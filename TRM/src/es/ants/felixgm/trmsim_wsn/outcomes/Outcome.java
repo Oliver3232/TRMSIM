@@ -159,8 +159,17 @@ public abstract class Outcome {
      * @param fileName Path of the file where to write
      */
     public static void writeToFile(Collection<Outcome> outcomes, String fileName) {
-        try { 
+        writeToFile(outcomes, fileName, true);
+    }
+
+    public static void writeToFile(Collection<Outcome> outcomes, String fileName, boolean includeHeaders) {
+        try {
             FileWriter out = new FileWriter(fileName);
+
+            if (includeHeaders && !outcomes.isEmpty()) {
+                Outcome firstOutcome = outcomes.iterator().next();
+                out.write(generateFileHeader(firstOutcome) + "\n");
+            }
 
             int i = 0;
             for (Outcome outcome : outcomes)
@@ -171,6 +180,29 @@ public abstract class Outcome {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    private static String generateFileHeader(Outcome outcome) {
+        String header = "Index\tSatisfaction\tAvgSatisfaction\tAvgPathLength";
+
+        if (outcome instanceof EnergyConsumptionOutcome) {
+            header += "\tClientEnergy\tMaliciousServerEnergy\tBenevolentServerEnergy\tRelayServerEnergy\tAvgSensorEnergy";
+        }
+
+        if (outcome instanceof EigenTrustEnergyConsumptionOutcome) {
+            header += "\tPreTrustedPeerEnergy";
+        }
+
+        if (outcome instanceof PowerTrustEnergyConsumptionOutcome) {
+            header += "\tPowerNodeEnergy";
+        }
+
+        if (outcome instanceof FuzzyOutcome) {
+            header += "\tVeryHighCount\tHighCount\tMediumCount\tLowCount\tVeryLowCount";
+            header += "\tVeryHighPercentage\tHighPercentage\tMediumPercentage\tLowPercentage\tVeryLowPercentage";
+        }
+
+        return header;
     }
 
     /**

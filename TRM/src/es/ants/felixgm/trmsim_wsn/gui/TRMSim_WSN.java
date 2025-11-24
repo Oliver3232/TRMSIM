@@ -116,11 +116,13 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             this.setSize((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()*1.0),
                     (int)(Toolkit.getDefaultToolkit().getScreenSize().getHeight()*0.98));
             this.setLocationRelativeTo(null);
-            
             initializeTRModels();
 
             C = Controller.C();
             TRModelComboBoxItemStateChanged(null);
+
+            SimulationResultRepository.getInstance().clearRepository();
+
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
@@ -430,6 +432,20 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             }
         });
         buttonsControlPanel.add(runSimulationsButton);
+
+        exportDataButton = new javax.swing.JButton();
+        exportDataButton.setText("Export Data");
+        exportDataButton.setMargin(new java.awt.Insets(2, 5, 2, 5));
+        exportDataButton.setMaximumSize(new java.awt.Dimension(150, 25));
+        exportDataButton.setMinimumSize(new java.awt.Dimension(120, 25));
+        exportDataButton.setPreferredSize(new java.awt.Dimension(150, 25));
+        exportDataButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                exportDataButtonActionPerformed(evt);
+            }
+        });
+        buttonsControlPanel.add(exportDataButton);
+
 
         spinnersControlPanel.setPreferredSize(new java.awt.Dimension(100, 205));
         spinnersControlPanel.setLayout(new javax.swing.BoxLayout(spinnersControlPanel, javax.swing.BoxLayout.Y_AXIS));
@@ -1253,6 +1269,18 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         });
         simulationsMenu.add(stopSimulationsMenuItem);
 
+
+        exportDataMenuItem = new javax.swing.JMenuItem();
+        exportDataMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_E, java.awt.event.InputEvent.CTRL_MASK));
+        exportDataMenuItem.setIcon(new ImageIcon(ClassLoader.getSystemResource("resources/images/save.gif")));
+        exportDataMenuItem.setText("Export Data");
+        exportDataMenuItem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                exportDataMenuItemActionPerformed(evt);
+            }
+        });
+        simulationsMenu.add(exportDataMenuItem);
+
         menuBar.add(simulationsMenu);
 
         parametersMenu.setText("Parameters");
@@ -1618,11 +1646,16 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             if (arg instanceof Network)
                 paintNetwork((Network)arg,C.get_requiredService());
             else if (arg instanceof Collection) {
+                Collection<Outcome> outcomes = (Collection<Outcome>) arg;
+
+                SimulationResultRepository repository = SimulationResultRepository.getInstance();
+                repository.addAllOutcomes(outcomes);
+
                 for (OutcomesPanel outcomesPanel : outcomesPanels) {
                     if (outcomesPanel.isShowing())
-                        outcomesPanel.plotOutcomes((Collection<Outcome>) arg);
+                        outcomesPanel.plotOutcomes(outcomes);
                     else
-                        outcomesPanel.setOutcomes((Collection<Outcome>) arg);
+                        outcomesPanel.setOutcomes(outcomes);
                 }
             } else if (arg instanceof String) {
                 String msg = ((String)arg).replaceFirst("selected TRM",(String)TRModelComboBox.getSelectedItem());
@@ -1633,6 +1666,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                     stopTRMmenuItem.setEnabled(false);
                     stopSimulationsButton.setEnabled(false);
                     stopSimulationsMenuItem.setEnabled(false);
+
+                    SimulationResultRepository repository = SimulationResultRepository.getInstance();
+                    messagesTextArea.setText("Simulation completed. " + repository.getResultCount() + " results saved. Use 'Export Data' to save to file.\n" + messagesTextArea.getText());
                 }
             } else if (arg instanceof Exception)
                 throw (Exception) arg;
@@ -1688,6 +1724,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     
     private void runSimulationsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runSimulationsButtonActionPerformed
         try {
+            SimulationResultRepository.getInstance().clearRepository();
             int numExecutions = (Integer)numExecutionsSpinner.getValue();
             int numNetworks = (Integer)numNetworksSpinner.getValue();
             int minNumSensors = (Integer)minNumSensorsSpinner.getValue();
@@ -1787,6 +1824,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
     private void runTRMButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runTRMButtonActionPerformed
         try {
+            SimulationResultRepository.getInstance().clearRepository();
             int numExecutions = (Integer)numExecutionsSpinner.getValue();
             boolean dynamic = dynamicWSNsCheckBox.isSelected();
             boolean oscillating = oscillatingWSNsCheckBox.isSelected();
@@ -2272,8 +2310,70 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         return Outcome.computeOutcomes(globalOutcomes);
     }
 
+    //new methods
+
+
+    private void exportDataButtonActionPerformed(java.awt.event.ActionEvent evt) {
+        showExportDialog();
+    }
+
+    private void exportDataMenuItemActionPerformed(java.awt.event.ActionEvent evt) {
+        showExportDialog();
+    }
+
+    private void showExportDialog() {
+        try {
+            SimulationResultRepository repository = SimulationResultRepository.getInstance();
+
+            if (repository.getResultCount() == 0) {
+                JOptionPane.showMessageDialog(this,
+                        "No simulation data available for export. Please run a simulation first.",
+                        "No Data",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            Object[] options = {"Simple CSV", "Detailed CSV", "Formatted Text Report",
+                                "Formatted TSV (Excel-friendly)", "Cancel"};
+            int choice = JOptionPane.showOptionDialog(this,
+                    "Choose export format (" + repository.getResultCount() + " results available):",
+                    "Export Simulation Data",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[0]);
+
+            switch (choice) {
+                case 0: // Simple CSV
+                    repository.exportToCSV(this);
+                    break;
+                case 1: // Detailed CSV
+                    repository.exportDetailedToCSV(this);
+                    break;
+                case 2: //Formated
+                    repository.exportToFormattedText(this);
+                    break;
+                case 3: //TSV
+                    repository.exportToFormattedTSV(this);
+                    break;
+
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error during export: " + ex.getMessage(),
+                    "Export Error",
+                    JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
+
+    //new vars
+    private javax.swing.JButton exportDataButton;
+    private javax.swing.JMenuItem exportDataMenuItem;
+
     private javax.swing.JScrollPane TRMParametersScrollPane;
     private javax.swing.JPanel TRM_ParametersPanelAux;
     private javax.swing.JComboBox TRModelComboBox;
