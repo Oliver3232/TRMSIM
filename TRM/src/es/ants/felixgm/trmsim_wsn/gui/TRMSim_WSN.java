@@ -2334,7 +2334,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             }
 
             Object[] options = {"Simple CSV", "Detailed CSV", "Formatted Text Report",
-                                "Formatted TSV (Excel-friendly)", "Cancel"};
+                                "Formatted TSV (Excel-friendly)", "Energy Consumption", "Energy Consumption - text", "Cancel"};
             int choice = JOptionPane.showOptionDialog(this,
                     "Choose export format (" + repository.getResultCount() + " results available):",
                     "Export Simulation Data",
@@ -2356,6 +2356,12 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                     break;
                 case 3: //TSV
                     repository.exportToFormattedTSV(this);
+                    break;
+                case 4: //Energy consumption
+                    repository.exportEnergyConsumption(this);
+                    break;
+                case 5: //energy- text
+                    repository.exportEnergyConsumptionText(this);
                     break;
 
             }

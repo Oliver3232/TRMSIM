@@ -344,4 +344,10 @@ public class SimulationResultRepository {
     public void exportToFormattedTSV(TRMSim_WSN parentFrame) {
         FormattedTSVExporter.exportToFormattedTSV(parentFrame, simulationResults);
     }
+    public void exportEnergyConsumption(TRMSim_WSN parentFrame) {
+        EnergyConsumptionExporter.exportEnergyConsumption(parentFrame, simulationResults);
+    }
+    public void exportEnergyConsumptionText(TRMSim_WSN parentFrame) {
+        EnergyConsumptionTextExporter.exportEnergyConsumptionText(parentFrame, simulationResults);
+    }
 }
