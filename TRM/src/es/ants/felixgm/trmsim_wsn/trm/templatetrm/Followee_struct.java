@@ -64,9 +64,9 @@ public class Followee_struct {
 			double weight = t.fading * t.severity;
 			double xi = t.getSatisfaction().getSatisfactionValue();
 			double temp = weight * xi;
-			sum += temp; // Ówi*xi
-			wx2 += temp * xi;// Ówi*xi*xi
-			weights += weight;// Ówi
+			sum += temp; // wi*xi
+			wx2 += temp * xi;// wi*xi*xi
+			weights += weight;// wi
 		}
 		}
 		fade();

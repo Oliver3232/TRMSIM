@@ -76,12 +76,13 @@ import java.awt.Point;
 import java.awt.Toolkit;
 import java.io.File;
 import java.util.*;
-import javax.swing.ImageIcon;
-import javax.swing.JFileChooser;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
+import javax.swing.*;
 
-
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.awt.Font;
+import javax.swing.border.EmptyBorder;
+import com.formdev.flatlaf.FlatIntelliJLaf;
 /**
  * <p>This class represents the main window of TRMSim-WSN</p>
  * <ul>
@@ -112,9 +113,15 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
      */
     public TRMSim_WSN() {
         try {
+            // 1. Run the old init to create components and attach listeners
             initComponents();
-            this.setSize((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()*1.0),
-                    (int)(Toolkit.getDefaultToolkit().getScreenSize().getHeight()*0.98));
+
+            // 2. Run our new layout logic to rearrange everything
+            setupModernLayout();
+
+            // 3. Standard setup code from the original file...
+            this.setSize((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()*0.9),
+                    (int)(Toolkit.getDefaultToolkit().getScreenSize().getHeight()*0.9));
             this.setLocationRelativeTo(null);
             initializeTRModels();
 
@@ -2120,8 +2127,23 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             boolean oscillating = false;
             boolean collusion = false;
             TRMSim_WSN_Verbose(trustModelNames, requiredService, numNetworks, numExecutions, minNumSensors, maxNumSensors, probClients, probRelay, probMalicious, dynamic, oscillating, collusion);
-        } else
+        } else {
+            // TRMSim_WSN_GUI(); <-- Old call
+
+            try {
+                // Try to set FlatLaf (Modern)
+                UIManager.setLookAndFeel( new com.formdev.flatlaf.FlatIntelliJLaf() );
+            } catch( Exception ex ) {
+                try {
+                    // Fallback to System L&F if FlatLaf isn't found
+                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                } catch (Exception ex2) {
+                    ex2.printStackTrace();
+                }
+            }
+
             TRMSim_WSN_GUI();
+        }
     }
 
     /**
@@ -2504,4 +2526,164 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
     private Collection<OutcomesPanel> outcomesPanels;
     private LegendPanel legendPanel = new LegendPanel();
+
+    /**
+     * Re-organizes the components initialized by initComponents() into a modern dashboard layout.
+     */
+    private void setupModernLayout() {
+        // 1. Clear the old "Generated" Layout
+        this.getContentPane().removeAll();
+        this.setLayout(new BorderLayout());
+
+        // =========================================================================
+        // SECTION A: THE TOOLBAR (Top Actions)
+        // =========================================================================
+        JToolBar toolbar = new JToolBar();
+        toolbar.setFloatable(false);
+        toolbar.setBorder(new EmptyBorder(5, 5, 5, 5));
+
+        // Re-use existing buttons.
+        // Note: We don't create new buttons, we move the existing ones
+        // so we keep the ActionListeners.
+        toolbar.add(newWSNButton);
+        toolbar.add(loadWSNButton);
+        toolbar.add(saveWSNButton);
+        toolbar.addSeparator();
+        toolbar.add(resetWSNButton);
+        toolbar.addSeparator();
+        toolbar.add(runTRMButton);
+        toolbar.add(stopTRMButton);
+        toolbar.addSeparator();
+        toolbar.add(runSimulationsButton);
+        toolbar.add(stopSimulationsButton);
+        toolbar.addSeparator();
+        toolbar.add(exportDataButton);
+
+        this.add(toolbar, BorderLayout.NORTH);
+
+        // =========================================================================
+        // SECTION B: THE SIDEBAR (Configuration)
+        // =========================================================================
+        JPanel sidebar = new JPanel(new BorderLayout());
+        sidebar.setPreferredSize(new Dimension(320, 0));
+        sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.LIGHT_GRAY));
+
+        JTabbedPane settingsTabs = new JTabbedPane();
+
+        // --- Tab 1: Topology ---
+        JPanel topologyPanel = new JPanel();
+        topologyPanel.setLayout(new BoxLayout(topologyPanel, BoxLayout.Y_AXIS));
+        topologyPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        // Helper to group label + component
+        topologyPanel.add(wrapConfig(minNumSensorsLabel, minNumSensorsSpinner));
+        topologyPanel.add(wrapConfig(maxNumSensorsLabel, maxNumSensorsSpinner));
+        topologyPanel.add(wrapConfig(radioRangeLabel, radioRangeSlider));
+        // Add the text field for range (visual feedback)
+        JPanel rangeFeedback = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+        rangeFeedback.add(new javax.swing.JLabel("Current Range Value:"));
+        rangeFeedback.add(radioRangeTextField);
+        topologyPanel.add(rangeFeedback);
+
+        // --- Tab 2: Scenario ---
+        JPanel scenarioPanel = new JPanel();
+        scenarioPanel.setLayout(new BoxLayout(scenarioPanel, BoxLayout.Y_AXIS));
+        scenarioPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        scenarioPanel.add(wrapConfig(percentageClientsLabel, percentageClientsSlider));
+        scenarioPanel.add(wrapConfig(percentageMaliciousServersLabel, percentageMaliciousServersSlider));
+        scenarioPanel.add(wrapConfig(percentageRelayServersLabel, percentageRelayServersSlider));
+        scenarioPanel.add(wrapConfig(delayLabel, delaySlider));
+
+        // --- Tab 3: Simulation ---
+        JPanel simSettingsPanel = new JPanel();
+        simSettingsPanel.setLayout(new BoxLayout(simSettingsPanel, BoxLayout.Y_AXIS));
+        simSettingsPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        simSettingsPanel.add(wrapConfig(numExecutionsLabel, numExecutionsSpinner));
+        simSettingsPanel.add(wrapConfig(numNetworksLabel, numNetworksSpinner));
+
+        JPanel checkPanel = new JPanel(new GridLayout(0, 1, 5, 5));
+        checkPanel.setBorder(BorderFactory.createTitledBorder("Threats & Dynamics"));
+        checkPanel.add(collusionCheckBox);
+        checkPanel.add(oscillatingWSNsCheckBox);
+        checkPanel.add(dynamicWSNsCheckBox);
+        simSettingsPanel.add(checkPanel);
+
+        // --- Tab 4: View ---
+        JPanel viewPanel = new JPanel(new GridLayout(0, 1, 5, 5));
+        viewPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        viewPanel.add(showIdsCheckBox);
+        viewPanel.add(showLinksCheckBox);
+        viewPanel.add(showRangesCheckBox);
+        viewPanel.add(showGridCheckBox);
+
+        // Add tabs
+        settingsTabs.addTab("Topology", topologyPanel);
+        settingsTabs.addTab("Scenario", scenarioPanel);
+        settingsTabs.addTab("Sim Settings", simSettingsPanel);
+        settingsTabs.addTab("View", viewPanel);
+
+        sidebar.add(settingsTabs, BorderLayout.CENTER);
+
+        // Trust Model Selector (Bottom of Sidebar)
+        JPanel modelPanel = new JPanel(new BorderLayout(5, 5));
+        modelPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        modelPanel.add(TRModelLabel, BorderLayout.NORTH);
+        modelPanel.add(TRModelComboBox, BorderLayout.CENTER);
+        sidebar.add(modelPanel, BorderLayout.SOUTH);
+
+        this.add(sidebar, BorderLayout.WEST);
+
+        // =========================================================================
+        // SECTION C: CENTER & BOTTOM (Map + Outcomes)
+        // =========================================================================
+
+        // Center Split Pane
+        JSplitPane centerSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        centerSplit.setResizeWeight(0.7); // 70% height for the map
+        centerSplit.setBorder(null);
+
+        // 1. The Map Container (Top of Split)
+        JPanel mapContainer = new JPanel(new BorderLayout());
+        mapContainer.add(networkPanelContainer, BorderLayout.CENTER);
+
+        // Legend on the Right of the Map
+        JPanel legendWrapper = new JPanel(new BorderLayout());
+        legendWrapper.setBorder(BorderFactory.createTitledBorder("Legend"));
+        legendWrapper.setPreferredSize(new Dimension(150, 0));
+        legendWrapper.add(legendPanelContainer, BorderLayout.CENTER);
+        mapContainer.add(legendWrapper, BorderLayout.EAST);
+
+        centerSplit.setTopComponent(mapContainer);
+
+        // 2. The Bottom Tabs (Bottom of Split)
+        JTabbedPane bottomTabs = new JTabbedPane();
+
+        // Fix: Ensure the parametersPanel uses a layout that fits
+        parametersPanel.setPreferredSize(null);
+
+        bottomTabs.addTab("Charts & Outcomes", outcomesPanelsPanel);
+        bottomTabs.addTab("Console Log", messagePanel);
+        bottomTabs.addTab("Parameters", parametersPanel);
+
+        centerSplit.setBottomComponent(bottomTabs);
+
+        this.add(centerSplit, BorderLayout.CENTER);
+
+        // Force UI to re-calculate layout
+        this.validate();
+        this.repaint();
+    }
+
+    /** * Helper method to create a standard labeled row for the settings
+     */
+    private JPanel wrapConfig(javax.swing.JLabel label, javax.swing.JComponent component) {
+        JPanel p = new JPanel(new BorderLayout(5, 5));
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        p.add(label, BorderLayout.WEST);
+        p.add(component, BorderLayout.CENTER);
+        return p;
+    }
+
 }
