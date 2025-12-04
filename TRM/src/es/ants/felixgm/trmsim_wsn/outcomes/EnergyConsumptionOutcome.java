@@ -47,7 +47,8 @@ import es.ants.felixgm.trmsim_wsn.satisfaction.Satisfaction;
 import es.ants.felixgm.trmsim_wsn.search.IsClientSearchCondition;
 import es.ants.felixgm.trmsim_wsn.search.IsServerSearchCondition;
 import java.util.Collection;
-
+import es.ants.felixgm.trmsim_wsn.network.Sensor; // Import Sensor
+import java.util.Vector; // Import Vector if needed
 /**
  * <p>This class models the outcome of a trust and reputation model. It includes,
  * besides the elements of a {@link BasicOutcome}, the energy consumption of each
@@ -110,12 +111,70 @@ public class EnergyConsumptionOutcome extends BasicOutcome {
      * @param requiredService Service requested by every client in the network
      * @param numExecutions Number of times the selected trust and reputation model has been executed
      */
+//    public void setEnergyConsumption(Network network, Service requiredService, int numExecutions) {
+//        clientEnergyConsumption = network.get_sensorsTransmittedDistance(new IsClientSearchCondition(),requiredService)/(double)numExecutions;
+//        maliciousServerEnergyConsumption = network.get_sensorsTransmittedDistance(new IsServerSearchCondition(requiredService,IsServerSearchCondition.MALICIOUS_SERVER),requiredService)/(double)numExecutions;
+//        benevolentServerEnergyConsumption = network.get_sensorsTransmittedDistance(new IsServerSearchCondition(requiredService,IsServerSearchCondition.BENEVOLENT_SERVER),requiredService)/(double)numExecutions;
+//        relayServerEnergyConsumption = network.get_sensorsTransmittedDistance(new IsServerSearchCondition(new Service("Relay"),IsServerSearchCondition.RELAY_SERVER),new Service("Relay"))/(double)numExecutions;
+//        avgSensorEnergyConsumption = (clientEnergyConsumption+maliciousServerEnergyConsumption+benevolentServerEnergyConsumption+relayServerEnergyConsumption)/4.0;
+//    }
+//    @Override
     public void setEnergyConsumption(Network network, Service requiredService, int numExecutions) {
+        // Pôvodný výpočet priemerov
         clientEnergyConsumption = network.get_sensorsTransmittedDistance(new IsClientSearchCondition(),requiredService)/(double)numExecutions;
         maliciousServerEnergyConsumption = network.get_sensorsTransmittedDistance(new IsServerSearchCondition(requiredService,IsServerSearchCondition.MALICIOUS_SERVER),requiredService)/(double)numExecutions;
         benevolentServerEnergyConsumption = network.get_sensorsTransmittedDistance(new IsServerSearchCondition(requiredService,IsServerSearchCondition.BENEVOLENT_SERVER),requiredService)/(double)numExecutions;
         relayServerEnergyConsumption = network.get_sensorsTransmittedDistance(new IsServerSearchCondition(new Service("Relay"),IsServerSearchCondition.RELAY_SERVER),new Service("Relay"))/(double)numExecutions;
         avgSensorEnergyConsumption = (clientEnergyConsumption+maliciousServerEnergyConsumption+benevolentServerEnergyConsumption+relayServerEnergyConsumption)/4.0;
+
+        // --- ZAČIATOK NOVÉHO KÓDU: Získanie dát pre jednotlivé nody ---
+        this.nodeMetrics.clear();
+        Collection<Sensor> sensors = network.get_sensors();
+
+        for (Sensor s : sensors) {
+            String type = "Unknown";
+            double goodnessVal = -1.0; // Default hodnota (n/a)
+
+            if (s.get_numServices() == 0) {
+                type = "Client";
+            } else {
+                // Logika pre typ a goodness
+                if (requiredService != null && s.offersService(requiredService)) {
+                    try {
+                        goodnessVal = s.get_goodness(requiredService); // Získame presnú hodnotu goodness
+                        if (goodnessVal > 0.5) {
+                            type = "Benevolent Server";
+                        } else {
+                            type = "Malicious Server";
+                        }
+                    } catch (Exception e) {
+                        type = "Malicious Server";
+                    }
+                } else {
+                    type = "Relay/Other";
+                }
+            }
+
+            double energy = s.get_transmittedDistance() / (double)numExecutions;
+
+            // Získanie počtu susedov
+            int neighbors = 0;
+            if (s.getNeighbors() != null) {
+                neighbors = s.getNeighbors().size();
+            }
+
+            this.addNodeMetric(new NodeMetric(
+                    s.id(),
+                    type,
+                    energy,
+                    s.get_transmittedDistance(),
+                    s.getX(), // Pozícia X
+                    s.getY(), // Pozícia Y
+                    neighbors,
+                    goodnessVal
+            ));
+        }
+        // --- KONIEC NOVÉHO KÓDU ---
     }
 
     @Override

@@ -47,6 +47,8 @@ import es.ants.felixgm.trmsim_wsn.network.Service;
 import java.io.FileWriter;
 import java.util.Collection;
 import java.util.Vector;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>This class models the outcome of a trust and reputation model. It includes
@@ -58,7 +60,14 @@ import java.util.Vector;
 public abstract class Outcome {
     /** Satisfaction of the client with the received service */
     protected Satisfaction satisfaction;
+    protected List<NodeMetric> nodeMetrics = new ArrayList<>();
+    public List<NodeMetric> getNodeMetrics() {
+        return nodeMetrics;
+    }
 
+    public void addNodeMetric(NodeMetric metric) {
+        this.nodeMetrics.add(metric);
+    }
     /**
      * Class Outcome constructor
      * @param satisfaction Satisfaction of the client with the received service

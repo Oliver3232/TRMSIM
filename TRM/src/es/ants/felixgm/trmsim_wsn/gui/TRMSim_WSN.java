@@ -2333,8 +2333,21 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 return;
             }
 
-            Object[] options = {"Simple CSV", "Detailed CSV", "Formatted Text Report",
-                                "Formatted TSV (Excel-friendly)", "Energy Consumption", "Energy Consumption - text", "Cancel"};
+            // UPDATED OPTIONS
+            Object[] options = {
+                    "Simple CSV",
+                    "Detailed CSV",
+                    "Formatted Text Report",
+                    "Formatted TSV (Excel-friendly)",
+                    "Energy Consumption (Summary)",
+                    "Energy Consumption - Text (Summary)",
+                    "--- NEW: Node Data CSV (All) ---",
+                    "--- NEW: Node Energy CSV ---",
+                    "--- NEW: Node Energy Text ---",
+                    "--- NEW: Node Data Text (All) ---",
+                    "Cancel"
+            };
+
             int choice = JOptionPane.showOptionDialog(this,
                     "Choose export format (" + repository.getResultCount() + " results available):",
                     "Export Simulation Data",
@@ -2345,25 +2358,20 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                     options[0]);
 
             switch (choice) {
-                case 0: // Simple CSV
-                    repository.exportToCSV(this);
-                    break;
-                case 1: // Detailed CSV
-                    repository.exportDetailedToCSV(this);
-                    break;
-                case 2: //Formated
-                    repository.exportToFormattedText(this);
-                    break;
-                case 3: //TSV
-                    repository.exportToFormattedTSV(this);
-                    break;
-                case 4: //Energy consumption
-                    repository.exportEnergyConsumption(this);
-                    break;
-                case 5: //energy- text
-                    repository.exportEnergyConsumptionText(this);
-                    break;
+                case 0: repository.exportToCSV(this); break;
+                case 1: repository.exportDetailedToCSV(this); break;
+                case 2: repository.exportToFormattedText(this); break;
+                case 3: repository.exportToFormattedTSV(this); break;
+                case 4: repository.exportEnergyConsumption(this); break;
+                case 5: repository.exportEnergyConsumptionText(this); break;
 
+                // NEW CASES
+                case 6: repository.exportNodeLevelCSV(this); break;
+                case 7: repository.exportNodeLevelEnergyCSV(this); break;
+                case 8: repository.exportNodeLevelEnergyText(this); break;
+                case 9: repository.exportNodeLevelText(this); break;
+
+                default: break; // Cancel
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,

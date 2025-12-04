@@ -350,4 +350,21 @@ public class SimulationResultRepository {
     public void exportEnergyConsumptionText(TRMSim_WSN parentFrame) {
         EnergyConsumptionTextExporter.exportEnergyConsumptionText(parentFrame, simulationResults);
     }
+
+
+    public void exportNodeLevelCSV(TRMSim_WSN parentFrame) {
+        NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 1);
+    }
+
+    public void exportNodeLevelEnergyCSV(TRMSim_WSN parentFrame) {
+        NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 2);
+    }
+
+    public void exportNodeLevelEnergyText(TRMSim_WSN parentFrame) {
+        NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 3);
+    }
+
+    public void exportNodeLevelText(TRMSim_WSN parentFrame) {
+        NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 4);
+    }
 }
