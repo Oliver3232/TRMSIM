@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -16,28 +16,28 @@
  * --------------------------------
  *
  * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
  *
  * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
+ * authors of the material.
  *
  * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
  *
  * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
  *
  * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
+ * names, trademarks, or service marks.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 package es.ants.felixgm.trmsim_wsn.trm.eigentrust;
 
 import es.ants.felixgm.trmsim_wsn.search.IsServerSearchCondition;
@@ -57,15 +57,23 @@ import java.util.Vector;
  */
 public class EigenTrust_Sensor extends Sensor {
     /** Number of sensors composing the network this sensor belongs to */
-    protected static int _numSensors = 0;
+    // CHANGED: Instance variable
+    protected int numSensors = 0;
     /** Window size for storing transactions outcomes */
-    protected static int _windowSize;
+    // CHANGED: Instance variable
+    protected int windowSize = 0;
+
+    // NEW: Local parameters
+    protected EigenTrust_Parameters parameters;
+
     /** Collection of Transactions this sensor has had */
     protected Collection<Transaction> transactions;
     /** Vector t */
     protected double[] globalTrustVector;
     /** Vector p */
-    protected static double[] _preTrustedPeersVector = null;
+    // CHANGED: Instance variable
+    protected double[] preTrustedPeersVector = null;
+
     /** Collection of severs who this sensor has interacted with */
     protected Collection<EigenTrust_Sensor> interactedServers;
     /** Indicates if this sensor is a pre-trusted peer (true) or not (false) */
@@ -88,6 +96,11 @@ public class EigenTrust_Sensor extends Sensor {
         super(id,x,y);
     }
 
+    // NEW: Setters for Network to call
+    public void setParameters(EigenTrust_Parameters p) { this.parameters = p; }
+    public void setNumSensors(int n) { this.numSensors = n; }
+    public void setWindowSize(int w) { this.windowSize = w; }
+
     /**
      * This method computes the local trust value s_{ij}\in \mathbb{N}
      * @param server Server j
@@ -96,7 +109,7 @@ public class EigenTrust_Sensor extends Sensor {
     private double getLocalTrustValue(EigenTrust_Sensor server) {
         double localTrustValue = 0.0;
 
-        for (Transaction transaction : transactions) 
+        for (Transaction transaction : transactions)
             if (transaction.getServer().equals(server))
                 localTrustValue += ((SatisfactionInterval)transaction.getSatisfaction()).getSatisfactionValue();
 
@@ -105,7 +118,7 @@ public class EigenTrust_Sensor extends Sensor {
 
     /**
      * This method computes the normalized local trust value c_{ij}\in[0,1]
-     * @param server Server j 
+     * @param server Server j
      * @return c_{ij}
      */
     public synchronized double getNormalizedLocalTrustValue(EigenTrust_Sensor server) {
@@ -130,7 +143,7 @@ public class EigenTrust_Sensor extends Sensor {
                 if (localTrustValuesSum != 0.0) {
                     return normalizedLocalTrustValue / localTrustValuesSum;
                 } else {
-                    return _preTrustedPeersVector[server.id() - 1];
+                    return preTrustedPeersVector[server.id() - 1]; // Use instance variable
                 }
             }
         } catch (Exception ex) { ex.printStackTrace(); }
@@ -144,7 +157,8 @@ public class EigenTrust_Sensor extends Sensor {
      * @param outcome Outcome of the trnsaction to be added
      */
     public synchronized void addNewTransaction(EigenTrust_Sensor client, EigenTrust_Sensor server, Outcome outcome){
-        if ((transactions.size() != 0) && (transactions.size() >= _windowSize))
+        // Use instance variable windowSize
+        if ((transactions.size() != 0) && (transactions.size() >= windowSize))
             ((LinkedList<Transaction>)transactions).removeLast();
 
         ((LinkedList<Transaction>)transactions).addFirst(new Transaction(client,server,outcome));
@@ -156,12 +170,23 @@ public class EigenTrust_Sensor extends Sensor {
     public void reset() {
         transactions = new LinkedList<Transaction>();
         interactedServers = new LinkedList<EigenTrust_Sensor>();
-        globalTrustVector = new double[_numSensors];
-        if (_preTrustedPeersVector == null)
-            _preTrustedPeersVector = new double[_numSensors];
-        if (((EigenTrust_Parameters)(trmmodelWSN.get_TRMParameters())).get_preTrustedPeersPercentage() > 0) {
+
+        // Safety check for array size
+        if (numSensors > 0) {
+            globalTrustVector = new double[numSensors];
+            if (preTrustedPeersVector == null || preTrustedPeersVector.length != numSensors)
+                preTrustedPeersVector = new double[numSensors];
+        } else {
+            globalTrustVector = new double[0];
+            preTrustedPeersVector = new double[0];
+        }
+
+        // Use local parameters (fallback if null, though it shouldn't happen with correct initialization)
+        EigenTrust_Parameters params = (parameters != null) ? parameters : (EigenTrust_Parameters)trmmodelWSN.get_TRMParameters();
+
+        if (params.get_preTrustedPeersPercentage() > 0) {
             for (int i = 0; i < globalTrustVector.length; i++)
-                globalTrustVector[i] = _preTrustedPeersVector[i];
+                globalTrustVector[i] = preTrustedPeersVector[i];
         } else {
             Collection<Vector<Sensor>> pathsToServers = findSensors(new IsServerSearchCondition(requiredService));
             if (pathsToServers != null)
@@ -189,23 +214,26 @@ public class EigenTrust_Sensor extends Sensor {
      * Sets the new pre-trusted peers vector p
      * @param preTrustedPeersVector New pre-trusted peers vector p
      */
-    public static void set_preTrustedPeersVector(double[] preTrustedPeersVector) {
-        _preTrustedPeersVector = new double[preTrustedPeersVector.length];
-        for (int i = 0; i < preTrustedPeersVector.length; i++) 
-            _preTrustedPeersVector[i] = preTrustedPeersVector[i];
+    // CHANGED: Instance method
+    public void setPreTrustedPeersVector(double[] preTrustedPeersVector) {
+        this.preTrustedPeersVector = new double[preTrustedPeersVector.length];
+        for (int i = 0; i < preTrustedPeersVector.length; i++)
+            this.preTrustedPeersVector[i] = preTrustedPeersVector[i];
     }
 
     /**
      * Returns the current pre-trusted peers vector p
      * @return The current pre-trusted peers vector p
      */
-    public static double[] get_preTrustedPeersVector() { return _preTrustedPeersVector; }
+    // CHANGED: Instance method
+    public double[] getPreTrustedPeersVector() { return preTrustedPeersVector; }
 
     /**
      * Returns the number of sensors composing the network this sensor belongs to
      * @return The number of sensors composing the network this sensor belongs to
      */
-    public static int getNumSensors() { return _numSensors; }
+    // CHANGED: Instance method
+    public int getNumSensors() { return numSensors; }
 
     /**
      * Indicates if this sensor is a pre-trusted peer (true) or not (false)
@@ -217,13 +245,15 @@ public class EigenTrust_Sensor extends Sensor {
      * Sets the number of sensors composing the network this sensor belongs to
      * @param numSensors The number of sensors composing the network this sensor belongs to
      */
-    public static void setNumSensors(int numSensors){ _numSensors = numSensors; }
+    // CHANGED: Instance method
+    public void setNumSensorsStatic(int numSensors){ this.numSensors = numSensors; }
 
     /**
      * Sets the window size for storing transactions outcomes
      * @param windowSize New window size for storing transactions outcomes
      */
-    public static void set_windowSize(int windowSize) { _windowSize = windowSize; }
+    // CHANGED: Instance method
+    public void setWindowSizeStatic(int windowSize) { this.windowSize = windowSize; }
 
     /**
      * Sets this senor as a pre-trusted peer or not

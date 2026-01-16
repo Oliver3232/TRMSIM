@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -16,28 +16,28 @@
  * --------------------------------
  *
  * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
  *
  * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
+ * authors of the material.
  *
  * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
  *
  * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
  *
  * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
+ * names, trademarks, or service marks.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.powertrust;
 
@@ -58,6 +58,10 @@ import java.util.List;
  * @since 0.3
  */
 public class PowerTrust_Network extends Network {
+
+    // OPRAVA: Uloženie parametrov pre túto sieť
+    private PowerTrust_Parameters parameters;
+
     /**
      * This constructor creates a new random PowerTrust Network using the given parameters
      * @param numSensors Number of sensors composing the network
@@ -66,6 +70,7 @@ public class PowerTrust_Network extends Network {
      * @param probServices A collection of probabilities of offering a certain service, one per service
      * @param probGoodness A collection of goodnesses about offering a certain service, one per service
      * @param services All the services offered by the generated Network
+     * @param parameters The PowerTrust specific parameters
      */
     public PowerTrust_Network(
             int numSensors,
@@ -73,8 +78,12 @@ public class PowerTrust_Network extends Network {
             double rangeFactor,
             Collection<Double> probServices,
             Collection<Double> probGoodness,
-            Collection<Service> services) {
+            Collection<Service> services,
+            PowerTrust_Parameters parameters) { // OPRAVA: Pridaný parameter
         super(numSensors, probClients, rangeFactor, probServices, probGoodness, services);
+
+        this.parameters = parameters;
+        initializeSensors(); // OPRAVA: Dodatočná inicializácia
         reset();
     }
 
@@ -82,28 +91,53 @@ public class PowerTrust_Network extends Network {
      * This method loads a network from a XML file and creates the specific
      * corresponding PowerTrust Network
      * @param xmlFilePath Path of the XML to load the network from
+     * @param parameters The PowerTrust specific parameters
      * @throws java.lang.Exception If the XML file given does not have the appropriate structure, or if
      * a sensor links to an undefined sensor, or if a sensor links to itself
      */
-    public PowerTrust_Network(String xmlFilePath) throws Exception {
+    public PowerTrust_Network(String xmlFilePath, PowerTrust_Parameters parameters) throws Exception { // OPRAVA: Pridaný parameter
         super(xmlFilePath);
+        this.parameters = parameters;
+        initializeSensors(); // OPRAVA: Dodatočná inicializácia
         reset();
+    }
+
+    // OPRAVA: Pomocná metóda na distribúciu parametrov a počtu senzorov
+    private void initializeSensors() {
+        int totalSensors = sensors.size();
+        for (Sensor s : sensors) {
+            if (s instanceof PowerTrust_Sensor) {
+                PowerTrust_Sensor ps = (PowerTrust_Sensor) s;
+                ps.setParameters(this.parameters);
+                ps.setNumSensors(totalSensors);
+            }
+        }
     }
 
     @Override
     public void reset() {
-        PowerTrust_Sensor.setNumSensors(sensors.size());
+        // PowerTrust_Sensor.setNumSensors(sensors.size()); -- ODSTRÁNENÉ (Bolo static)
+
+        // Namiesto toho aktualizujeme inštancie:
+        initializeSensors();
+
         super.reset();
-        int m = (int)(sensors.size()*((PowerTrust_Parameters)PowerTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_powerNodesPercentage());
-        if ((((PowerTrust_Parameters)PowerTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_powerNodesPercentage() > 0) && (m == 0))
+
+        // OPRAVA: Použitie lokálnych parametrov a statického volania Sensor.get_TRM... sa zbavujeme
+        int m = (int)(sensors.size() * parameters.get_powerNodesPercentage());
+
+        if ((parameters.get_powerNodesPercentage() > 0) && (m == 0))
             m = 1;
 
-        while (m > 0) {
+        int safetyCounter = 0;
+        while (m > 0 && safetyCounter < servers.size() * 2) {
             int selectedServer = (int)(Math.random()*servers.size());
-            if (!((PowerTrust_Sensor)(((List<Sensor>)servers).get(selectedServer))).isPowerNode()) {
-                ((PowerTrust_Sensor)(((List<Sensor>)servers).get(selectedServer))).setPowerNode(true);
+            Sensor selected = ((List<Sensor>)servers).get(selectedServer);
+            if (selected instanceof PowerTrust_Sensor && !((PowerTrust_Sensor)selected).isPowerNode()) {
+                ((PowerTrust_Sensor)selected).setPowerNode(true);
                 m--;
             }
+            safetyCounter++;
         }
     }
 
@@ -113,7 +147,7 @@ public class PowerTrust_Network extends Network {
             int numBenevolentServers = 0;
             for (Sensor server : servers)
                 if ((server.offersService(service)) && (server.get_goodness(service) >= 0.5) &&
-                    !(((PowerTrust_Sensor)server).isPowerNode())) {
+                        (server instanceof PowerTrust_Sensor) && !(((PowerTrust_Sensor)server).isPowerNode())) {
                     numBenevolentServers++;
                     server.set_goodness(service,0.0);
                 }
@@ -153,14 +187,14 @@ public class PowerTrust_Network extends Network {
                         numSensors++;
                     }
                 } else if (searchCondition instanceof IsPowerNodeSearchCondition) {
-                    if (((PowerTrust_Sensor)sensor).isPowerNode()) {
+                    if (sensor instanceof PowerTrust_Sensor && ((PowerTrust_Sensor)sensor).isPowerNode()) {
                         sensorsTransmittedDistance += sensor.get_transmittedDistance();
                         numSensors++;
                     }
                 } else {
                     if (searchCondition.sensorAcomplishesCondition(sensor)) {
                         if (((IsServerSearchCondition)searchCondition).get_serverType() == IsServerSearchCondition.BENEVOLENT_SERVER) {
-                            if (!((PowerTrust_Sensor)sensor).isPowerNode()) {
+                            if (sensor instanceof PowerTrust_Sensor && !((PowerTrust_Sensor)sensor).isPowerNode()) {
                                 sensorsTransmittedDistance += sensor.get_transmittedDistance();
                                 numSensors++;
                             }

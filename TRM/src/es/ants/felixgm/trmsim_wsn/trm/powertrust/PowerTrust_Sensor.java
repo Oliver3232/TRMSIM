@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -16,28 +16,28 @@
  * --------------------------------
  *
  * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
  *
  * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
+ * authors of the material.
  *
  * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
  *
  * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
  *
  * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
+ * names, trademarks, or service marks.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.powertrust;
 
@@ -58,7 +58,12 @@ import java.util.Vector;
  */
 public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_Sensor>{
     /** Number of sensors composing the network this sensor belongs to */
-    protected static int _numSensors = 0;
+    // OPRAVA: Odstránené static
+    protected int _numSensors = 0;
+
+    // OPRAVA: Lokálne parametre
+    private PowerTrust_Parameters parameters;
+
     /** Score v_i */
     protected double globalReputationScore;
     /** Vector r_i */
@@ -87,12 +92,25 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
         super(id,x,y);
     }
 
+    // OPRAVA: Settery pre parametre a počet senzorov
+    public void setParameters(PowerTrust_Parameters p) { this.parameters = p; }
+    public void setNumSensors(int n) { this._numSensors = n; }
+
     @Override
     public void reset() {
         transactions = new LinkedList<Transaction>();
-        globalReputationScore = 1.0/_numSensors;
-        normalizedLocalTrustVector = new double[_numSensors];
-        mostRecentFeedbackScoreVector = new double[_numSensors];
+
+        // OPRAVA: Použitie inštančnej premennej + kontrola
+        if (_numSensors > 0) {
+            globalReputationScore = 1.0/_numSensors;
+            normalizedLocalTrustVector = new double[_numSensors];
+            mostRecentFeedbackScoreVector = new double[_numSensors];
+        } else {
+            globalReputationScore = 0;
+            normalizedLocalTrustVector = new double[0];
+            mostRecentFeedbackScoreVector = new double[0];
+        }
+
         isPowerNode = false;
     }
 
@@ -111,7 +129,11 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
                     return 0.0;
             }
         } catch (Exception ex) { ex.printStackTrace(); }
-        return normalizedLocalTrustVector[server.id()-1];
+
+        // Ochrana indexu
+        if (server.id()-1 < normalizedLocalTrustVector.length)
+            return normalizedLocalTrustVector[server.id()-1];
+        return 0.0;
     }
 
     /**
@@ -122,7 +144,10 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
      */
     public synchronized double computeGlobalReputation() {
         if (transactions.size() > 0) {
-            double epsilon = ((PowerTrust_Parameters)trmmodelWSN.get_TRMParameters()).get_epsilon();
+            // OPRAVA: Použitie lokálnych parametrov alebo fallback na globalne
+            PowerTrust_Parameters params = (parameters != null) ? parameters : (PowerTrust_Parameters)trmmodelWSN.get_TRMParameters();
+
+            double epsilon = params.get_epsilon();
             double pre = globalReputationScore;
             do {
                 pre = globalReputationScore;
@@ -131,8 +156,12 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
                     PowerTrust_Sensor client = (PowerTrust_Sensor)transaction.getClient();
                     sum += client.get_globalReputationScore()*client.getNormalizedLocalTrustScore(this);
                 }
-                double alpha = ((PowerTrust_Parameters)trmmodelWSN.get_TRMParameters()).get_powerNodesWeight();
-                int m = (int)(_numSensors*((PowerTrust_Parameters)trmmodelWSN.get_TRMParameters()).get_powerNodesPercentage());
+                double alpha = params.get_powerNodesWeight();
+                int m = (int)(_numSensors * params.get_powerNodesPercentage());
+
+                // Ochrana delenia nulou
+                if (alpha == 0) alpha = 0.0001;
+
                 if (isPowerNode)
                     globalReputationScore = (1.0 - alpha)*sum + m/alpha;
                 else
@@ -152,11 +181,17 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
         ((LinkedList<Transaction>)transactions).addFirst(new Transaction(client,server,outcome));
 
         if (get_numServices() == 0) {
-            mostRecentFeedbackScoreVector[server.id()-1] = outcome.get_satisfaction().isSatisfied() ? 1.0 : 0.0;
-            double localTrustValueSum = 0.0;
-            for (int i = 0; i < mostRecentFeedbackScoreVector.length; i++)
-                localTrustValueSum += mostRecentFeedbackScoreVector[i];
-            normalizedLocalTrustVector[server.id()-1] = mostRecentFeedbackScoreVector[server.id()-1]/localTrustValueSum;
+            int idx = server.id()-1;
+            // Ochrana indexu
+            if (idx >= 0 && idx < mostRecentFeedbackScoreVector.length) {
+                mostRecentFeedbackScoreVector[idx] = outcome.get_satisfaction().isSatisfied() ? 1.0 : 0.0;
+                double localTrustValueSum = 0.0;
+                for (int i = 0; i < mostRecentFeedbackScoreVector.length; i++)
+                    localTrustValueSum += mostRecentFeedbackScoreVector[i];
+
+                if (localTrustValueSum > 0)
+                    normalizedLocalTrustVector[idx] = mostRecentFeedbackScoreVector[idx]/localTrustValueSum;
+            }
         }
     }
 
@@ -167,10 +202,13 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
      */
     @Override
     public Outcome get_outcome() {
-        int numPowerNodes = (int)(_numSensors*((PowerTrust_Parameters)PowerTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_powerNodesPercentage());
-        if ((((PowerTrust_Parameters)PowerTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_powerNodesPercentage() > 0) && (numPowerNodes == 0))
+        // OPRAVA: Lokálne parametre a premenné
+        PowerTrust_Parameters params = (parameters != null) ? parameters : (PowerTrust_Parameters)trmmodelWSN.get_TRMParameters();
+
+        int numPowerNodes = (int)(_numSensors * params.get_powerNodesPercentage());
+        if ((params.get_powerNodesPercentage() > 0) && (numPowerNodes == 0))
             numPowerNodes = 1;
-        
+
         Collection<Vector<Sensor>> pathsToServers = this.findSensors(new IsServerSearchCondition(requiredService));
         Vector<PowerTrust_Sensor> reachableServers = new Vector<PowerTrust_Sensor>();
         if (pathsToServers != null) {
@@ -211,7 +249,8 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
      * Sets the number of sensors composing the network this sensor belongs to
      * @param numSensors The number of sensors composing the network this sensor belongs to
      */
-    public static void setNumSensors(int numSensors){ _numSensors = numSensors; }
+    // OPRAVA: Už nie je static
+    public void setNumSensorsStatic(int numSensors){ _numSensors = numSensors; }
 
     /**
      * Sets this senor as a power node or not
@@ -229,7 +268,8 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
      * Returns the number of sensors composing the network this sensor belongs to
      * @return The number of sensors composing the network this sensor belongs to
      */
-    public static int getNumSensors() { return _numSensors; }
+    // OPRAVA: Už nie je static
+    public int getNumSensors() { return _numSensors; }
 
     /**
      * Returns the current global reputation score v_i^t

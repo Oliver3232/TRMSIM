@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -10,34 +10,26 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- *
- *
- * Additional Terms of this License
+ * * * Additional Terms of this License
  * --------------------------------
- *
- * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
- *
- * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
- *
- * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
- *
- * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
- *
- * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
- *
- * You should have received a copy of the GNU Lesser General Public License
+ * * 1. It is Required the preservation of specified reasonable legal notices
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
+ * * 2. It is limited the use for publicity purposes of names of licensors or
+ * authors of the material.
+ * * 3. It is Required indemnification of licensors and authors of that material
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
+ * * 4. It is Prohibited misrepresentation of the origin of that material, and it is
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
+ * * 5. It is Declined to grant rights under trademark law for use of some trade
+ * names, trademarks, or service marks.
+ * * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.btrm_wsn;
 
@@ -51,6 +43,10 @@ import java.util.Collection;
  * @since 0.2
  */
 public class BTRM_Network extends Network {
+
+    // NEW: Local parameters
+    private BTRM_WSN_Parameters parameters;
+
     /**
      * This constructor creates a new random BTRM Network using the given parameters
      * @param numSensors Number of sensors composing the network
@@ -59,6 +55,7 @@ public class BTRM_Network extends Network {
      * @param probServices A collection of probabilities of offering a certain service, one per service
      * @param probGoodness A collection of goodnesses about offering a certain service, one per service
      * @param services All the services offered by the generated Network
+     * @param parameters BTRM specific parameters
      */
     public BTRM_Network(
             int numSensors,
@@ -66,8 +63,11 @@ public class BTRM_Network extends Network {
             double rangeFactor,
             Collection<Double> probServices,
             Collection<Double> probGoodness,
-            Collection<Service> services) {
+            Collection<Service> services,
+            BTRM_WSN_Parameters parameters) { // Added parameters
         super(numSensors, probClients, rangeFactor, probServices, probGoodness, services);
+        this.parameters = parameters;
+        initializeSensors();
         reset();
     }
 
@@ -75,19 +75,37 @@ public class BTRM_Network extends Network {
      * This method loads a network from a XML file and creates the specific
      * corresponding BTRM Network
      * @param xmlFilePath Path of the XML to load the network from
+     * @param parameters BTRM specific parameters
      * @throws java.lang.Exception If the XML file given does not have the appropriate structure, or if
      * a sensor links to an undefined sensor, or if a sensor links to itself
      */
-    public BTRM_Network(String xmlFilePath) throws Exception {
+    public BTRM_Network(String xmlFilePath, BTRM_WSN_Parameters parameters) throws Exception {
         super(xmlFilePath);
+        this.parameters = parameters;
+        initializeSensors();
         reset();
+    }
+
+    // Helper to push settings to sensors (replacing static calls)
+    private void initializeSensors() {
+        int serverCount = servers.size();
+        for (Sensor s : sensors) {
+            if (s instanceof BTRM_Sensor) {
+                BTRM_Sensor bs = (BTRM_Sensor) s;
+                bs.setParameters(parameters);
+                bs.setNumServers(serverCount);
+                bs.resetLinks(); // Also reset links to use correct initial pheromone
+            }
+        }
     }
 
     @Override
     public void reset() {
-        BTRM_Sensor.setNumServers(servers.size());
-        BTRM_Link.set_initialPheromone(
-                ((BTRM_WSN_Parameters)BTRM_Sensor.get_TRModel_WSN().get_TRMParameters()).get_initialPheromone());
+        // REMOVED static calls: BTRM_Sensor.setNumServers(servers.size())
+        // and BTRM_Link.set_initialPheromone(...)
+
+        initializeSensors();
+
         super.reset();
     }
 

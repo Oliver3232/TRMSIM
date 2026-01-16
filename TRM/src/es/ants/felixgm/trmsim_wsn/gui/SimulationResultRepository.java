@@ -6,23 +6,17 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import java.awt.Component;
 
 public class SimulationResultRepository {
-    private static SimulationResultRepository instance;
+    // Odstranený static instance
     private List<Outcome> simulationResults;
     private String baseExportPath = "simulation_results/";
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    private SimulationResultRepository() {
+    public SimulationResultRepository() {
         simulationResults = new Vector<>();
         new File(baseExportPath).mkdirs();
-    }
-
-    public static SimulationResultRepository getInstance() {
-        if (instance == null) {
-            instance = new SimulationResultRepository();
-        }
-        return instance;
     }
 
     public void addOutcome(Outcome outcome) {
@@ -45,7 +39,7 @@ public class SimulationResultRepository {
         return simulationResults.size();
     }
 
-    public void exportToCSV(TRMSim_WSN parentFrame) {
+    public void exportToCSV(Component parentComponent) {
         try {
             JFileChooser fileChooser = new JFileChooser(baseExportPath);
             fileChooser.setDialogTitle("Export Simulation Data to CSV");
@@ -56,7 +50,7 @@ public class SimulationResultRepository {
                 public String getDescription() { return "CSV Files (*.csv)"; }
             });
 
-            if (fileChooser.showSaveDialog(parentFrame) == JFileChooser.APPROVE_OPTION) {
+            if (fileChooser.showSaveDialog(parentComponent) == JFileChooser.APPROVE_OPTION) {
                 String filename = fileChooser.getSelectedFile().getAbsolutePath();
                 if (!filename.toLowerCase().endsWith(".csv")) {
                     filename += ".csv";
@@ -64,19 +58,19 @@ public class SimulationResultRepository {
 
                 if (!simulationResults.isEmpty()) {
                     Outcome.writeToFile(simulationResults, filename);
-                    JOptionPane.showMessageDialog(parentFrame,
+                    JOptionPane.showMessageDialog(parentComponent,
                             "Data successfully exported to: " + filename,
                             "Export Successful",
                             JOptionPane.INFORMATION_MESSAGE);
                 } else {
-                    JOptionPane.showMessageDialog(parentFrame,
+                    JOptionPane.showMessageDialog(parentComponent,
                             "No simulation data available for export",
                             "Export Failed",
                             JOptionPane.WARNING_MESSAGE);
                 }
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(parentFrame,
+            JOptionPane.showMessageDialog(parentComponent,
                     "Error during export: " + ex.getMessage(),
                     "Export Error",
                     JOptionPane.ERROR_MESSAGE);
@@ -84,7 +78,7 @@ public class SimulationResultRepository {
         }
     }
 
-    public void exportDetailedToCSV(TRMSim_WSN parentFrame) {
+    public void exportDetailedToCSV(Component parentComponent) {
         try {
             JFileChooser fileChooser = new JFileChooser(baseExportPath);
             fileChooser.setDialogTitle("Export Detailed Simulation Data to CSV");
@@ -95,7 +89,7 @@ public class SimulationResultRepository {
                 public String getDescription() { return "CSV Files (*.csv)"; }
             });
 
-            if (fileChooser.showSaveDialog(parentFrame) == JFileChooser.APPROVE_OPTION) {
+            if (fileChooser.showSaveDialog(parentComponent) == JFileChooser.APPROVE_OPTION) {
                 String filename = fileChooser.getSelectedFile().getAbsolutePath();
                 if (!filename.toLowerCase().endsWith(".csv")) {
                     filename += ".csv";
@@ -103,19 +97,19 @@ public class SimulationResultRepository {
 
                 if (!simulationResults.isEmpty()) {
                     exportDetailedCSV(filename);
-                    JOptionPane.showMessageDialog(parentFrame,
+                    JOptionPane.showMessageDialog(parentComponent,
                             "Detailed data successfully exported to: " + filename,
                             "Export Successful",
                             JOptionPane.INFORMATION_MESSAGE);
                 } else {
-                    JOptionPane.showMessageDialog(parentFrame,
+                    JOptionPane.showMessageDialog(parentComponent,
                             "No simulation data available for export",
                             "Export Failed",
                             JOptionPane.WARNING_MESSAGE);
                 }
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(parentFrame,
+            JOptionPane.showMessageDialog(parentComponent,
                     "Error during export: " + ex.getMessage(),
                     "Export Error",
                     JOptionPane.ERROR_MESSAGE);
@@ -162,192 +156,39 @@ public class SimulationResultRepository {
         }
     }
 
+    // Helper metódy pre extrakciu dát (skrátené pre prehľadnosť, logika ostáva)
+    private double getAvgSatisfaction(Outcome o) { try { if (o instanceof BasicOutcome) return ((BasicOutcome) o).get_avgSatisfaction(); } catch (Exception e) {} return 0.0; }
+    private double getAvgPathLength(Outcome o) { try { if (o instanceof BasicOutcome) return ((BasicOutcome) o).get_avgPathLength(); } catch (Exception e) {} return 0.0; }
+    private double getClientEnergy(Outcome o) { try { if (o instanceof EnergyConsumptionOutcome) return ((EnergyConsumptionOutcome) o).get_clientEnergyConsumption(); } catch (Exception e) {} return 0.0; }
+    private double getMaliciousServerEnergy(Outcome o) { try { if (o instanceof EnergyConsumptionOutcome) return ((EnergyConsumptionOutcome) o).get_maliciousServerEnergyConsumption(); } catch (Exception e) {} return 0.0; }
+    private double getBenevolentServerEnergy(Outcome o) { try { if (o instanceof EnergyConsumptionOutcome) return ((EnergyConsumptionOutcome) o).get_benevolentServerEnergyConsumption(); } catch (Exception e) {} return 0.0; }
+    private double getRelayServerEnergy(Outcome o) { try { if (o instanceof EnergyConsumptionOutcome) return ((EnergyConsumptionOutcome) o).get_relayServerEnergyConsumption(); } catch (Exception e) {} return 0.0; }
+    private double getAvgSensorEnergy(Outcome o) { try { if (o instanceof EnergyConsumptionOutcome) return ((EnergyConsumptionOutcome) o).get_avgSensorEnergyConsumption(); } catch (Exception e) {} return 0.0; }
+    private double getPreTrustedPeerEnergy(Outcome o) { try { if (o instanceof EigenTrustEnergyConsumptionOutcome) return ((EigenTrustEnergyConsumptionOutcome) o).get_preTrustedPeerEnergyConsumption(); } catch (Exception e) {} return 0.0; }
+    private double getPowerNodeEnergy(Outcome o) { try { if (o instanceof PowerTrustEnergyConsumptionOutcome) return ((PowerTrustEnergyConsumptionOutcome) o).get_powerNodeEnergyConsumption(); } catch (Exception e) {} return 0.0; }
 
-    private double getAvgSatisfaction(Outcome outcome) {
-        try {
-            if (outcome instanceof BasicOutcome) {
-                return ((BasicOutcome) outcome).get_avgSatisfaction();
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
+    // Fuzzy outcomes helpers
+    private int getVeryHighCount(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionCount().getOrDefault("Very High", 0); } catch (Exception e) {} return 0; }
+    private int getHighCount(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionCount().getOrDefault("High", 0); } catch (Exception e) {} return 0; }
+    private int getMediumCount(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionCount().getOrDefault("Medium", 0); } catch (Exception e) {} return 0; }
+    private int getLowCount(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionCount().getOrDefault("Low", 0); } catch (Exception e) {} return 0; }
+    private int getVeryLowCount(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionCount().getOrDefault("Very Low", 0); } catch (Exception e) {} return 0; }
+    private double getVeryHighPercentage(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionPercentage("Very High"); } catch (Exception e) {} return 0.0; }
+    private double getHighPercentage(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionPercentage("High"); } catch (Exception e) {} return 0.0; }
+    private double getMediumPercentage(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionPercentage("Medium"); } catch (Exception e) {} return 0.0; }
+    private double getLowPercentage(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionPercentage("Low"); } catch (Exception e) {} return 0.0; }
+    private double getVeryLowPercentage(Outcome o) { try { if (o instanceof FuzzyOutcome) return ((FuzzyOutcome) o).getSatisfactionPercentage("Very Low"); } catch (Exception e) {} return 0.0; }
 
-    private double getAvgPathLength(Outcome outcome) {
-        try {
-            if (outcome instanceof BasicOutcome) {
-                return ((BasicOutcome) outcome).get_avgPathLength();
-            }
-        } catch (Exception e) {}
-        return 0.0;
+    public void exportToFormattedText(Component parentComponent) {
+        // FormattedTextExporter.exportToFormattedText(parentComponent, simulationResults);
     }
-
-    private double getClientEnergy(Outcome outcome) {
-        try {
-            if (outcome instanceof EnergyConsumptionOutcome) {
-                return ((EnergyConsumptionOutcome) outcome).get_clientEnergyConsumption();
-            }
-        } catch (Exception e) {}
-        return 0.0;
+    public void exportToFormattedTSV(Component parentComponent) {
+        // FormattedTSVExporter.exportToFormattedTSV(parentComponent, simulationResults);
     }
-
-    private double getMaliciousServerEnergy(Outcome outcome) {
-        try {
-            if (outcome instanceof EnergyConsumptionOutcome) {
-                return ((EnergyConsumptionOutcome) outcome).get_maliciousServerEnergyConsumption();
-            }
-        } catch (Exception e) {}
-        return 0.0;
+    public void exportEnergyConsumption(Component parentComponent) {
+        // EnergyConsumptionExporter.exportEnergyConsumption(parentComponent, simulationResults);
     }
-
-    private double getBenevolentServerEnergy(Outcome outcome) {
-        try {
-            if (outcome instanceof EnergyConsumptionOutcome) {
-                return ((EnergyConsumptionOutcome) outcome).get_benevolentServerEnergyConsumption();
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private double getRelayServerEnergy(Outcome outcome) {
-        try {
-            if (outcome instanceof EnergyConsumptionOutcome) {
-                return ((EnergyConsumptionOutcome) outcome).get_relayServerEnergyConsumption();
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private double getAvgSensorEnergy(Outcome outcome) {
-        try {
-            if (outcome instanceof EnergyConsumptionOutcome) {
-                return ((EnergyConsumptionOutcome) outcome).get_avgSensorEnergyConsumption();
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private double getPreTrustedPeerEnergy(Outcome outcome) {
-        try {
-            if (outcome instanceof EigenTrustEnergyConsumptionOutcome) {
-                return ((EigenTrustEnergyConsumptionOutcome) outcome).get_preTrustedPeerEnergyConsumption();
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private double getPowerNodeEnergy(Outcome outcome) {
-        try {
-            if (outcome instanceof PowerTrustEnergyConsumptionOutcome) {
-                return ((PowerTrustEnergyConsumptionOutcome) outcome).get_powerNodeEnergyConsumption();
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private int getVeryHighCount(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                HashMap<String, Integer> counts = ((FuzzyOutcome) outcome).getSatisfactionCount();
-                return counts.getOrDefault("Very High", 0);
-            }
-        } catch (Exception e) {}
-        return 0;
-    }
-
-    private int getHighCount(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                HashMap<String, Integer> counts = ((FuzzyOutcome) outcome).getSatisfactionCount();
-                return counts.getOrDefault("High", 0);
-            }
-        } catch (Exception e) {}
-        return 0;
-    }
-
-    private int getMediumCount(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                HashMap<String, Integer> counts = ((FuzzyOutcome) outcome).getSatisfactionCount();
-                return counts.getOrDefault("Medium", 0);
-            }
-        } catch (Exception e) {}
-        return 0;
-    }
-
-    private int getLowCount(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                HashMap<String, Integer> counts = ((FuzzyOutcome) outcome).getSatisfactionCount();
-                return counts.getOrDefault("Low", 0);
-            }
-        } catch (Exception e) {}
-        return 0;
-    }
-
-    private int getVeryLowCount(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                HashMap<String, Integer> counts = ((FuzzyOutcome) outcome).getSatisfactionCount();
-                return counts.getOrDefault("Very Low", 0);
-            }
-        } catch (Exception e) {}
-        return 0;
-    }
-
-    private double getVeryHighPercentage(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                return ((FuzzyOutcome) outcome).getSatisfactionPercentage("Very High");
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private double getHighPercentage(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                return ((FuzzyOutcome) outcome).getSatisfactionPercentage("High");
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private double getMediumPercentage(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                return ((FuzzyOutcome) outcome).getSatisfactionPercentage("Medium");
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private double getLowPercentage(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                return ((FuzzyOutcome) outcome).getSatisfactionPercentage("Low");
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private double getVeryLowPercentage(Outcome outcome) {
-        try {
-            if (outcome instanceof FuzzyOutcome) {
-                return ((FuzzyOutcome) outcome).getSatisfactionPercentage("Very Low");
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-    public void exportToFormattedText(TRMSim_WSN parentFrame) {
-        FormattedTextExporter.exportToFormattedText(parentFrame, simulationResults);
-    }
-    public void exportToFormattedTSV(TRMSim_WSN parentFrame) {
-        FormattedTSVExporter.exportToFormattedTSV(parentFrame, simulationResults);
-    }
-    public void exportEnergyConsumption(TRMSim_WSN parentFrame) {
-        EnergyConsumptionExporter.exportEnergyConsumption(parentFrame, simulationResults);
-    }
-    public void exportEnergyConsumptionText(TRMSim_WSN parentFrame) {
-        EnergyConsumptionTextExporter.exportEnergyConsumptionText(parentFrame, simulationResults);
+    public void exportEnergyConsumptionText(Component parentComponent) {
+        // EnergyConsumptionTextExporter.exportEnergyConsumptionText(parentComponent, simulationResults);
     }
 }

@@ -1,43 +1,35 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless 
- * Sensor Networks" is free software: you can redistribute it and/or 
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of 
- * the License, or (at your option) any later version always keeping 
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version always keeping
  * the additional terms specified in this license.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
- * 
- * Additional Terms of this License
+ * * * Additional Terms of this License
  * --------------------------------
- * 
- * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
- * 
- * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
- * 
- * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
- * 
- * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
- * 
- * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
- * 
- * You should have received a copy of the GNU Lesser General Public License
+ * * 1. It is Required the preservation of specified reasonable legal notices
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
+ * * 2. It is limited the use for publicity purposes of names of licensors or
+ * authors of the material.
+ * * 3. It is Required indemnification of licensors and authors of that material
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
+ * * 4. It is Prohibited misrepresentation of the origin of that material, and it is
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
+ * * 5. It is Declined to grant rights under trademark law for use of some trade
+ * names, trademarks, or service marks.
+ * * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.btrm_wsn;
 
@@ -57,45 +49,44 @@ import es.ants.felixgm.trmsim_wsn.network.Service;
 import es.ants.felixgm.trmsim_wsn.trm.TRModel_WSN;
 
 /**
- * <p>This class models BTRM_WSN (Bio-inspired Trust and Reputation Model for Wireless Sensor Networks) 
- * algorithm used by a client in a P2P, Ad-hoc or Wireless Sensor Network, 
+ * <p>This class models BTRM_WSN (Bio-inspired Trust and Reputation Model for Wireless Sensor Networks)
+ * algorithm used by a client in a P2P, Ad-hoc or Wireless Sensor Network,
  * in order to find the most trustworthy server offering a desired service.</p>
- * <p><a name="BTRM_WSNparameters"></a>It needs some parameters to be passed as a 
+ * <p><a name="BTRM_WSNparameters"></a>It needs some parameters to be passed as a
  * {@link BTRM_WSN_Parameters} object. To do this, a file can be given following the next structure:</p>
  * <pre>
- *    ####################################
- *    # BTRM-WSN parameters file
- *    # Thu Jun 19 14:07:13 CEST 2008
- *    ####################################
- *    pathLengthFactor=0.71
- *    alpha=1.0
- *    phi=0.01
- *    initialPheromone=0.85
- *    q0=0.45
- *    numIterations=0.59
- *    punishmentThreshold=0.48
- *    rho=0.87
- *    beta=1.0
- *    numAnts=0.35
- *    transitionThreshold=0.66
+ * ####################################
+ * # BTRM-WSN parameters file
+ * # Thu Jun 19 14:07:13 CEST 2008
+ * ####################################
+ * pathLengthFactor=0.71
+ * alpha=1.0
+ * phi=0.01
+ * initialPheromone=0.85
+ * q0=0.45
+ * numIterations=0.59
+ * punishmentThreshold=0.48
+ * rho=0.87
+ * beta=1.0
+ * numAnts=0.35
+ * transitionThreshold=0.66
  * </pre>
- * This file can be downloaded 
+ * This file can be downloaded
  * <a href="http://ants.dif.um.es/~felixgm/research/trmsim-wsn/resources/BTRM-WSNparameters.txt" target=_blank">here</a>.
  * But if any of the parameters can not be successfully extracted from the file, they are set
  * to a default value.
  * <br></br>
  * For more information regarding BTRM-WSN algorithm, please check the following reference:
  * <ul>
- *   <li>F&eacute;lix G&oacute;mez M&aacute;rmol, Gregorio Mart&iacute;nez
- *       P&eacute;rez, &quot;<strong>Providing Trust in Wireless Sensor Networks
- *       using a Bio-inspired Technic</strong>&quot;, <a href="http://www.springer.com/business/business+information+systems/journal/11235" target="_blank">
- *       Telecommunication Systems Journal</a>,
- *       vol. 46, no. 2, pp. 163-180, 2011
- *       <a href="http://dx.doi.org/10.1007/s11235-010-9281-7" target="_blank"><img src="http://ants.dif.um.es/~felixgm/img/adobe.gif" border="0"></a>
- *   </li>
+ * <li>F&eacute;lix G&oacute;mez M&aacute;rmol, Gregorio Mart&iacute;nez
+ * P&eacute;rez, &quot;<strong>Providing Trust in Wireless Sensor Networks
+ * using a Bio-inspired Technic</strong>&quot;, <a href="http://www.springer.com/business/business+information+systems/journal/11235" target="_blank">
+ * Telecommunication Systems Journal</a>,
+ * vol. 46, no. 2, pp. 163-180, 2011
+ * <a href="http://dx.doi.org/10.1007/s11235-010-9281-7" target="_blank"><img src="http://ants.dif.um.es/~felixgm/img/adobe.gif" border="0"></a>
+ * </li>
  * </ul>
- * 
- * @author <a href="http://ants.dif.um.es/~felixgm/en" target="_blank">F&eacute;lix G&oacute;mez M&aacute;rmol</a>, <a href="http://webs.um.es/gregorio" target="_blank">Gregorio Mart&iacute;nez P&eacute;rez</a>
+ * * @author <a href="http://ants.dif.um.es/~felixgm/en" target="_blank">F&eacute;lix G&oacute;mez M&aacute;rmol</a>, <a href="http://webs.um.es/gregorio" target="_blank">Gregorio Mart&iacute;nez P&eacute;rez</a>
  * @version 0.4
  * @since 0.2
  */
@@ -106,7 +97,7 @@ public class BTRM_WSN extends TRModel_WSN
      * @param btrm_parameters Parameters needed for the algorithm, as described <a href="#BTRM_WSNparameters">before</a>
      */
     public BTRM_WSN(BTRM_WSN_Parameters btrm_parameters) {
-    	super(btrm_parameters);
+        super(btrm_parameters);
     }
 
     /**
@@ -131,7 +122,7 @@ public class BTRM_WSN extends TRModel_WSN
         double numIterations = ((BTRM_WSN_Parameters)trmParameters).get_numIterations();
         double pathLengthFactor = ((BTRM_WSN_Parameters)trmParameters).get_pathLengthFactor();
         double transitionThreshold = ((BTRM_WSN_Parameters)trmParameters).get_transitionThreshold();
-        
+
         int N_Ants = (int)Math.max(1.0,Math.pow(client.get_numServers(),numAnts));
         BTRM_Ant ants[] = new BTRM_Ant[N_Ants];
         for (int i = 0; i < ants.length; i++)
@@ -140,13 +131,13 @@ public class BTRM_WSN extends TRModel_WSN
         double globalMax = Double.NEGATIVE_INFINITY;
         Vector<Sensor> solution = new Vector<Sensor>();
         boolean checkedSolution[] = new boolean[ants.length];
-        
+
         for (int numIter = 0; numIter < N_Iterations; numIter++) {
             for (int i = 0; i < ants.length; i++) {
                 ants[i].reset();
                 checkedSolution[i] = false;
             }
-            
+
             /* All the ants build their paths */
             int foundSolutions = 0;
             while (foundSolutions < ants.length) {
@@ -164,15 +155,15 @@ public class BTRM_WSN extends TRModel_WSN
                         } else {
                             ants[k].pheromoneLocalUpdating(phi, nextSensor);
                             ants[k].addSensor(nextSensor);
-	                    //It is a server offering the required service
-	                    if (nextSensor.offersService(service)) {
+                            //It is a server offering the required service
+                            if (nextSensor.offersService(service)) {
                                 double averagePheromone = ants[k].getLastNodePheromone();
                                 if (((averagePheromone > transitionThreshold) &&
                                         (Math.random() < averagePheromone))) {
                                     ants[k].setSolutionFound();
                                     foundSolutions++;
                                 }
-                            }   
+                            }
                         }
                     }
             }
@@ -184,21 +175,21 @@ public class BTRM_WSN extends TRModel_WSN
                 if (!checkedSolution[k]) {
                     double antsPercentage = 1;
                     for (int l = k+1; l < ants.length; l++)
-                    	if (ants[k].get_solution().equals(ants[l].get_solution())) {
+                        if (ants[k].get_solution().equals(ants[l].get_solution())) {
                             antsPercentage++;
                             checkedSolution[l] = true;
-                    	}
+                        }
                     antsPercentage = antsPercentage/ants.length;
                     checkedSolution[k] = true;
-                    double solutionQuality = 
+                    double solutionQuality =
                             (antsPercentage*ants[k].get_averagePheromone())
-                            /(Math.pow(ants[k].get_solution().size()-1,pathLengthFactor));
+                                    /(Math.pow(ants[k].get_solution().size()-1,pathLengthFactor));
                     if (solutionQuality > currentMax) {
                         currentMax = solutionQuality;
                         bestAnt = k;
                     }
                 }
-            
+
             if (currentMax > globalMax) {
                 globalMax = currentMax;
                 solution = (Vector<Sensor>)ants[bestAnt].get_solution().clone();
@@ -294,11 +285,13 @@ public class BTRM_WSN extends TRModel_WSN
             Collection<Double> probServices,
             Collection<Double> probGoodness,
             Collection<Service> services) {
-        return new BTRM_Network(numSensors,probClients,rangeFactor,probServices,probGoodness,services);
+        // FIX: Passing parameters to Network constructor
+        return new BTRM_Network(numSensors,probClients,rangeFactor,probServices,probGoodness,services, (BTRM_WSN_Parameters) get_TRMParameters());
     }
 
     @Override
     public Network loadCurrentNetwork(String fileName) throws Exception {
-        return new BTRM_Network(fileName);
+        // FIX: Passing parameters to Network constructor
+        return new BTRM_Network(fileName, (BTRM_WSN_Parameters) get_TRMParameters());
     }
 }

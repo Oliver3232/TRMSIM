@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -16,28 +16,28 @@
  * --------------------------------
  *
  * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
  *
  * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
+ * authors of the material.
  *
  * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
  *
  * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
  *
  * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
+ * names, trademarks, or service marks.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.lftm;
 
@@ -55,8 +55,11 @@ public class LFTM_Link extends Link {
     static public final double MAX_PHEROMONE = 1-Math.pow(10, -6);
     /** Minimum value for a pheromone trace: 0.000001 */
     static public final double MIN_PHEROMONE = Math.pow(10, -6);
+
     /** Initial value of pheromone */
-    static private double _initialPheromone = 0.5;
+    // CHANGED: Instance variable
+    private double initialPheromoneValue = 0.5;
+
     /** Pheromone trace of this link */
     protected double pheromone;
     /** Heuristic value of this link */
@@ -66,12 +69,22 @@ public class LFTM_Link extends Link {
      * Class LFTM_Link constructor
      * @param source Source sensor of the link
      * @param destination Destination sensor of the link
+     * @param initialPheromone The initial pheromone value passed from the Sensor [NEW]
      */
-    public LFTM_Link(LFTM_Sensor source, LFTM_Sensor destination) {
+    public LFTM_Link(LFTM_Sensor source, LFTM_Sensor destination, double initialPheromone) {
         super(source, destination);
-
+        this.initialPheromoneValue = initialPheromone;
         pheromone = pheromoneInitialization();
         heuristic = 1.0/source.distance(destination);
+    }
+
+    /**
+     * Class LFTM_Link constructor
+     * @param source Source sensor of the link
+     * @param destination Destination sensor of the link
+     */
+    public LFTM_Link(LFTM_Sensor source, LFTM_Sensor destination) {
+        this(source, destination, 0.5);
     }
 
     /**
@@ -81,7 +94,7 @@ public class LFTM_Link extends Link {
     private double pheromoneInitialization() {
         return Math.min(MAX_PHEROMONE,
                 Math.max(MIN_PHEROMONE,
-                _initialPheromone+(2*Math.random()-1.0)*_initialPheromone*(1.0-_initialPheromone)));
+                        initialPheromoneValue+(2*Math.random()-1.0)*initialPheromoneValue*(1.0-initialPheromoneValue)));
     }
 
     /**
@@ -89,6 +102,12 @@ public class LFTM_Link extends Link {
      */
     public void reset() {
         pheromone = pheromoneInitialization();
+    }
+
+    // NEW: Method to allow resetting with a specific value (used by Sensor.resetLinks)
+    public void setInitialPheromoneAndReset(double value) {
+        this.initialPheromoneValue = value;
+        reset();
     }
 
     @Override
@@ -133,5 +152,6 @@ public class LFTM_Link extends Link {
      * Sets the initial value of pheromone of this link
      * @param initialPheromone The new initial value of pheromone of this link
      */
-    public static void set_initialPheromone(double initialPheromone) { _initialPheromone = initialPheromone; }
+    // CHANGED: Removed static set_initialPheromone
+    // public static void set_initialPheromone(double initialPheromone) { _initialPheromone = initialPheromone; }
 }

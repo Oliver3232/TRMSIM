@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -16,28 +16,28 @@
  * --------------------------------
  *
  * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
  *
  * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
+ * authors of the material.
  *
  * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
  *
  * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
  *
  * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
+ * names, trademarks, or service marks.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.eigentrust;
 
@@ -58,6 +58,10 @@ import java.util.Vector;
  * @since 0.2
  */
 public class EigenTrust_Network extends Network {
+
+    // NEW: Local parameters
+    private EigenTrust_Parameters parameters;
+
     /**
      * This constructor creates a new random EigenTrust Network using the given parameters
      * @param numSensors Number of sensors composing the network
@@ -66,6 +70,7 @@ public class EigenTrust_Network extends Network {
      * @param probServices A collection of probabilities of offering a certain service, one per service
      * @param probGoodness A collection of goodnesses about offering a certain service, one per service
      * @param services All the services offered by the generated Network
+     * @param parameters EigenTrust specific parameters
      */
     public EigenTrust_Network (
             int numSensors,
@@ -73,8 +78,10 @@ public class EigenTrust_Network extends Network {
             double rangeFactor,
             Collection<Double> probServices,
             Collection<Double> probGoodness,
-            Collection<Service> services) {
+            Collection<Service> services,
+            EigenTrust_Parameters parameters) { // Added params
         super(numSensors, probClients, rangeFactor, probServices, probGoodness, services);
+        this.parameters = parameters;
 
         for (Sensor sensor : sensors) {
             servers.add(sensor);
@@ -92,7 +99,11 @@ public class EigenTrust_Network extends Network {
                 }
         }
 
-        double preTrustedPeersPercentage = ((EigenTrust_Parameters)EigenTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_preTrustedPeersPercentage();
+        // Push settings to sensors before calculating pre-trusted peers
+        initializeSensors();
+
+        // FIX: Use local parameters instance
+        double preTrustedPeersPercentage = parameters.get_preTrustedPeersPercentage();
         if (preTrustedPeersPercentage > 0.0) {
             double preTrustedPeersVector[] = new double[get_numSensors()];
             int numPreTrustedPeers = 0;
@@ -116,7 +127,13 @@ public class EigenTrust_Network extends Network {
             for (Sensor sensor : sensors)
                 if (((EigenTrust_Sensor) sensor).isPreTrustedPeer())
                     preTrustedPeersVector[sensor.id() - 1] = 1.0 / numPreTrustedPeers;
-            EigenTrust_Sensor.set_preTrustedPeersVector(preTrustedPeersVector);
+
+            // FIX: Set vector to all sensors (instance method instead of static)
+            for (Sensor sensor : sensors) {
+                if (sensor instanceof EigenTrust_Sensor) {
+                    ((EigenTrust_Sensor) sensor).setPreTrustedPeersVector(preTrustedPeersVector);
+                }
+            }
         }
         reset();
     }
@@ -128,8 +145,12 @@ public class EigenTrust_Network extends Network {
      * @throws java.lang.Exception If the XML file given does not have the appropriate structure, or if
      * a sensor links to an undefined sensor, or if a sensor links to itself
      */
-    public EigenTrust_Network(String xmlFilePath) throws Exception {
+    public EigenTrust_Network(String xmlFilePath, EigenTrust_Parameters parameters) throws Exception {
         super(xmlFilePath);
+        this.parameters = parameters;
+
+        initializeSensors(); // Push settings
+
         for (Sensor client : clients) {
             client.addService(new Service("Relay"), 1.0);
             servers.add(client);
@@ -138,14 +159,15 @@ public class EigenTrust_Network extends Network {
             if (!clients.contains(server))
                 clients.add(server);
 
-        double preTrustedPeersPercentage = ((EigenTrust_Parameters)EigenTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_preTrustedPeersPercentage();
+        // FIX: Use local parameters instance
+        double preTrustedPeersPercentage = parameters.get_preTrustedPeersPercentage();
         if (preTrustedPeersPercentage > 0.0)
             try {
                 double preTrustedPeersVector[] = new double[get_numSensors()];
                 int numPreTrustedPeers = 0;
                 for (Sensor sensor : sensors)
                     if((sensor.get_goodness(new Service("My Service")) > 0.5) &&
-                        (Math.random() < preTrustedPeersPercentage)) {
+                            (Math.random() < preTrustedPeersPercentage)) {
                         ((EigenTrust_Sensor)sensor).setPreTrustedPeer(true);
                         numPreTrustedPeers++;
                     }
@@ -159,16 +181,35 @@ public class EigenTrust_Network extends Network {
                 for (Sensor sensor : sensors)
                     if (((EigenTrust_Sensor)sensor).isPreTrustedPeer())
                         preTrustedPeersVector[sensor.id()-1] = 1.0/numPreTrustedPeers;
-                EigenTrust_Sensor.set_preTrustedPeersVector(preTrustedPeersVector);
+
+                // FIX: Set vector to all sensors
+                for (Sensor sensor : sensors) {
+                    if (sensor instanceof EigenTrust_Sensor) {
+                        ((EigenTrust_Sensor) sensor).setPreTrustedPeersVector(preTrustedPeersVector);
+                    }
+                }
             } catch(Exception ex) {}
         reset();
     }
 
+    // Helper to push settings to sensors
+    private void initializeSensors() {
+        int sensorCount = sensors.size();
+        int winSize = parameters.get_windowSize();
+        for (Sensor s : sensors) {
+            if (s instanceof EigenTrust_Sensor) {
+                EigenTrust_Sensor es = (EigenTrust_Sensor) s;
+                es.setParameters(parameters);
+                es.setNumSensors(sensorCount);
+                es.setWindowSize(winSize);
+            }
+        }
+    }
+
     @Override
     public void reset() {
-        EigenTrust_Sensor.setNumSensors(sensors.size());
-        EigenTrust_Sensor.set_windowSize(
-                ((EigenTrust_Parameters)EigenTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_windowSize());
+        // REMOVED static calls: EigenTrust_Sensor.setNumSensors(...) and .set_windowSize(...)
+        initializeSensors();
         super.reset();
     }
 
@@ -184,13 +225,13 @@ public class EigenTrust_Network extends Network {
 
             for (Sensor server : servers) {
                 out.write("\t<server id=\""+server.id()
-                +"\" x=\""+(((int)(server.getX()*100))/100.0)
-                +"\" y=\""+(((int)(server.getY()*100))/100.0)
-                +"\">\n");
+                        +"\" x=\""+(((int)(server.getX()*100))/100.0)
+                        +"\" y=\""+(((int)(server.getY()*100))/100.0)
+                        +"\">\n");
                 for (Service service : server.get_services())
                     out.write("\t\t<service id=\""+service.id()+"\" "
-                        +"goodness=\""+server.get_goodness(service)+"\""
-                        +"/>\n");
+                            +"goodness=\""+server.get_goodness(service)+"\""
+                            +"/>\n");
                 for (Sensor neighbor : server.getNeighbors())
                     if (neighbor.get_numServices() == 0)
                         out.write("\t\t<client id=\""+neighbor.id()+"\"/>\n");
@@ -253,7 +294,7 @@ public class EigenTrust_Network extends Network {
             int numBenevolentServers = 0;
             for (Sensor server : servers)
                 if ((server.offersService(service)) && (server.get_goodness(service) >= 0.5) &&
-                    !(((EigenTrust_Sensor)server).isPreTrustedPeer())) {
+                        !(((EigenTrust_Sensor)server).isPreTrustedPeer())) {
                     numBenevolentServers++;
                     server.set_goodness(service,0.0);
                 }

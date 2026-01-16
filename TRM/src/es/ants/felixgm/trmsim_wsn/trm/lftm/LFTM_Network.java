@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -16,28 +16,28 @@
  * --------------------------------
  *
  * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
  *
  * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
+ * authors of the material.
  *
  * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
  *
  * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
  *
  * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
+ * names, trademarks, or service marks.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.lftm;
 
@@ -53,6 +53,10 @@ import java.util.Collection;
  * @since 0.4
  */
 public class LFTM_Network extends Network {
+
+    // NEW: Local parameters
+    private LFTM_Parameters parameters;
+
     /**
      * This constructor creates a new random LFTM Network using the given parameters
      * @param numSensors Number of sensors composing the network
@@ -61,6 +65,7 @@ public class LFTM_Network extends Network {
      * @param probServices A collection of probabilities of offering a certain service, one per service
      * @param probGoodness A collection of goodnesses about offering a certain service, one per service
      * @param services All the services offered by the generated Network
+     * @param parameters LFTM specific parameters
      */
     public LFTM_Network(
             int numSensors,
@@ -68,8 +73,11 @@ public class LFTM_Network extends Network {
             double rangeFactor,
             Collection<Double> probServices,
             Collection<Double> probGoodness,
-            Collection<Service> services) {
+            Collection<Service> services,
+            LFTM_Parameters parameters) { // Added parameters
         super(numSensors, probClients, rangeFactor, probServices, probGoodness, services);
+        this.parameters = parameters;
+        initializeSensors();
         reset();
     }
 
@@ -77,20 +85,39 @@ public class LFTM_Network extends Network {
      * This method loads a network from a XML file and creates the specific
      * corresponding LFTM Network
      * @param xmlFilePath Path of the XML to load the network from
+     * @param parameters LFTM specific parameters
      * @throws Exception If the XML file given does not have the appropriate structure, or if
      * a sensor links to an undefined sensor, or if a sensor links to itself
      */
-    public LFTM_Network(String xmlFilePath) throws Exception {
+    public LFTM_Network(String xmlFilePath, LFTM_Parameters parameters) throws Exception {
         super(xmlFilePath);
+        this.parameters = parameters;
+        initializeSensors();
         reset();
     }
 
+    // Helper to push settings to sensors (replacing static calls)
+    private void initializeSensors() {
+        int serverCount = servers.size();
+        for (Sensor s : sensors) {
+            if (s instanceof LFTM_Sensor) {
+                LFTM_Sensor ls = (LFTM_Sensor) s;
+                ls.setParameters(parameters);
+                ls.setNumServers(serverCount);
+                // Also reset links to use correct initial pheromone
+                ls.resetLinks();
+            }
+        }
+    }
 
     @Override
     public void reset() {
-        LFTM_Sensor.setNumServers(servers.size());
-        LFTM_Link.set_initialPheromone(
-                ((LFTM_Parameters)LFTM_Sensor.get_TRModel_WSN().get_TRMParameters()).get_initialPheromone());
+        // REMOVED static calls: LFTM_Sensor.setNumServers(servers.size());
+        // REMOVED static calls: LFTM_Link.set_initialPheromone(...);
+
+        // Ensure sensors are up to date
+        initializeSensors();
+
         super.reset();
     }
 

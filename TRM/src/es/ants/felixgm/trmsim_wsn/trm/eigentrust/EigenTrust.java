@@ -1,43 +1,35 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless 
- * Sensor Networks" is free software: you can redistribute it and/or 
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of 
- * the License, or (at your option) any later version always keeping 
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version always keeping
  * the additional terms specified in this license.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
- * 
- * Additional Terms of this License
+ * * * Additional Terms of this License
  * --------------------------------
- * 
- * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
- * 
- * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
- * 
- * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
- * 
- * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
- * 
- * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
- * 
- * You should have received a copy of the GNU Lesser General Public License
+ * * 1. It is Required the preservation of specified reasonable legal notices
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
+ * * 2. It is limited the use for publicity purposes of names of licensors or
+ * authors of the material.
+ * * 3. It is Required indemnification of licensors and authors of that material
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
+ * * 4. It is Prohibited misrepresentation of the origin of that material, and it is
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
+ * * 5. It is Declined to grant rights under trademark law for use of some trade
+ * names, trademarks, or service marks.
+ * * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.eigentrust;
 
@@ -60,32 +52,32 @@ import java.util.Vector;
 
 /**
  * <p>This class models EigenTrust
- * algorithm used by a client in a P2P, Ad-hoc or Wireless Sensor Network, 
+ * algorithm used by a client in a P2P, Ad-hoc or Wireless Sensor Network,
  * in order to find the most trustworthy server offering a desired service.</p>
  * <p><a name="EigenTrustparameters"></a>It needs some parameters to be passed as a
  * {@link EigenTrust_Parameters} object. To do this, a file can be given following the next structure:</p>
  * <pre>
- *    ####################################
- *    # EigenTrust parameters file
- *    ####################################
- *    windowSize=5
- *    epsilon=0.1
- *    preTrustedPeersPercentage=0.3
- *    preTrustedPeersWeight=0.25
- *    zeroTrustNodeSelectionProbability=0.2
+ * ####################################
+ * # EigenTrust parameters file
+ * ####################################
+ * windowSize=5
+ * epsilon=0.1
+ * preTrustedPeersPercentage=0.3
+ * preTrustedPeersWeight=0.25
+ * zeroTrustNodeSelectionProbability=0.2
  * </pre>
- * This file can be downloaded 
+ * This file can be downloaded
  * <a href="http://ants.dif.um.es/~felixgm/research/trmsim-wsn/resources/EigenTrustparameters.txt" target=_blank">here</a>.
  * But if any of the parameters can not be successfully extracted from the file, they are set
  * to a default value.
  * <br></br>
  * For more information regarding EigenTrust algorithm, please check the following reference:
  * <ul>
- *   <li>Kamvar, S., Schlosser, M. and Garcia-Molina, H., &quot;<strong>The EigenTrust
- *       Algorithm for Reputation Management in P2P Networks</strong>&quot;, WWW03:
- *       Proceedings of the 12th international conference on World Wide Web,
- *       pp. 640-651, 2003
- *   </li>
+ * <li>Kamvar, S., Schlosser, M. and Garcia-Molina, H., &quot;<strong>The EigenTrust
+ * Algorithm for Reputation Management in P2P Networks</strong>&quot;, WWW03:
+ * Proceedings of the 12th international conference on World Wide Web,
+ * pp. 640-651, 2003
+ * </li>
  * </ul>
  * @author <a href="http://ants.dif.um.es/~felixgm/en" target="_blank">F&eacute;lix G&oacute;mez M&aacute;rmol</a>, <a href="http://webs.um.es/gregorio" target="_blank">Gregorio Mart&iacute;nez P&eacute;rez</a> and Antonio Bern&aacute;rdez
  * @version 0.4
@@ -102,7 +94,7 @@ public class EigenTrust extends TRModel_WSN {
      * @param eigenTrust_parameters Parameters needed for the algorithm, as described <a href="#EigenTrustparameters">before</a>
      */
     public EigenTrust(EigenTrust_Parameters eigenTrust_parameters) {
-    	super(eigenTrust_parameters);
+        super(eigenTrust_parameters);
     }
 
     /**
@@ -113,7 +105,8 @@ public class EigenTrust extends TRModel_WSN {
 
     @Override
     public synchronized GatheredInformation gatherInformation(Sensor client, Service service) {
-        GatheredInformationEigenTrust gatheredInfo = new GatheredInformationEigenTrust(client.findSensors(new IsServerSearchCondition(service)),EigenTrust_Sensor.getNumSensors());
+        // FIX: Use instance method getNumSensors() from the client instance
+        GatheredInformationEigenTrust gatheredInfo = new GatheredInformationEigenTrust(client.findSensors(new IsServerSearchCondition(service)), ((EigenTrust_Sensor)client).getNumSensors());
         Collection<Vector<Sensor>> pathsToClients = client.findSensors(new IsServerSearchCondition());
 
         for (Vector<Sensor> pathToClient : pathsToClients) {
@@ -138,16 +131,18 @@ public class EigenTrust extends TRModel_WSN {
         double[][] normalizedLocalTrustValuesMatrix =
                 ((GatheredInformationEigenTrust)gi).get_normalizedLocalTrustValuesMatrix();
         do {
+            // FIX: Pass the sensor to access pre-trusted peers vector
             newGlobalTrustVector =
                     computeNewGlobalTrustVector(normalizedLocalTrustValuesMatrix,
-                                               ((EigenTrust_Sensor)client).get_globalTrustVector());
+                            ((EigenTrust_Sensor)client).get_globalTrustVector(),
+                            (EigenTrust_Sensor)client);
             delta = globalTrustVectorsDistance(((EigenTrust_Sensor)client).get_globalTrustVector(),newGlobalTrustVector);
             ((EigenTrust_Sensor)client).set_globalTrustVector(newGlobalTrustVector);
         } while (delta >= ((EigenTrust_Parameters)trmParameters).get_epsilon());
 
         mostTrustworthyServerId = selectServiceProvider(client,((EigenTrust_Sensor)client).get_globalTrustVector());
         Vector<Sensor> path =
-            ((GatheredInformationEigenTrust)gi).getPathToServer(mostTrustworthyServerId);
+                ((GatheredInformationEigenTrust)gi).getPathToServer(mostTrustworthyServerId);
         return path;
     }
 
@@ -156,7 +151,7 @@ public class EigenTrust extends TRModel_WSN {
         Outcome outcome = null;
         if ((path == null) || (path.size() <= 0) || (!path.lastElement().isActive()))
             return outcome;
-        
+
         EigenTrust_Sensor server = (EigenTrust_Sensor)path.lastElement();
         EigenTrust_Sensor client = (EigenTrust_Sensor)path.firstElement();
         Service receivedService = server.serve(service,path);
@@ -165,7 +160,7 @@ public class EigenTrust extends TRModel_WSN {
             outcome = new EigenTrustEnergyConsumptionOutcome(new SatisfactionInterval(MIN_SATISFACTION,MAX_SATISFACTION,MIN_SATISFACTION),path.size());
         else
             outcome = new EigenTrustEnergyConsumptionOutcome(new SatisfactionInterval(MIN_SATISFACTION,MAX_SATISFACTION,MAX_SATISFACTION),path.size());
-        
+
         client.addNewTransaction(client, server, outcome);
 
         return outcome;
@@ -179,8 +174,8 @@ public class EigenTrust extends TRModel_WSN {
     @Override
     public Outcome reward(Vector<Sensor> path, Outcome outcome) {
         return outcome;
-    }    
-    
+    }
+
     /**
      * EigenTrust does not implement this method, since it does not apply any specific punish step
      * @param path
@@ -213,10 +208,10 @@ public class EigenTrust extends TRModel_WSN {
             double accumulator = 0.0;
             for (int j = 0; j < probailities.size(); j++) {
                 if ((accumulator <= aleat) &&
-                                (aleat <= (accumulator + probailities.get(j)/addition)) &&
-                                (client.id() != candidates.get(j)+1) &&
-                                (client.findSensors(new IsSensorSearchCondition(candidates.get(j)+1)) != null))
-                        return candidates.get(j)+1;
+                        (aleat <= (accumulator + probailities.get(j)/addition)) &&
+                        (client.id() != candidates.get(j)+1) &&
+                        (client.findSensors(new IsSensorSearchCondition(candidates.get(j)+1)) != null))
+                    return candidates.get(j)+1;
                 accumulator += probailities.get(j)/addition;
             }
         } else { //Select a zero-trust service provider
@@ -244,11 +239,13 @@ public class EigenTrust extends TRModel_WSN {
      * This method computes the equation: t^{k+1} = C^T * t^k
      * @param normalizedLocalTrustValuesMatrix C matrix
      * @param globalTrustVector t^k vector
+     * @param client The sensor computing the vector (to access pre-trusted peers)
      * @return t^{k+1} = C^T * t^k
      */
-    private double[] computeNewGlobalTrustVector(double[][] normalizedLocalTrustValuesMatrix, double[] globalTrustVector) {
+    // FIX: Added client parameter to access instance method getPreTrustedPeersVector()
+    private double[] computeNewGlobalTrustVector(double[][] normalizedLocalTrustValuesMatrix, double[] globalTrustVector, EigenTrust_Sensor client) {
         double[] newGlobalTrustVector = new double[globalTrustVector.length];
-        double[] preTrustedPeersVector = EigenTrust_Sensor.get_preTrustedPeersVector();
+        double[] preTrustedPeersVector = client.getPreTrustedPeersVector(); // Changed to instance call
         double preTrustedPeersWeight = ((EigenTrust_Parameters)trmParameters).get_preTrustedPeersWeight();
         double sum = 0.0;
 
@@ -294,11 +291,13 @@ public class EigenTrust extends TRModel_WSN {
             Collection<Double> probServices,
             Collection<Double> probGoodness,
             Collection<Service> services)  {
-        return new EigenTrust_Network(numSensors,1.0,rangeFactor,probServices,probGoodness,services);
+        // FIX: Pass parameters to Network constructor
+        return new EigenTrust_Network(numSensors,1.0,rangeFactor,probServices,probGoodness,services, (EigenTrust_Parameters) get_TRMParameters());
     }
 
     @Override
     public Network loadCurrentNetwork(String fileName) throws Exception {
-        return new EigenTrust_Network(fileName);
+        // FIX: Pass parameters to Network constructor
+        return new EigenTrust_Network(fileName, (EigenTrust_Parameters) get_TRMParameters());
     }
 }

@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -16,28 +16,28 @@
  * --------------------------------
  *
  * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
  *
  * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
+ * authors of the material.
  *
  * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
  *
  * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
  *
  * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
+ * names, trademarks, or service marks.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.lftm;
 
@@ -65,42 +65,42 @@ import java.util.Vector;
  * <p><a name="LFTMparameters"></a>It needs some parameters to be passed as a
  * {@link LFTM_Parameters} object. To do this, a file can be given following the next structure:</p>
  * <pre>
- *    ####################################
- *    # LFTM parameters file
- *    ####################################
- *    phi=0.01
- *    rho=0.87
- *    q0=0.45
- *    numAnts=0.35
- *    numIterations=0.59
- *    alpha=1.0
- *    beta=1.0
- *    initialPheromone=0.85
- *    pathLengthFactor=0.71
- *    transitionThreshold=0.66
- *    punishmentThreshold=0.48
- *    U_MIN=0.0
- *    U_MAX=1.0
- *    VH_A=0.7
- *    VH_B=0.9
- *    VH_C=1.0
- *    VH_D=1.0
- *    H_A=0.55
- *    H_B=0.7
- *    H_C=0.8
- *    H_D=0.9
- *    M_A=0.3
- *    M_B=0.45
- *    M_C=0.55
- *    M_D=0.7
- *    L_A=0.1
- *    L_B=0.2
- *    L_C=0.3
- *    L_D=0.45
- *    VL_A=0.0
- *    VL_B=0.0
- *    VL_C=0.1
- *    VL_D=0.3
+ * ####################################
+ * # LFTM parameters file
+ * ####################################
+ * phi=0.01
+ * rho=0.87
+ * q0=0.45
+ * numAnts=0.35
+ * numIterations=0.59
+ * alpha=1.0
+ * beta=1.0
+ * initialPheromone=0.85
+ * pathLengthFactor=0.71
+ * transitionThreshold=0.66
+ * punishmentThreshold=0.48
+ * U_MIN=0.0
+ * U_MAX=1.0
+ * VH_A=0.7
+ * VH_B=0.9
+ * VH_C=1.0
+ * VH_D=1.0
+ * H_A=0.55
+ * H_B=0.7
+ * H_C=0.8
+ * H_D=0.9
+ * M_A=0.3
+ * M_B=0.45
+ * M_C=0.55
+ * M_D=0.7
+ * L_A=0.1
+ * L_B=0.2
+ * L_C=0.3
+ * L_D=0.45
+ * VL_A=0.0
+ * VL_B=0.0
+ * VL_C=0.1
+ * VL_D=0.3
  * </pre>
  * This file can be downloaded
  * <a href="http://ants.dif.um.es/~felixgm/research/trmsim-wsn/resources/LFTMparameters.txt" target=_blank">here</a>.
@@ -109,13 +109,13 @@ import java.util.Vector;
  * <br></br>
  * For more information regarding LFTM algorithm, please check the following reference:
  * <ul>
- *   <li>F&eacute;lix G&oacute;mez M&aacute;rmol, Javier G&oacute;mez-Mar&iacute;n 
- *       Bl&aacute;zquez,Gregorio Mart&iacute;nez P&eacute;rez,  &quot;<strong>LFTM
- *       Linguistic Fuzzy Trust Mechanism for Distributed Networks</strong>&quot;,
- *       <a href="http://eu.wiley.com/WileyCDA/WileyTitle/productCd-CPE.html" target="_blank">
- *       Concurrency and Computation: Practice &amp; Experience</a>, 2012
- *       <a href="http://dx.doi.org/10.1002/cpe.1825" target="_blank"><img src="http://ants.dif.um.es/~felixgm/img/adobe.gif" border="0"></a>
- *   </li>
+ * <li>F&eacute;lix G&oacute;mez M&aacute;rmol, Javier G&oacute;mez-Mar&iacute;n
+ * Bl&aacute;zquez,Gregorio Mart&iacute;nez P&eacute;rez,  &quot;<strong>LFTM
+ * Linguistic Fuzzy Trust Mechanism for Distributed Networks</strong>&quot;,
+ * <a href="http://eu.wiley.com/WileyCDA/WileyTitle/productCd-CPE.html" target="_blank">
+ * Concurrency and Computation: Practice &amp; Experience</a>, 2012
+ * <a href="http://dx.doi.org/10.1002/cpe.1825" target="_blank"><img src="http://ants.dif.um.es/~felixgm/img/adobe.gif" border="0"></a>
+ * </li>
  * </ul>
  *
  * @author <a href="http://ants.dif.um.es/~felixgm/en" target="_blank">F&eacute;lix G&oacute;mez M&aacute;rmol</a>, <a href="http://webs.um.es/gregorio" target="_blank">Gregorio Mart&iacute;nez P&eacute;rez</a>
@@ -129,7 +129,7 @@ public class LFTM extends TRModel_WSN {
      * @param lftm_parameters Parameters needed for the algorithm, as described <a href="#LFTMparameters">before</a>
      */
     public LFTM(LFTM_Parameters lftm_parameters) {
-    	super(lftm_parameters);
+        super(lftm_parameters);
     }
 
     /**
@@ -186,13 +186,13 @@ public class LFTM extends TRModel_WSN {
                                 if (ants[k].get_solution() == null) {
                                     System.out.println("ants[k].get_solution() == null");
                                     System.out.flush();
-                                } 
+                                }
                             }
                         } else {
                             ants[k].pheromoneLocalUpdating(phi, nextSensor);
                             ants[k].addSensor(nextSensor);
-	                    //It is a server offering the required service
-	                    if (nextSensor.offersService(service)) {
+                            //It is a server offering the required service
+                            if (nextSensor.offersService(service)) {
                                 double averagePheromone = ants[k].getLastNodePheromone();
                                 if (((averagePheromone > transitionThreshold) &&
                                         (Math.random() < averagePheromone))) {
@@ -211,15 +211,15 @@ public class LFTM extends TRModel_WSN {
                 if (!checkedSolution[k]) {
                     double antsPercentage = 1;
                     for (int l = k+1; l < ants.length; l++)
-                    	if (ants[k].get_solution().equals(ants[l].get_solution())) {
+                        if (ants[k].get_solution().equals(ants[l].get_solution())) {
                             antsPercentage++;
                             checkedSolution[l] = true;
-                    	}
+                        }
                     antsPercentage = antsPercentage/ants.length;
                     checkedSolution[k] = true;
                     double solutionQuality =
                             (antsPercentage*ants[k].get_averagePheromone())
-                            /(Math.pow(ants[k].get_solution().size()-1,pathLengthFactor));
+                                    /(Math.pow(ants[k].get_solution().size()-1,pathLengthFactor));
                     if (solutionQuality > currentMax) {
                         currentMax = solutionQuality;
                         bestAnt = k;
@@ -346,11 +346,13 @@ public class LFTM extends TRModel_WSN {
             Collection<Double> probServices,
             Collection<Double> probGoodness,
             Collection<Service> services)  {
-        return new LFTM_Network(numSensors,probClients,rangeFactor,probServices,probGoodness,services);
+        // FIX: Passing parameters to Network constructor
+        return new LFTM_Network(numSensors,probClients,rangeFactor,probServices,probGoodness,services, (LFTM_Parameters) get_TRMParameters());
     }
 
     @Override
     public Network loadCurrentNetwork(String fileName) throws Exception {
-        return new LFTM_Network(fileName);
+        // FIX: Passing parameters to Network constructor
+        return new LFTM_Network(fileName, (LFTM_Parameters) get_TRMParameters());
     }
 }

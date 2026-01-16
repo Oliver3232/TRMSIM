@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -16,28 +16,28 @@
  * --------------------------------
  *
  * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
  *
  * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
+ * authors of the material.
  *
  * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
  *
  * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
  *
  * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
+ * names, trademarks, or service marks.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.powertrust;
 
@@ -60,9 +60,9 @@ import java.util.Vector;
  * <p><a name="PowerTrustparameters"></a>It needs some parameters to be passed as a
  * {@link PowerTrust_Parameters} object. To do this, a file can be given following the next structure:</p>
  * <pre>
- *    ####################################
- *    # PowerTrust parameters file
- *    ####################################
+ * ####################################
+ * # PowerTrust parameters file
+ * ####################################
  * </pre>
  * This file can be downloaded
  * <a href="http://ants.dif.um.es/~felixgm/research/trmsim-wsn/resources/PowerTrustparameters.txt" target=_blank">here</a>.
@@ -71,11 +71,11 @@ import java.util.Vector;
  * <br></br>
  * For more information regarding PowerTrust algorithm, please check the following reference:
  * <ul>
- *   <li>Zhou, R. and Hwang, K., &quot;<strong>PowerTrust: A Robust and Scalable
- *       Reputation System for Trusted Peer-to-Peer Computing</strong>&quot;,
- *       IEEE Transactions on Parallel and Distributed Systems, vol 18, no. 4,
- *       pp. 460-473, 2007
- *   </li>
+ * <li>Zhou, R. and Hwang, K., &quot;<strong>PowerTrust: A Robust and Scalable
+ * Reputation System for Trusted Peer-to-Peer Computing</strong>&quot;,
+ * IEEE Transactions on Parallel and Distributed Systems, vol 18, no. 4,
+ * pp. 460-473, 2007
+ * </li>
  * </ul>
  * @author <a href="http://ants.dif.um.es/~felixgm/en" target="_blank">F&eacute;lix G&oacute;mez M&aacute;rmol</a>, <a href="http://webs.um.es/gregorio" target="_blank">Gregorio Mart&iacute;nez P&eacute;rez</a>
  * @version 0.4
@@ -87,7 +87,7 @@ public class PowerTrust extends TRModel_WSN {
      * @param powerTrust_parameters Parameters needed for the algorithm, as described <a href="#PowerTrustparameters">before</a>
      */
     public PowerTrust(PowerTrust_Parameters powerTrust_parameters) {
-    	super(powerTrust_parameters);
+        super(powerTrust_parameters);
     }
 
     /**
@@ -162,11 +162,14 @@ public class PowerTrust extends TRModel_WSN {
             Collection<Double> probServices,
             Collection<Double> probGoodness,
             Collection<Service> services)  {
-        return new PowerTrust_Network(numSensors,probClients,rangeFactor,probServices,probGoodness,services);
+        // OPRAVA: Posielame this.parameters (pretypované) do konštruktora siete
+        return new PowerTrust_Network(numSensors,probClients,rangeFactor,probServices,probGoodness,services,
+                (PowerTrust_Parameters) get_TRMParameters());
     }
 
     @Override
     public Network loadCurrentNetwork(String fileName) throws Exception {
-        return new PowerTrust_Network(fileName);
+        // OPRAVA: Posielame this.parameters (pretypované) do konštruktora siete
+        return new PowerTrust_Network(fileName, (PowerTrust_Parameters) get_TRMParameters());
     }
 }

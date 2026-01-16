@@ -1,5 +1,5 @@
 /**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
+ * "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless
  * Sensor Networks" is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
@@ -16,28 +16,28 @@
  * --------------------------------
  *
  * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
+ * and author attributions in that material and in the Appropriate Legal
+ * Notices displayed by works containing it.
  *
  * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
+ * authors of the material.
  *
  * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
+ * by anyone who conveys the material (or modified versions of it) with
+ * contractual assumptions of liability to the recipient, for any liability
+ * that these contractual assumptions directly impose on those licensors
+ * and authors.
  *
  * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
+ * required that modified versions of such material be marked in reasonable
+ * ways as different from the original version.
  *
  * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
+ * names, trademarks, or service marks.
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
-*/
+ */
 
 package es.ants.felixgm.trmsim_wsn.trm.lftm;
 
@@ -61,7 +61,12 @@ import java.util.Vector;
  */
 public class LFTM_Sensor extends Sensor {
     /** Number of servers composing the network this sensor belongs to */
-    protected static int _numServers = 0;
+    // CHANGED: Instance variable, removed static
+    protected int _numServers = 0;
+
+    // NEW: Local parameters
+    protected LFTM_Parameters parameters;
+
     /** Goodness of this sensor related to each provided service */
     protected HashMap<LFTM_Service,Variable> _servicesGoodness;
     /** Client's conformity, used to assess the client satisfaction with a received service */
@@ -82,11 +87,7 @@ public class LFTM_Sensor extends Sensor {
      */
     public LFTM_Sensor () {
         super();
-        _servicesGoodness = new HashMap<LFTM_Service,Variable>();
-        clientConformity = new Variable("ClientConformity", LFTM_Parameters.get_linguisticTerms(),new DefuzzifierCenterOfGravity(LFTM_Parameters.get_U_MIN(),LFTM_Parameters.get_U_MAX()));
-        clientConformity.setValue("Medium");
-        clientGoodness = new Variable("ClientGoodness", LFTM_Parameters.get_linguisticTerms(),new DefuzzifierCenterOfGravity(LFTM_Parameters.get_U_MIN(),LFTM_Parameters.get_U_MAX()));
-        clientGoodness.setValue("Medium");
+        init();
     }
 
     /**
@@ -97,11 +98,31 @@ public class LFTM_Sensor extends Sensor {
      */
     public LFTM_Sensor(int id, double x, double y) {
         super(id,x,y);
+        init();
+    }
+
+    private void init() {
         _servicesGoodness = new HashMap<LFTM_Service,Variable>();
         clientConformity = new Variable("ClientConformity", LFTM_Parameters.get_linguisticTerms(),new DefuzzifierCenterOfGravity(LFTM_Parameters.get_U_MIN(),LFTM_Parameters.get_U_MAX()));
         clientConformity.setValue("Medium");
         clientGoodness = new Variable("ClientGoodness", LFTM_Parameters.get_linguisticTerms(),new DefuzzifierCenterOfGravity(LFTM_Parameters.get_U_MIN(),LFTM_Parameters.get_U_MAX()));
         clientGoodness.setValue("Medium");
+    }
+
+    // NEW: Setters for Network to call
+    public void setParameters(LFTM_Parameters p) { this.parameters = p; }
+    public void setNumServers(int n) { this._numServers = n; }
+
+    // Helper to reset links with correct parameters
+    public void resetLinks() {
+        if (links != null) {
+            double initialPheromone = (parameters != null) ? parameters.get_initialPheromone() : 0.5;
+            for (Link link : links) {
+                if (link instanceof LFTM_Link) {
+                    ((LFTM_Link) link).setInitialPheromoneAndReset(initialPheromone);
+                }
+            }
+        }
     }
 
     /**
@@ -164,7 +185,7 @@ public class LFTM_Sensor extends Sensor {
         numRequests++;
         if (numRequests == numRequestsThreshold) {
             numRequests = 0;
-            if (dynamic) {
+            if (dynamic && runningSimulation) { // Use instance variables
                 activeState = false;
                 Timer timer = new Timer();
                 timer.schedule(new TimerTask(){
@@ -172,8 +193,6 @@ public class LFTM_Sensor extends Sensor {
                         activeState = true;
                     }
                 },100);
-                timer.cancel();
-                timer = null;
             }
         }
 
@@ -238,7 +257,9 @@ public class LFTM_Sensor extends Sensor {
             if (links == null)
                 links = new ArrayList<Link>();
 
-            LFTM_Link link = new LFTM_Link(this,(LFTM_Sensor)node);
+            // FIX: Pass initial pheromone if parameters exist, else default
+            double initPheromone = (parameters != null) ? parameters.get_initialPheromone() : 0.5;
+            LFTM_Link link = new LFTM_Link(this,(LFTM_Sensor)node, initPheromone);
             links.add(link);
         }
     }
@@ -253,7 +274,8 @@ public class LFTM_Sensor extends Sensor {
      * Sets the number of servers
      * @param numServers Number of servers
      */
-    public static void setNumServers(int numServers){ _numServers = numServers; }
+    // CHANGED: Removed static
+    public void setNumServersStatic(int numServers){ _numServers = numServers; }
 
     /**
      * Gets the pheromone trace with a given neighbor
@@ -360,10 +382,10 @@ public class LFTM_Sensor extends Sensor {
         String s = id+" ("+xPosition+","+yPosition+") ->";
 
         for (Link link : links)
-                s += " ("+link.get_destination().id()
-                +","+((int)(getPheromone(link.get_destination())*100))/100.0
-                +","+((int)(getHeuristic(link.get_destination())*100))/100.0
-                +") |";
+            s += " ("+link.get_destination().id()
+                    +","+((int)(getPheromone(link.get_destination())*100))/100.0
+                    +","+((int)(getHeuristic(link.get_destination())*100))/100.0
+                    +") |";
         return s;
     }
 }

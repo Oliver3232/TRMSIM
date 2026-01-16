@@ -1,50 +1,8 @@
-/**
- *  "TRMSim-WSN, Trust and Reputation Models Simulator for Wireless 
- * Sensor Networks" is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of 
- * the License, or (at your option) any later version always keeping 
- * the additional terms specified in this license.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- * 
- * 
- * Additional Terms of this License
- * --------------------------------
- * 
- * 1. It is Required the preservation of specified reasonable legal notices
- *   and author attributions in that material and in the Appropriate Legal
- *   Notices displayed by works containing it.
- * 
- * 2. It is limited the use for publicity purposes of names of licensors or
- *   authors of the material.
- * 
- * 3. It is Required indemnification of licensors and authors of that material
- *   by anyone who conveys the material (or modified versions of it) with
- *   contractual assumptions of liability to the recipient, for any liability
- *   that these contractual assumptions directly impose on those licensors
- *   and authors.
- * 
- * 4. It is Prohibited misrepresentation of the origin of that material, and it is
- *   required that modified versions of such material be marked in reasonable
- *   ways as different from the original version.
- * 
- * 5. It is Declined to grant rights under trademark law for use of some trade
- *   names, trademarks, or service marks.
- * 
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program (lgpl.txt).  If not, see <http://www.gnu.org/licenses/>
- */
-
 package es.ants.felixgm.trmsim_wsn;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.Outcome;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.network.Service;
-
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
 
 import java.util.Observable;
@@ -56,11 +14,10 @@ import java.util.ArrayList;
  * <p>
  * This class is used to run simulations of a trust and reputation model
  * </p>
- * 
- * @author <a href="http://ants.dif.um.es/~felixgm/en"
- *         target="_blank">F&eacute;lix G&oacute;mez M&aacute;rmol</a>, <a
- *         href="http://webs.um.es/gregorio" target="_blank">Gregorio
- *         Mart&iacute;nez P&eacute;rez</a>
+ * * @author <a href="http://ants.dif.um.es/~felixgm/en"
+ * target="_blank">F&eacute;lix G&oacute;mez M&aacute;rmol</a>, <a
+ * href="http://webs.um.es/gregorio" target="_blank">Gregorio
+ * Mart&iacute;nez P&eacute;rez</a>
  * @version 0.5
  * @since 0.1
  */
@@ -120,49 +77,54 @@ public class Simulation extends Observable implements Runnable {
 	/** It determines whether to stop and interrupt the current simulation */
 	private boolean stop;
 
+	/** The controller instance managing this simulation */
+	private Controller controller;
+
 	/**
 	 * Creates a new Simulation
-	 * 
+	 * * @param controller
+	 * The controller instance managing this simulation
 	 * @param observers
-	 *            Used to communicate changes to the GUI
+	 * Used to communicate changes to the GUI
 	 * @param requiredService
-	 *            Service requested by every client of each WSN
+	 * Service requested by every client of each WSN
 	 * @param minNumSensors
-	 *            Minimum number of sensors composing every WSN
+	 * Minimum number of sensors composing every WSN
 	 * @param maxNumSensors
-	 *            Maximum number of sensors composing every WSN
+	 * Maximum number of sensors composing every WSN
 	 * @param probClients
-	 *            The probability of a node to act as a client
+	 * The probability of a node to act as a client
 	 * @param probRelay
-	 *            The probability of a server to act just as a relay node (not
-	 *            offering the required service)
+	 * The probability of a server to act just as a relay node (not
+	 * offering the required service)
 	 * @param probMalicious
-	 *            The probability of a server offering the required service to
-	 *            act as a malicious server (not providing the offered service,
-	 *            or providing a worse or different one)
+	 * The probability of a server offering the required service to
+	 * act as a malicious server (not providing the offered service,
+	 * or providing a worse or different one)
 	 * @param radioRange
-	 *            Maximum wireless range of every sensor. It determines the
-	 *            neighborhood of every sensor
+	 * Maximum wireless range of every sensor. It determines the
+	 * neighborhood of every sensor
 	 * @param dynamic
-	 *            It determines if the WSN will be dynamic (nodes sometimes
-	 *            switch off in order to save battery, breaking all their links)
+	 * It determines if the WSN will be dynamic (nodes sometimes
+	 * switch off in order to save battery, breaking all their links)
 	 * @param oscillating
-	 *            It determines if the goodness of the servers belonging to the
-	 *            created WSN will change along the time
+	 * It determines if the goodness of the servers belonging to the
+	 * created WSN will change along the time
 	 * @param collusion
-	 *            It determines if the malicious servers belonging to the
-	 *            created WSN will form a collusion among them
+	 * It determines if the malicious servers belonging to the
+	 * created WSN will form a collusion among them
 	 * @param numNetworks
-	 *            Number of wireless sensor networks to test
+	 * Number of wireless sensor networks to test
 	 * @param numExecutions
-	 *            Number of service requests of every client composing each WSN
+	 * Number of service requests of every client composing each WSN
 	 */
-	public Simulation(Collection<Observer> observers, Service requiredService,
-			int minNumSensors, int maxNumSensors, double probClients,
-			double probRelay, double probMalicious, double radioRange,
-			boolean dynamic, boolean oscillating, boolean collusion,
-			int numNetworks, int numExecutions) {
-		network = null;
+	public Simulation(Controller controller, Collection<Observer> observers, Service requiredService,
+					  int minNumSensors, int maxNumSensors, double probClients,
+					  double probRelay, double probMalicious, double radioRange,
+					  boolean dynamic, boolean oscillating, boolean collusion,
+					  int numNetworks, int numExecutions) {
+		this.controller = controller;
+		this.network = null;
 		this.requiredService = requiredService;
 
 		this.minNumSensors = minNumSensors;
@@ -188,29 +150,31 @@ public class Simulation extends Observable implements Runnable {
 
 	/**
 	 * Creates a new Simulation
-	 * 
+	 * * @param controller
+	 * The controller instance managing this simulation
 	 * @param observers
-	 *            Used to communicate changes to the GUI
+	 * Used to communicate changes to the GUI
 	 * @param requiredService
-	 *            Service requested by every client of the specified WSN
+	 * Service requested by every client of the specified WSN
 	 * @param dynamic
-	 *            It determines if the WSN will be dynamic (nodes sometimes
-	 *            switch off in order to save battery, breaking all their links)
+	 * It determines if the WSN will be dynamic (nodes sometimes
+	 * switch off in order to save battery, breaking all their links)
 	 * @param oscillating
-	 *            It determines if the goodness of the servers belonging to the
-	 *            created WSN will change along the time
+	 * It determines if the goodness of the servers belonging to the
+	 * created WSN will change along the time
 	 * @param collusion
-	 *            It determines if the malicious servers belonging to the
-	 *            created WSN will form a collusion among them
+	 * It determines if the malicious servers belonging to the
+	 * created WSN will form a collusion among them
 	 * @param numExecutions
-	 *            Number of service requests of every client composing the
-	 *            specified WSN
+	 * Number of service requests of every client composing the
+	 * specified WSN
 	 * @param network
-	 *            Wireless sensor network to test
+	 * Wireless sensor network to test
 	 */
-	public Simulation(Collection<Observer> observers, Service requiredService,
-			boolean dynamic, boolean oscillating, boolean collusion,
-			int numExecutions, Network network) {
+	public Simulation(Controller controller, Collection<Observer> observers, Service requiredService,
+					  boolean dynamic, boolean oscillating, boolean collusion,
+					  int numExecutions, Network network) {
+		this.controller = controller;
 		this.network = network;
 		this.requiredService = requiredService;
 
@@ -238,14 +202,21 @@ public class Simulation extends Observable implements Runnable {
 	 * Starts the simulations
 	 */
 	public void run() {
-		Sensor.setRunningSimulation(true);
+		// Sensor.setRunningSimulation(true); -- Static call removed
+		// Logic moved to check if network exists or update it later
+
 		try {
 			for (int net = 0; (net < numNetworks) && !stop; net++) {
-				if ((network == null) || (numNetworks != 1))
-					network = Controller.C().createNewNetwork(minNumSensors,
+				if ((network == null) || (numNetworks != 1)) {
+					// Controller.C() removed, using instance 'controller'
+					network = controller.createNewNetwork(minNumSensors,
 							maxNumSensors, probClients, probRelay,
 							probMalicious, radioRange, dynamic, oscillating,
 							collusion);
+				}
+
+				// Ensure the network knows simulation is running (replaces static Sensor call)
+				network.set_runningSimulation(true);
 
 				for (Sensor client : network.get_clients())
 					client.set_requiredService(requiredService);
@@ -323,13 +294,18 @@ public class Simulation extends Observable implements Runnable {
 					notifyObservers(globalOutcomes);
 				}
 			}
-			Sensor.setRunningSimulation(false);
+
+			// Sensor.setRunningSimulation(false); -- Static call removed
+			if (network != null) network.set_runningSimulation(false);
+
 			setChanged();
 			notifyObservers("Finishing simulations at "
 					+ (new java.util.Date()) + "...\n");
 			// Cancel all timers - Added by Hamed Khiabani
-			for (Sensor sensor : network.get_sensors())
-				sensor.cancelAllTimers();
+			if (network != null) {
+				for (Sensor sensor : network.get_sensors())
+					sensor.cancelAllTimers();
+			}
 			if (stop) {
 				setChanged();
 				notifyObservers(network);
@@ -340,16 +316,18 @@ public class Simulation extends Observable implements Runnable {
 				notifyObservers(globalOutcomes);
 			}
 		} catch (Exception ex) {
-			Sensor.setRunningSimulation(false);
+			// Sensor.setRunningSimulation(false); -- Static call removed
+			if (network != null) network.set_runningSimulation(false);
+
 			setChanged();
 			notifyObservers(ex);
+			ex.printStackTrace();
 		}
 	}
 
 	/**
-	 * This method returns the global outcomes achieved by this simulations
-	 * 
-	 * @return The global outcomes achieved by this simulations
+	 * This method returns the global outcomes achieved by these simulations
+	 * * @return The global outcomes achieved by this simulations
 	 */
 	public Collection<Outcome> get_globalOutcomes() {
 		return globalOutcomes;

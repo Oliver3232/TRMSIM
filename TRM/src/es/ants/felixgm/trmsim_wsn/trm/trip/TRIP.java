@@ -271,11 +271,12 @@ public class TRIP extends TRModel_WSN {
             Collection<Double> probServices,
             Collection<Double> probGoodness,
             Collection<Service> services) {
-        return new TRIP_Network(numSensors,probClients,rangeFactor,probServices,probGoodness,services);
+        return new TRIP_Network(numSensors, probClients, rangeFactor,
+                probServices, probGoodness, services,
+                (TRIP_Parameters) get_TRMParameters());
     }
 
     @Override
     public Network loadCurrentNetwork(String xmlFilePath) throws Exception {
-        return new TRIP_Network(xmlFilePath);
-    }
+        return new TRIP_Network(xmlFilePath, (TRIP_Parameters) get_TRMParameters());    }
 }
