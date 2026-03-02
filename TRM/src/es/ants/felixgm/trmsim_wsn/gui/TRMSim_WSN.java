@@ -660,8 +660,6 @@ public class TRMSim_WSN extends javax.swing.JPanel implements Observer {
                     showIdsCheckBox.isSelected(), showGridCheckBox.isSelected());
         C.sleep();
     }
-
-
     private javax.swing.JButton exportDataButton;
     private javax.swing.JScrollPane TRMParametersScrollPane;
     private javax.swing.JComboBox TRModelComboBox;
