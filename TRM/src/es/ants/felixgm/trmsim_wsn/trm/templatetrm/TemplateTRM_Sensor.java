@@ -278,9 +278,9 @@ public class TemplateTRM_Sensor extends Sensor {
 			double weight = t.fading * t.severity;
 			double xi = t.getSatisfaction().getSatisfactionValue();
 			double temp = weight * xi;
-			sum += temp; // Ówi*xi
-			wx2 += temp * xi;// Ówi*xi*xi
-			weights += weight;// Ówi
+			sum += temp; // wi*xi
+			wx2 += temp * xi;// wi*xi*xi
+			weights += weight;// wi
 				}
 		 m = sum / weights;
 		 s = (wx2 * weights - Math.pow(sum, 2)) / Math.pow(weights, 2);
@@ -303,9 +303,9 @@ public class TemplateTRM_Sensor extends Sensor {
 			double weight = t.fading * t.severity;
 			double xi = t.getSatisfaction().getSatisfactionValue();
 			double temp = weight * xi;
-			sum += temp; // Ówi*xi
-			wx2 += temp * xi;// Ówi*xi*xi
-			weights += weight;// Ówi
+			sum += temp; // ï¿½wi*xi
+			wx2 += temp * xi;// ï¿½wi*xi*xi
+			weights += weight;// ï¿½wi
 				}
 			m = sum / (weights+0.000001);
 			s = (wx2 * weights - Math.pow(sum, 2)) / Math.pow(weights+0.00001, 2);
