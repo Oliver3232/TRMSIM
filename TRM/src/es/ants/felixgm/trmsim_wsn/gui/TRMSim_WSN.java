@@ -661,7 +661,6 @@ public class TRMSim_WSN extends javax.swing.JPanel implements Observer {
         C.sleep();
     }
 
-    // Premenné
     private javax.swing.JButton exportDataButton;
     private javax.swing.JScrollPane TRMParametersScrollPane;
     private javax.swing.JComboBox TRModelComboBox;
