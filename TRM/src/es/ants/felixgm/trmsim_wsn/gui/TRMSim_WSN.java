@@ -2347,16 +2347,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         try {
             SimulationResultRepository repository = SimulationResultRepository.getInstance();
 
-            if (repository.getResultCount() == 0) {
-                JOptionPane.showMessageDialog(this,
-                        "No simulation data available for export. Please run a simulation first.",
-                        "No Data",
-                        JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
             // UPDATED OPTIONS
             Object[] options = {
+                    "Energy Consumption Graph (PNG)",
                     "Simple CSV",
                     "Detailed CSV",
                     "Formatted Text Report",
@@ -2380,18 +2373,49 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                     options[0]);
 
             switch (choice) {
-                case 0: repository.exportToCSV(this); break;
-                case 1: repository.exportDetailedToCSV(this); break;
-                case 2: repository.exportToFormattedText(this); break;
-                case 3: repository.exportToFormattedTSV(this); break;
-                case 4: repository.exportEnergyConsumption(this); break;
-                case 5: repository.exportEnergyConsumptionText(this); break;
+                case 0:
+                    OutcomesPanel energyOutcomesPanel = getEnergyOutcomesPanel();
+                    if (energyOutcomesPanel == null) {
+                        JOptionPane.showMessageDialog(this,
+                                "Energy Consumption graph is not available for the selected model.",
+                                "Export Failed",
+                                JOptionPane.WARNING_MESSAGE);
+                        break;
+                    }
+                    GraphImageExporter.exportCurrentGraph(this, energyOutcomesPanel, energyOutcomesPanel.getLabel());
+                    break;
+                case 1:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportToCSV(this);
+                    break;
+                case 2:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportDetailedToCSV(this);
+                    break;
+                case 3:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportToFormattedText(this);
+                    break;
+                case 4:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportToFormattedTSV(this);
+                    break;
+                case 5:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportEnergyConsumption(this);
+                    break;
+                case 6:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportEnergyConsumptionText(this);
+                    break;
 
                 // NEW CASES
-                case 6: repository.exportNodeLevelCSV(this); break;
-                case 7: repository.exportNodeLevelEnergyCSV(this); break;
-                case 8: repository.exportNodeLevelEnergyText(this); break;
-                case 9: repository.exportNodeLevelText(this); break;
+                case 7:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportNodeLevelCSV(this);
+                    break;
+                case 8:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportNodeLevelEnergyCSV(this);
+                    break;
+                case 9:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportNodeLevelEnergyText(this);
+                    break;
+                case 10:
+                    if (ensureSimulationDataAvailable(repository)) repository.exportNodeLevelText(this);
+                    break;
 
                 default: break; // Cancel
             }
@@ -2402,6 +2426,38 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
+    }
+
+    private OutcomesPanel getSelectedOutcomesPanel() {
+        java.awt.Component selected = outcomesTabbedPane.getSelectedComponent();
+        if (selected instanceof OutcomesPanel) {
+            return (OutcomesPanel) selected;
+        }
+        return null;
+    }
+
+    private OutcomesPanel getEnergyOutcomesPanel() {
+        if (outcomesPanels == null) {
+            return null;
+        }
+        for (OutcomesPanel outcomesPanel : outcomesPanels) {
+            if ((outcomesPanel.getLabel() != null) &&
+                    outcomesPanel.getLabel().toLowerCase().contains("energy")) {
+                return outcomesPanel;
+            }
+        }
+        return null;
+    }
+
+    private boolean ensureSimulationDataAvailable(SimulationResultRepository repository) {
+        if (repository.getResultCount() == 0) {
+            JOptionPane.showMessageDialog(this,
+                    "No simulation data available for export. Please run a simulation first.",
+                    "No Data",
+                    JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        return true;
     }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -2573,7 +2629,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         // SECTION B: THE SIDEBAR (Configuration)
         // =========================================================================
         JPanel sidebar = new JPanel(new BorderLayout());
-        sidebar.setPreferredSize(new Dimension(320, 0));
+        sidebar.setPreferredSize(new Dimension(260, 0));
         sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.LIGHT_GRAY));
 
         JTabbedPane settingsTabs = new JTabbedPane();
@@ -2667,6 +2723,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
         // 2. The Bottom Tabs (Bottom of Split)
         JTabbedPane bottomTabs = new JTabbedPane();
+        outcomesPanelsPanel.setPreferredSize(new Dimension(960, 320));
+        outcomesPanelsPanel.setMinimumSize(new Dimension(640, 260));
+        outcomesTabbedPane.setPreferredSize(new Dimension(930, 280));
 
         // Fix: Ensure the parametersPanel uses a layout that fits
         parametersPanel.setPreferredSize(null);

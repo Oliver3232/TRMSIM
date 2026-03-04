@@ -43,8 +43,11 @@ package es.ants.felixgm.trmsim_wsn.gui.outcomespanels;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.FuzzyOutcome;
 import es.ants.felixgm.trmsim_wsn.outcomes.Outcome;
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.util.Collection;
 
 /**
@@ -56,11 +59,13 @@ import java.util.Collection;
  */
 public class LFTM_SatisfactionPanel extends OutcomesPanel {
 
-    protected Color veryHighSatisfactionColor = Color.GREEN;
-    protected Color highSatisfactionColor = Color.ORANGE;
-    protected Color mediumSatisfactionColor = Color.BLUE;
-    protected Color lowSatisfactionColor = Color.RED;
-    protected Color veryLowSatisfactionColor = Color.DARK_GRAY;
+    protected Color veryHighSatisfactionColor = new Color(56, 142, 60);
+    protected Color highSatisfactionColor = new Color(255, 167, 38);
+    protected Color mediumSatisfactionColor = new Color(66, 165, 245);
+    protected Color lowSatisfactionColor = new Color(255, 112, 67);
+    protected Color veryLowSatisfactionColor = new Color(84, 110, 122);
+    /** Upper padding so top values remain visible */
+    protected double topAxisMargin = 0.08;
 
     /** Creates new form LFTM_SatisfactionPanel */
     public LFTM_SatisfactionPanel(Collection<Outcome> outcomes) {
@@ -77,14 +82,21 @@ public class LFTM_SatisfactionPanel extends OutcomesPanel {
         int height = this.getHeight();
         int width = this.getWidth();
 
+        graphics.setColor(new Color(64, 80, 102));
+        graphics.setFont(new Font("SansSerif", Font.BOLD, 14));
+        graphics.drawString("Satisfaction Distribution", (int)(width*xAxisMargin), 16);
+        graphics.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        graphics.drawString("Y: Satisfaction [%]", (int)(width*xAxisMargin), 32);
+
         graphics.drawLine(0, (int)(height*yAxisMargin), width, (int)(height*yAxisMargin));
-        graphics.drawLine((int)(width*xAxisMargin), 0, (int)(width*xAxisMargin), height);
+        graphics.drawLine((int)(width*xAxisMargin), (int)(height*topAxisMargin), (int)(width*xAxisMargin), height);
 
         graphics.drawString("Very High", (int)((xAxisMargin+(1-xAxisMargin)*(2.0/18.0))*width), (int)(0.5*height*(yAxisMargin+1))+5);
         graphics.drawString("High", (int)((xAxisMargin+(1-xAxisMargin)*(5.5/18.0))*width), (int)(0.5*height*(yAxisMargin+1))+5);
         graphics.drawString("Medium", (int)((xAxisMargin+(1-xAxisMargin)*(8.0/18.0))*width), (int)(0.5*height*(yAxisMargin+1))+5);
         graphics.drawString("Low", (int)((xAxisMargin+(1-xAxisMargin)*(11.5/18.0))*width), (int)(0.5*height*(yAxisMargin+1))+5);
         graphics.drawString("Very Low", (int)((xAxisMargin+(1-xAxisMargin)*(14.0/18.0))*width), (int)(0.5*height*(yAxisMargin+1))+5);
+        graphics.drawString("X: Satisfaction class", (int)(width*0.38), height - 8);
     }
 
     protected void plotOutcomes(Collection<Outcome> outcomes, Graphics graphics) {
@@ -106,43 +118,66 @@ public class LFTM_SatisfactionPanel extends OutcomesPanel {
         double mediumSatisfaction = ((FuzzyOutcome)outcome).getSatisfactionPercentage("Medium");
         double lowSatisfaction = ((FuzzyOutcome)outcome).getSatisfactionPercentage("Low");
         double veryLowSatisfaction = ((FuzzyOutcome)outcome).getSatisfactionPercentage("Very Low");
+        int yZero = (int)(height*yAxisMargin);
+        int yTop = (int)(height*topAxisMargin);
+        int drawableHeight = Math.max(1, yZero-yTop);
+        Graphics2D g2 = (graphics instanceof Graphics2D) ? (Graphics2D) graphics : null;
 
-        graphics.setColor(veryHighSatisfactionColor);
-        graphics.fillRect((int)((xAxisMargin+(1-xAxisMargin)*(2.0/18.0))*width),
-                   (int)((yAxisMargin)*height*(1-veryHighSatisfaction)),
-                   (int)((1-xAxisMargin)*(2.0/18.0)*width),
-                   (int)((yAxisMargin)*height*veryHighSatisfaction));
+        drawRoundedSatisfactionBar(graphics, veryHighSatisfactionColor,
+                (int)((xAxisMargin+(1-xAxisMargin)*(2.0/18.0))*width),
+                yZero-(int)(drawableHeight*veryHighSatisfaction),
+                (int)((1-xAxisMargin)*(2.0/18.0)*width),
+                (int)(drawableHeight*veryHighSatisfaction));
 
-        graphics.setColor(highSatisfactionColor);
-        graphics.fillRect((int)((xAxisMargin+(1-xAxisMargin)*(5.0/18.0))*width),
-                   (int)((yAxisMargin)*height*(1-highSatisfaction)),
-                   (int)((1-xAxisMargin)*(2.0/18.0)*width),
-                   (int)((yAxisMargin)*height*highSatisfaction));
+        drawRoundedSatisfactionBar(graphics, highSatisfactionColor,
+                (int)((xAxisMargin+(1-xAxisMargin)*(5.0/18.0))*width),
+                yZero-(int)(drawableHeight*highSatisfaction),
+                (int)((1-xAxisMargin)*(2.0/18.0)*width),
+                (int)(drawableHeight*highSatisfaction));
 
-        graphics.setColor(mediumSatisfactionColor);
-        graphics.fillRect((int)((xAxisMargin+(1-xAxisMargin)*(8.0/18.0))*width),
-                   (int)((yAxisMargin)*height*(1-mediumSatisfaction)),
-                   (int)((1-xAxisMargin)*(2.0/18.0)*width),
-                   (int)((yAxisMargin)*height*mediumSatisfaction));
+        drawRoundedSatisfactionBar(graphics, mediumSatisfactionColor,
+                (int)((xAxisMargin+(1-xAxisMargin)*(8.0/18.0))*width),
+                yZero-(int)(drawableHeight*mediumSatisfaction),
+                (int)((1-xAxisMargin)*(2.0/18.0)*width),
+                (int)(drawableHeight*mediumSatisfaction));
 
-        graphics.setColor(lowSatisfactionColor);
-        graphics.fillRect((int)((xAxisMargin+(1-xAxisMargin)*(11.0/18.0))*width),
-                   (int)((yAxisMargin)*height*(1-lowSatisfaction)),
-                   (int)((1-xAxisMargin)*(2.0/18.0)*width),
-                   (int)((yAxisMargin)*height*lowSatisfaction));
+        drawRoundedSatisfactionBar(graphics, lowSatisfactionColor,
+                (int)((xAxisMargin+(1-xAxisMargin)*(11.0/18.0))*width),
+                yZero-(int)(drawableHeight*lowSatisfaction),
+                (int)((1-xAxisMargin)*(2.0/18.0)*width),
+                (int)(drawableHeight*lowSatisfaction));
 
-        graphics.setColor(veryLowSatisfactionColor);
-        graphics.fillRect((int)((xAxisMargin+(1-xAxisMargin)*(14.0/18.0))*width),
-                   (int)((yAxisMargin)*height*(1-veryLowSatisfaction)),
-                   (int)((1-xAxisMargin)*(2.0/18.0)*width),
-                   (int)((yAxisMargin)*height*veryLowSatisfaction));
+        drawRoundedSatisfactionBar(graphics, veryLowSatisfactionColor,
+                (int)((xAxisMargin+(1-xAxisMargin)*(14.0/18.0))*width),
+                yZero-(int)(drawableHeight*veryLowSatisfaction),
+                (int)((1-xAxisMargin)*(2.0/18.0)*width),
+                (int)(drawableHeight*veryLowSatisfaction));
 
         graphics.setColor(axesColor);
-        graphics.drawString(((int)(veryHighSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(2.0/18.0))*width), (int)((yAxisMargin)*height*(1-veryHighSatisfaction)));
-        graphics.drawString(((int)(highSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(5.0/18.0))*width), (int)((yAxisMargin)*height*(1-highSatisfaction)));
-        graphics.drawString(((int)(mediumSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(8.0/18.0))*width), (int)((yAxisMargin)*height*(1-mediumSatisfaction)));
-        graphics.drawString(((int)(lowSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(11.0/18.0))*width), (int)((yAxisMargin)*height*(1-lowSatisfaction)));
-        graphics.drawString(((int)(veryLowSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(14.0/18.0))*width), (int)((yAxisMargin)*height*(1-veryLowSatisfaction)));
+        graphics.drawString(((int)(veryHighSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(2.0/18.0))*width), yZero-(int)(drawableHeight*veryHighSatisfaction));
+        graphics.drawString(((int)(highSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(5.0/18.0))*width), yZero-(int)(drawableHeight*highSatisfaction));
+        graphics.drawString(((int)(mediumSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(8.0/18.0))*width), yZero-(int)(drawableHeight*mediumSatisfaction));
+        graphics.drawString(((int)(lowSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(11.0/18.0))*width), yZero-(int)(drawableHeight*lowSatisfaction));
+        graphics.drawString(((int)(veryLowSatisfaction*10000.0))/100.0+" %", (int)((xAxisMargin+(1-xAxisMargin)*(14.0/18.0))*width), yZero-(int)(drawableHeight*veryLowSatisfaction));
+        if (g2 != null) {
+            g2.setStroke(new BasicStroke(1.0f));
+        }
+    }
+
+    private void drawRoundedSatisfactionBar(Graphics graphics, Color color, int x, int y, int width, int height) {
+        if (!(graphics instanceof Graphics2D)) {
+            graphics.setColor(color);
+            graphics.fillRect(x, y, width, height);
+            return;
+        }
+        Graphics2D g2 = (Graphics2D) graphics;
+        int arc = Math.max(8, Math.min(14, width / 3));
+        int safeHeight = Math.max(1, height);
+
+        g2.setColor(new Color(20, 20, 20, 38));
+        g2.fillRoundRect(x + 2, y + 2, width, safeHeight, arc, arc);
+        g2.setColor(color);
+        g2.fillRoundRect(x, y, width, safeHeight, arc, arc);
     }
 
     /** This method is called from within the constructor to

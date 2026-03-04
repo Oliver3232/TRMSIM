@@ -44,7 +44,6 @@ package es.ants.felixgm.trmsim_wsn.gui.outcomespanels;
 import es.ants.felixgm.trmsim_wsn.outcomes.EigenTrustEnergyConsumptionOutcome;
 import es.ants.felixgm.trmsim_wsn.outcomes.Outcome;
 import java.awt.Color;
-import java.awt.Graphics;
 import java.util.Collection;
 
 /**
@@ -57,7 +56,7 @@ import java.util.Collection;
 public class EigenTrustEnergyConsumptionPanel extends EnergyConsumptionPanel {
 
     /** Color used to plot the pre-trusted peers energy consumption */
-    protected Color preTrustedPeerEnergyColor = Color.MAGENTA;
+    protected Color preTrustedPeerEnergyColor = new Color(171, 71, 188);
 
     /**
      * Class EigenTrustEnergyConsumptionPanel constructor
@@ -75,93 +74,33 @@ public class EigenTrustEnergyConsumptionPanel extends EnergyConsumptionPanel {
     }
 
     @Override
-    protected void drawAxes(Graphics graphics) {
-        int height = this.getHeight();
-        int width = this.getWidth();
-
-        graphics.drawLine(0, (int)(height*yAxisMargin), width, (int)(height*yAxisMargin));
-        graphics.drawLine((int)(width*xAxisMargin), 0, (int)(width*xAxisMargin), height);
-
-        graphics.drawString("Pre-Trusted", (int)((xAxisMargin+(1-xAxisMargin)*0.06*0.75)*width), (int)(0.5*height*(yAxisMargin+1))+5);
-        graphics.drawString("Malicious", (int)((xAxisMargin+(1-xAxisMargin)*0.31*0.75)*width), (int)(0.5*height*(yAxisMargin+1))+5);
-        graphics.drawString("Benevolent", (int)((xAxisMargin+(1-xAxisMargin)*0.52*0.75)*width), (int)(0.5*height*(yAxisMargin+1))+5);
-        graphics.drawString("Relay", (int)((xAxisMargin+(1-xAxisMargin)*0.79*0.75)*width), (int)(0.5*height*(yAxisMargin+1))+5);
+    protected String getHeaderTitle() {
+        return "EigenTrust Energy Consumption";
     }
 
     @Override
-    protected void plotOutcomes(Collection<Outcome> outcomes, Graphics graphics) {
-        this.outcomes = outcomes;
+    protected String[] getCategoryLabels() {
+        return new String[] {"Pre-Trusted", "Malicious", "Benevolent", "Relay"};
+    }
 
-        int height = this.getHeight();
-        int width = this.getWidth();
+    @Override
+    protected Color[] getCategoryColors() {
+        return new Color[] {preTrustedPeerEnergyColor, maliciousServerEnergyColor, benevolentServerEnergyColor, relayServerEnergyColor};
+    }
 
-        clearPanel(graphics);
-        drawAxes(graphics);
+    @Override
+    protected double[] extractCategoryValues(Outcome outcome) {
+        EigenTrustEnergyConsumptionOutcome e = (EigenTrustEnergyConsumptionOutcome) outcome;
+        return new double[] {
+                e.get_preTrustedPeerEnergyConsumption(),
+                e.get_maliciousServerEnergyConsumption(),
+                e.get_benevolentServerEnergyConsumption(),
+                e.get_relayServerEnergyConsumption()
+        };
+    }
 
-        if ((outcomes == null)  || (outcomes.size() == 0))
-            return;
-
-        Outcome outcome = Outcome.computeOutcomes(outcomes);
-        double preTrustedPeerEnergyConsumption = ((EigenTrustEnergyConsumptionOutcome)outcome).get_preTrustedPeerEnergyConsumption();
-        double maliciousServerEnergyConsumption = ((EigenTrustEnergyConsumptionOutcome)outcome).get_maliciousServerEnergyConsumption();
-        double benevolentServerEnergyConsumption = ((EigenTrustEnergyConsumptionOutcome)outcome).get_benevolentServerEnergyConsumption();
-        double relayServerEnergyConsumption = ((EigenTrustEnergyConsumptionOutcome)outcome).get_relayServerEnergyConsumption();
-        double max = preTrustedPeerEnergyConsumption;
-
-        if (maliciousServerEnergyConsumption > max)
-            max = maliciousServerEnergyConsumption;
-        if (benevolentServerEnergyConsumption > max)
-            max = benevolentServerEnergyConsumption;
-        if (relayServerEnergyConsumption > max)
-            max = relayServerEnergyConsumption;
-
-        int x1 = (int)((xAxisMargin+(1-xAxisMargin)*0.75)*width);
-        int y1 = (int)(yAxisMargin*height*0.05);
-        int w1 = Math.min((int)((xAxisMargin+(1-xAxisMargin)*0.2)*width),(int)(yAxisMargin*height*0.8));
-        int h1 = w1;
-
-        double avg = ((EigenTrustEnergyConsumptionOutcome)outcome).get_avgSensorEnergyConsumption();
-        avg = 4*constant + Math.pow(avg,alpha);
-        double power = Math.ceil(Math.log10(avg));
-        avg = ((int)(avg/Math.pow(10, power-2)))/10.0;
-        graphics.drawString(avg+"*10^"+(power-1),x1, (int)(yAxisMargin*height*0.95));
-
-        preTrustedPeerEnergyConsumption = preTrustedPeerEnergyConsumption/max;
-        maliciousServerEnergyConsumption = maliciousServerEnergyConsumption/max;
-        benevolentServerEnergyConsumption = benevolentServerEnergyConsumption/max;
-        relayServerEnergyConsumption = relayServerEnergyConsumption/max;
-
-        double sum = preTrustedPeerEnergyConsumption + maliciousServerEnergyConsumption + benevolentServerEnergyConsumption + relayServerEnergyConsumption;
-        int angle = (int)((preTrustedPeerEnergyConsumption/sum)*360);
-
-        graphics.setColor(preTrustedPeerEnergyColor);
-        graphics.fillRect((int)((xAxisMargin+(1-xAxisMargin)*0.08*0.75)*width),
-                   (int)((yAxisMargin)*height*(1-preTrustedPeerEnergyConsumption)),
-                   (int)((1-xAxisMargin)*0.15*0.75*width),
-                   (int)((yAxisMargin)*height*preTrustedPeerEnergyConsumption));
-        graphics.fillArc(x1,y1,w1,h1,0,angle);
-
-        graphics.setColor(maliciousServerEnergyColor);
-        graphics.fillRect((int)((xAxisMargin+(1-xAxisMargin)*0.31*0.75)*width),
-                   (int)((yAxisMargin)*height*(1-maliciousServerEnergyConsumption)),
-                   (int)((1-xAxisMargin)*0.15*0.75*width),
-                   (int)((yAxisMargin)*height*maliciousServerEnergyConsumption));
-        graphics.fillArc(x1,y1,w1,h1,angle,(int)((maliciousServerEnergyConsumption/sum)*360));
-        angle += (int)((maliciousServerEnergyConsumption/sum)*360);
-
-        graphics.setColor(benevolentServerEnergyColor);
-        graphics.fillRect((int)((xAxisMargin+(1-xAxisMargin)*0.54*0.75)*width),
-                   (int)((yAxisMargin)*height*(1-benevolentServerEnergyConsumption)),
-                   (int)((1-xAxisMargin)*0.15*0.75*width),
-                   (int)((yAxisMargin)*height*benevolentServerEnergyConsumption));
-        graphics.fillArc(x1,y1,w1,h1,angle,(int)((benevolentServerEnergyConsumption/sum)*360));
-        angle += (int)((benevolentServerEnergyConsumption/sum)*360);
-
-        graphics.setColor(relayServerEnergyColor);
-        graphics.fillRect((int)((xAxisMargin+(1-xAxisMargin)*0.77*0.75)*width),
-                   (int)((yAxisMargin)*height*(1-relayServerEnergyConsumption)),
-                   (int)((1-xAxisMargin)*0.15*0.75*width),
-                   (int)((yAxisMargin)*height*relayServerEnergyConsumption));
-        graphics.fillArc(x1,y1,w1,h1,angle,360-angle);
+    @Override
+    protected double getAverageSensorEnergy(Outcome outcome) {
+        return ((EigenTrustEnergyConsumptionOutcome) outcome).get_avgSensorEnergyConsumption();
     }
 }

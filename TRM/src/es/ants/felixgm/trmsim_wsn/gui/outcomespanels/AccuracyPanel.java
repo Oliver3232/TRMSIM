@@ -43,9 +43,18 @@ package es.ants.felixgm.trmsim_wsn.gui.outcomespanels;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.BasicOutcome;
 import es.ants.felixgm.trmsim_wsn.outcomes.Outcome;
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Path2D;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * <p>This class represents the generic panel used to plot the accuracy of
@@ -57,9 +66,15 @@ import java.util.Collection;
  */
 public class AccuracyPanel extends OutcomesPanel {
     /** Color used to plot the current accuracy of each outcome */
-    protected Color currentValueColor = Color.green;
+    protected Color currentValueColor = new Color(0, 150, 136);
     /** Color used to plot the average accuracy of all the outcomes */
-    protected Color averageValueColor = Color.red;
+    protected Color averageValueColor = new Color(255, 112, 67);
+    /** Grid color */
+    protected Color gridColor = new Color(206, 218, 236);
+    /** Axis label color */
+    protected Color labelColor = new Color(64, 80, 102);
+    /** Cached points for hover tooltips */
+    private List<HoverPoint> hoverPoints = new ArrayList<HoverPoint>();
 
     /**
      * Class AccuracyPanel constructor
@@ -80,111 +95,213 @@ public class AccuracyPanel extends OutcomesPanel {
 
     @Override
     protected void drawAxes(Graphics graphics) {
-        int height = this.getHeight();
-        int width = this.getWidth();
+        Graphics2D g2 = (Graphics2D) graphics;
+        ChartArea chart = buildChartArea();
 
-        graphics.drawLine(0, (int)(height*yAxisMargin), width, (int)(height*yAxisMargin));
-        graphics.drawLine((int)(width*xAxisMargin), 0, (int)(width*xAxisMargin), height);
+        g2.setColor(labelColor);
+        g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+        g2.drawString("Accuracy Over Recent Simulations", chart.left, chart.top - 18);
+        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.drawString("Y: Accuracy [% of benevolent selections]", chart.left, chart.top - 4);
 
-        graphics.drawString("20", 1, (int)(height*yAxisMargin*0.8)+5);
-        graphics.drawString("40", 1, (int)(height*yAxisMargin*0.6)+5);
-        graphics.drawString("60", 1, (int)(height*yAxisMargin*0.4)+5);
-        graphics.drawString("80", 1, (int)(height*yAxisMargin*0.2)+5);
-        //graphics.drawString("100", 0, (int)(height*yAxisMargin*0.0)+10);
-        
-        graphics.drawLine((int)(width*xAxisMargin)-5,(int)(height*yAxisMargin*0.8),(int)(width*xAxisMargin)+5,(int)(height*yAxisMargin*0.8));
-        graphics.drawLine((int)(width*xAxisMargin)-5,(int)(height*yAxisMargin*0.6),(int)(width*xAxisMargin)+5,(int)(height*yAxisMargin*0.6));
-        graphics.drawLine((int)(width*xAxisMargin)-5,(int)(height*yAxisMargin*0.4),(int)(width*xAxisMargin)+5,(int)(height*yAxisMargin*0.4));
-        graphics.drawLine((int)(width*xAxisMargin)-5,(int)(height*yAxisMargin*0.2),(int)(width*xAxisMargin)+5,(int)(height*yAxisMargin*0.2));
-        graphics.drawLine((int)(width*xAxisMargin)-5,(int)(height*yAxisMargin*0.0),(int)(width*xAxisMargin)+5,(int)(height*yAxisMargin*0.0));
+        g2.setColor(gridColor);
+        g2.setStroke(new BasicStroke(1f));
+        for (int tick = 0; tick <= 5; tick++) {
+            int y = chart.bottom - (int) ((chart.bottom - chart.top) * (tick / 5.0));
+            g2.drawLine(chart.left, y, chart.right, y);
+            g2.setColor(labelColor);
+            g2.drawString(String.valueOf(tick * 20), Math.max(2, chart.left - 30), y + 4);
+            g2.setColor(gridColor);
+        }
 
-        graphics.drawString("Current: ", (int)(1.5*width*xAxisMargin*(2-xAxisMargin))+5,(int)(0.5*height*(yAxisMargin+1))+5);
-        graphics.drawString("Average: ", (int)(width*0.5*(1.0-xAxisMargin))+5, (int)(0.5*height*(yAxisMargin+1))+5);
+        g2.setColor(new Color(84, 102, 132));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawLine(chart.left, chart.top, chart.left, chart.bottom);
+        g2.drawLine(chart.left, chart.bottom, chart.right, chart.bottom);
 
-        graphics.setColor(currentValueColor);
-        graphics.drawLine((int)(width*xAxisMargin*(2-xAxisMargin)),(int)(0.5*height*(yAxisMargin+1)),(int)(1.5*width*xAxisMargin*(2-xAxisMargin)),(int)(0.5*height*(yAxisMargin+1)));
-        graphics.setColor(averageValueColor);
-        graphics.drawLine((int)(width*0.45*(1.0-xAxisMargin)),(int)(0.5*height*(yAxisMargin+1)),(int)(width*0.5*(1.0-xAxisMargin)),(int)(0.5*height*(yAxisMargin+1)));
+        g2.setColor(labelColor);
+        g2.drawString("X: Recent simulation index", chart.left + (chart.width / 2) - 70, chart.bottom + 28);
+
+        int legendX = chart.right - 220;
+        int legendY = chart.top - 18;
+        drawLegend(g2, legendX, legendY, currentValueColor, "Current");
+        drawLegend(g2, legendX + 108, legendY, averageValueColor, "Running avg");
     }
 
     @Override
     protected void plotOutcomes(Collection<Outcome> outcomes, Graphics graphics) {
         this.outcomes = outcomes;
 
-        int height = this.getHeight();
-        int width = this.getWidth();
-        int xIncr = ((int)(width*(1.0-xAxisMargin)))/windowsSize;
-        int curr_x = (int)(width*xAxisMargin);
-        int curr_y = (int)(height*yAxisMargin);
-        int next_y = 0;
-        int avg_y = (int)(height*yAxisMargin);
-        int avg_next_y = 0;
-        double avg = 0.0;
-        int count = 0;
-        double value = 0.0;
-        Outcome lastOutcome = null;
-
         clearPanel(graphics);
         drawAxes(graphics);
 
-        if ((outcomes == null)  || (outcomes.size() == 0))
+        if (!(graphics instanceof Graphics2D) || outcomes == null || outcomes.isEmpty())
             return;
 
-        if (outcomes.size() <= windowsSize) {
-            curr_x = width - outcomes.size()*xIncr;
-            for (Outcome outcome : outcomes) {
-                count++;
-                value = ((BasicOutcome)outcome).get_avgSatisfaction();
+        Graphics2D g2 = (Graphics2D) graphics;
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                next_y = (int)((1.0-value)*(height*yAxisMargin));
-                graphics.setColor(currentValueColor);
-                graphics.drawLine(curr_x,curr_y,curr_x+xIncr,next_y);
-
-                avg += value;
-                avg_next_y = (int)((1.0-(avg/count))*(height*yAxisMargin));
-                graphics.setColor(averageValueColor);
-                graphics.drawLine(curr_x,avg_y,curr_x+xIncr,avg_next_y);
-
-                curr_x += xIncr;
-                curr_y = next_y;
-                avg_y = avg_next_y;
-                lastOutcome = outcome;
-            }
-        } else {
-            for (Outcome outcome : outcomes) {
-                count++;
-
-                value = ((BasicOutcome)outcome).get_avgSatisfaction();
-                avg += value;
-                if (count <= (outcomes.size()-windowsSize)) {
-                    curr_y = (int)((1.0-value)*(height*yAxisMargin));
-                    avg_y = (int)((1.0-(avg/count))*height*yAxisMargin);
-                    continue;
-                }
-
-                next_y = (int)((1.0-value)*(height*yAxisMargin));
-                graphics.setColor(currentValueColor);
-                graphics.drawLine(curr_x,curr_y,curr_x+xIncr,next_y);
-
-                avg_next_y = (int)((1.0-(avg/count))*height*yAxisMargin);
-                graphics.setColor(averageValueColor);
-                graphics.drawLine(curr_x,avg_y,curr_x+xIncr,avg_next_y);
-
-                curr_x += xIncr;
-                curr_y = next_y;
-                avg_y = avg_next_y;
-                lastOutcome = outcome;
+        List<Double> currentSeries = new ArrayList<Double>();
+        List<Double> averageSeries = new ArrayList<Double>();
+        double cumulative = 0.0;
+        int count = 0;
+        int start = Math.max(0, outcomes.size() - windowsSize);
+        for (Outcome outcome : outcomes) {
+            count++;
+            double current = ((BasicOutcome) outcome).get_avgSatisfaction();
+            cumulative += current;
+            if ((count - 1) >= start) {
+                currentSeries.add(bound01(current));
+                averageSeries.add(bound01(cumulative / count));
             }
         }
 
-        graphics.setColor(axesColor);
-        if (lastOutcome != null) {
-            value = ((int)(((BasicOutcome)lastOutcome).get_avgSatisfaction()*10000))/100.0;
-            graphics.drawString("Current: "+value+" %", (int)(1.5*width*xAxisMargin*(2-xAxisMargin))+5,(int)(0.5*height*(yAxisMargin+1))+5);
-            graphics.drawString("Average: "+(int)((avg/count)*10000)/100.0+" %", (int)(width*0.5*(1.0-xAxisMargin))+5, (int)(0.5*height*(yAxisMargin+1))+5);
-        } else {
-            graphics.drawString("Current: ", (int)(1.5*width*xAxisMargin*(2-xAxisMargin))+5,(int)(0.5*height*(yAxisMargin+1))+5);
-            graphics.drawString("Average: ", (int)(width*0.5*(1.0-xAxisMargin))+5, (int)(0.5*height*(yAxisMargin+1))+5);
+        ChartArea chart = buildChartArea();
+        hoverPoints = new ArrayList<HoverPoint>();
+        drawSmoothedSeries(g2, currentSeries, chart, currentValueColor, 2.8f, "Current");
+        drawSmoothedSeries(g2, averageSeries, chart, averageValueColor, 2.8f, "Running avg");
+
+        if (!currentSeries.isEmpty()) {
+            double current = currentSeries.get(currentSeries.size() - 1) * 100.0;
+            double avg = averageSeries.get(averageSeries.size() - 1) * 100.0;
+            g2.setColor(labelColor);
+            g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+            g2.drawString(String.format("Current: %.2f%%", current), chart.left, chart.bottom + 46);
+            g2.drawString(String.format("Running avg: %.2f%%", avg), chart.left + 170, chart.bottom + 46);
+        }
+    }
+
+    @Override
+    public String getToolTipText(MouseEvent event) {
+        if (hoverPoints == null || hoverPoints.isEmpty() || event == null) {
+            return super.getToolTipText(event);
+        }
+        int radius = 7;
+        for (HoverPoint point : hoverPoints) {
+            if (Math.abs(event.getX() - point.x) <= radius && Math.abs(event.getY() - point.y) <= radius) {
+                return point.label;
+            }
+        }
+        return super.getToolTipText(event);
+    }
+
+    private void drawSmoothedSeries(Graphics2D g2, List<Double> values, ChartArea chart, Color color, float strokeWidth, String seriesLabel) {
+        if (values == null || values.isEmpty()) {
+            return;
+        }
+
+        if (values.size() == 1) {
+            double y = mapY(values.get(0), chart);
+            fillAreaUnderSeries(g2, new double[] { chart.left }, new double[] { y }, chart, color);
+            g2.setColor(color);
+            g2.fill(new Ellipse2D.Double(chart.left - 3, y - 3, 6, 6));
+            hoverPoints.add(new HoverPoint(chart.left, (int)Math.round(y), String.format("%s: %.2f%%", seriesLabel, values.get(0) * 100.0)));
+            return;
+        }
+
+        double stepX = chart.width / (double) (values.size() - 1);
+        double[] xs = new double[values.size()];
+        double[] ys = new double[values.size()];
+        for (int i = 0; i < values.size(); i++) {
+            xs[i] = chart.left + (stepX * i);
+            ys[i] = mapY(values.get(i), chart);
+        }
+
+        fillAreaUnderSeries(g2, xs, ys, chart, color);
+
+        Path2D.Double path = new Path2D.Double();
+        path.moveTo(xs[0], ys[0]);
+        for (int i = 1; i < xs.length - 1; i++) {
+            double cx = xs[i];
+            double cy = ys[i];
+            double nx = (xs[i] + xs[i + 1]) / 2.0;
+            double ny = (ys[i] + ys[i + 1]) / 2.0;
+            path.quadTo(cx, cy, nx, ny);
+        }
+        path.quadTo(xs[xs.length - 2], ys[ys.length - 2], xs[xs.length - 1], ys[ys.length - 1]);
+
+        g2.setColor(color);
+        g2.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.draw(path);
+
+        for (int i = 0; i < xs.length; i++) {
+            g2.fill(new Ellipse2D.Double(xs[i] - 2.5, ys[i] - 2.5, 5, 5));
+            hoverPoints.add(new HoverPoint((int)Math.round(xs[i]), (int)Math.round(ys[i]),
+                    String.format("%s #%d: %.2f%%", seriesLabel, i + 1, values.get(i) * 100.0)));
+        }
+    }
+
+    private void fillAreaUnderSeries(Graphics2D g2, double[] xs, double[] ys, ChartArea chart, Color color) {
+        if (xs.length == 0 || ys.length == 0) {
+            return;
+        }
+        Path2D.Double area = new Path2D.Double();
+        area.moveTo(xs[0], chart.bottom);
+        for (int i = 0; i < xs.length; i++) {
+            area.lineTo(xs[i], ys[i]);
+        }
+        area.lineTo(xs[xs.length - 1], chart.bottom);
+        area.closePath();
+        Color fillColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 32);
+        g2.setColor(fillColor);
+        g2.fill(area);
+    }
+
+    private double mapY(double normalized, ChartArea chart) {
+        double bounded = bound01(normalized);
+        return chart.bottom - (chart.height * bounded);
+    }
+
+    private double bound01(double value) {
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private void drawLegend(Graphics2D g2, int x, int y, Color color, String label) {
+        g2.setColor(color);
+        g2.setStroke(new BasicStroke(2.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(x, y, x + 20, y);
+        g2.setColor(labelColor);
+        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.drawString(label, x + 26, y + 4);
+    }
+
+    private ChartArea buildChartArea() {
+        int width = getWidth();
+        int height = getHeight();
+        int left = Math.max(50, (int) (width * 0.10));
+        int right = width - Math.max(14, (int) (width * 0.04));
+        int top = Math.max(42, (int) (height * 0.15));
+        int bottom = height - Math.max(54, (int) (height * 0.20));
+        return new ChartArea(left, top, right, bottom);
+    }
+
+    private static class HoverPoint {
+        private final int x;
+        private final int y;
+        private final String label;
+
+        private HoverPoint(int x, int y, String label) {
+            this.x = x;
+            this.y = y;
+            this.label = label;
+        }
+    }
+
+    private static class ChartArea {
+        private final int left;
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final int width;
+        private final int height;
+
+        private ChartArea(int left, int top, int right, int bottom) {
+            this.left = left;
+            this.top = top;
+            this.right = Math.max(left + 10, right);
+            this.bottom = Math.max(top + 10, bottom);
+            this.width = this.right - this.left;
+            this.height = this.bottom - this.top;
         }
     }
 

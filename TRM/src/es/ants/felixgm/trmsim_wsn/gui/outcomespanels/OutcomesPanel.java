@@ -42,10 +42,16 @@
 package es.ants.felixgm.trmsim_wsn.gui.outcomespanels;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.Outcome;
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.Collection;
+import javax.swing.ToolTipManager;
 import javax.swing.JPanel;
 
 /**
@@ -63,9 +69,9 @@ public abstract class OutcomesPanel extends JPanel {
     /** Background color */
     protected Color backgroundColor = Color.white;
     /** Margin of the 'X' (horizontal) axis */
-    protected double xAxisMargin = 0.05;
+    protected double xAxisMargin = 0.0;
     /** Margin of the 'Y' (vertical) axis */
-    protected double yAxisMargin = 0.9;
+    protected double yAxisMargin = 0.8;
     /** Number of the outcomes to be actually plotted (the last ones) */
     protected int windowsSize = 10;
     /** Label for this outcomes panel */
@@ -78,6 +84,7 @@ public abstract class OutcomesPanel extends JPanel {
     public OutcomesPanel(Collection<Outcome> outcomes) {
         label = "Outcomes";
         this.outcomes = outcomes;
+        initializeInteractions();
     }
 
     /**
@@ -87,6 +94,7 @@ public abstract class OutcomesPanel extends JPanel {
     protected OutcomesPanel(String label) {
         this.label = label;
         this.outcomes = new ArrayList<Outcome>();
+        initializeInteractions();
     }
 
     @Override
@@ -135,8 +143,28 @@ public abstract class OutcomesPanel extends JPanel {
      * @param graphics Graphics object used to clear this outcomes panel
      */
     protected void clearPanel(Graphics graphics) {
-        graphics.setColor(backgroundColor);
-        graphics.fillRect(0, 0, this.getWidth(), this.getHeight());
+        if (graphics instanceof Graphics2D) {
+            Graphics2D g2 = (Graphics2D) graphics;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+            int width = this.getWidth();
+            int height = this.getHeight();
+            GradientPaint gradient = new GradientPaint(
+                    0, 0, new Color(250, 252, 255),
+                    0, height, new Color(241, 246, 255)
+            );
+            g2.setPaint(gradient);
+            g2.fillRect(0, 0, width, height);
+
+            g2.setColor(new Color(212, 223, 240));
+            g2.setStroke(new BasicStroke(1.0f));
+            g2.drawRect(0, 0, Math.max(0, width - 1), Math.max(0, height - 1));
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        } else {
+            graphics.setColor(backgroundColor);
+            graphics.fillRect(0, 0, this.getWidth(), this.getHeight());
+        }
         graphics.setColor(axesColor);
     }
 
@@ -151,4 +179,9 @@ public abstract class OutcomesPanel extends JPanel {
      * @param outcomes Outcomes to be plotted in this outcomes panel
      */
     public void setOutcomes(Collection<Outcome> outcomes) { this.outcomes = outcomes; }
+
+    private void initializeInteractions() {
+        setToolTipText(" ");
+        ToolTipManager.sharedInstance().registerComponent(this);
+    }
 }
