@@ -108,7 +108,8 @@ public abstract class OutcomesPanel extends JPanel {
      * @param outcomes Outcomes to be plotted in this outcomes panel
      */
     public void plotOutcomes(Collection<Outcome> outcomes) {
-        plotOutcomes(outcomes, this.getGraphics());
+        this.outcomes = outcomes;
+        repaint();
     }
 
     /**
@@ -122,7 +123,7 @@ public abstract class OutcomesPanel extends JPanel {
      * This method plots the vertical and horizontal axes in this outcomes panel
      */
     public void drawAxes() {
-        drawAxes(this.getGraphics());
+        repaint();
     }
 
     /**
@@ -135,7 +136,7 @@ public abstract class OutcomesPanel extends JPanel {
      * This method clears this outcomes panel
      */
     public void clearPanel() {
-        clearPanel(this.getGraphics());
+        repaint();
     }
 
     /**

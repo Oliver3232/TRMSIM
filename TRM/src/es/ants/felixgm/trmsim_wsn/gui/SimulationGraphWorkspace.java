@@ -40,6 +40,7 @@ final class SimulationGraphWorkspace {
     private final JCheckBox enable3DNavigationCheckBox = new JCheckBox("3D navigation");
     private final JButton fullscreenGraphButton = new JButton();
     private final PanelRenderer renderer;
+    private NetworkPanel mainNetworkPanel;
 
     private JFrame fullscreenFrame;
     private JavaFXNetworkPanel fullscreenNetworkPanel;
@@ -88,8 +89,12 @@ final class SimulationGraphWorkspace {
     }
 
     void applyVisualizationControlsToPanels(NetworkPanel mainPanel) {
-        if (mainPanel instanceof JavaFXNetworkPanel) {
-            applyVisualizationControls((JavaFXNetworkPanel) mainPanel);
+        if (mainPanel != null) {
+            mainNetworkPanel = mainPanel;
+        }
+        NetworkPanel panelToApply = (mainPanel != null) ? mainPanel : mainNetworkPanel;
+        if (panelToApply instanceof JavaFXNetworkPanel) {
+            applyVisualizationControls((JavaFXNetworkPanel) panelToApply);
         }
         if (fullscreenNetworkPanel != null) {
             applyVisualizationControls(fullscreenNetworkPanel);

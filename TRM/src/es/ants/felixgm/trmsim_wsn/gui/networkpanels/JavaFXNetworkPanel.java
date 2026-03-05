@@ -6,6 +6,8 @@ import es.ants.felixgm.trmsim_wsn.network.Service;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -220,7 +222,16 @@ public class JavaFXNetworkPanel extends NetworkPanel {
                 if (canvas == null) {
                     return;
                 }
-                renderSnapshot();
+                try {
+                    renderSnapshot();
+                } catch (Exception ex) {
+                    GraphicsContext gc = canvas.getGraphicsContext2D();
+                    gc.setFill(javafx.scene.paint.Color.rgb(32, 45, 68, 1.0));
+                    gc.fillRect(0, 0, Math.max(10, canvas.getWidth()), Math.max(10, canvas.getHeight()));
+                    gc.setFill(javafx.scene.paint.Color.rgb(235, 245, 255, 0.95));
+                    gc.setFont(Font.font("SansSerif", 12));
+                    gc.fillText("Graph renderer recovered from an internal update race.", 12, 24);
+                }
             } finally {
                 renderQueued.set(false);
             }
@@ -262,14 +273,16 @@ public class JavaFXNetworkPanel extends NetworkPanel {
             return;
         }
 
-        for (Sensor client : currentNetwork.get_clients()) {
+        Collection<Sensor> clientsSnapshot = copySensors(currentNetwork.get_clients());
+        for (Sensor client : clientsSnapshot) {
             Color color = client.isActive() ? clientColor : idleClientColor;
             color = adjustSpecialColor(client, color);
             drawSensor(gc, client, color, currentRadio, currentShowRanges, currentShowLinks, currentShowIds, w, h, pulse, currentTheme, use3D);
         }
 
         if (currentService != null) {
-            for (Sensor server : currentNetwork.get_servers()) {
+            Collection<Sensor> serversSnapshot = copySensors(currentNetwork.get_servers());
+            for (Sensor server : serversSnapshot) {
                 Color sensorColor = relayServerColor;
                 if (!server.isActive()) {
                     sensorColor = idleServerColor;
@@ -319,7 +332,8 @@ public class JavaFXNetworkPanel extends NetworkPanel {
                 gc.setStroke(javafx.scene.paint.Color.rgb(130, 130, 130, 0.28));
                 gc.setLineWidth(1.4);
             }
-            for (Sensor neighbor : sensor.getNeighbors()) {
+            Collection<Sensor> neighborsSnapshotPrimary = copySensors(sensor.getNeighbors());
+            for (Sensor neighbor : neighborsSnapshotPrimary) {
                 if (!neighbor.isActive()) {
                     continue;
                 }
@@ -337,7 +351,8 @@ public class JavaFXNetworkPanel extends NetworkPanel {
                 gc.setStroke(javafx.scene.paint.Color.rgb(90, 240, 255, 0.72));
             }
             gc.setLineWidth(theme == VisualTheme.WIREFRAME ? 0.95 : 1.05);
-            for (Sensor neighbor : sensor.getNeighbors()) {
+            Collection<Sensor> neighborsSnapshotSecondary = copySensors(sensor.getNeighbors());
+            for (Sensor neighbor : neighborsSnapshotSecondary) {
                 if (!neighbor.isActive()) {
                     continue;
                 }
@@ -620,6 +635,13 @@ public class JavaFXNetworkPanel extends NetworkPanel {
         } catch (Exception ignored) {
             return false;
         }
+    }
+
+    private Collection<Sensor> copySensors(Collection<Sensor> sensors) {
+        if (sensors == null || sensors.isEmpty()) {
+            return new ArrayList<Sensor>(0);
+        }
+        return new ArrayList<Sensor>(sensors);
     }
 
     private static final class ProjectedPoint {

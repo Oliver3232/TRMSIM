@@ -152,11 +152,35 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         trmodels.add(TRIP.get_name());
         trmodels.add(TemplateTRM.get_name());
         TRModelComboBox.setModel(new javax.swing.DefaultComboBoxModel(trmodels));
+        TRModelComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public java.awt.Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                java.awt.Component component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                String modelName = (value == null) ? "" : value.toString();
+                if (isTRModelDisabled(modelName)) {
+                    component.setForeground(new Color(145, 145, 145));
+                }
+                return component;
+            }
+        });
+        if (!trmodels.isEmpty()) {
+            lastAllowedTRModel = trmodels.firstElement();
+        }
         
         for (final String trmodel : trmodels) {
             JMenuItem trmodelMenuItem = new JMenuItem(trmodel);
+            if (isTRModelDisabled(trmodel)) {
+                trmodelMenuItem.setEnabled(false);
+            }
             trmodelMenuItem.addActionListener(new java.awt.event.ActionListener() {
                 public void actionPerformed(java.awt.event.ActionEvent evt) {
+                    if (isTRModelDisabled(trmodel)) {
+                        JOptionPane.showMessageDialog(TRMSim_WSN.this,
+                                "PowerTrust is temporarily disabled in this build.",
+                                "Model Disabled",
+                                JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
                     TRModelComboBox.setSelectedItem(trmodel);
                     TRModelComboBoxItemStateChanged(null);
                 }
@@ -1421,6 +1445,20 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private void TRModelComboBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_TRModelComboBoxItemStateChanged
         try {
             String trModelName = (String)TRModelComboBox.getSelectedItem();
+            if (isTRModelDisabled(trModelName)) {
+                if (lastAllowedTRModel != null && !lastAllowedTRModel.equals(trModelName)) {
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            TRModelComboBox.setSelectedItem(lastAllowedTRModel);
+                        }
+                    });
+                }
+                JOptionPane.showMessageDialog(this,
+                        "PowerTrust is temporarily disabled in this build.",
+                        "Model Disabled",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             String defaultParametersFileName = "";
             String packageName = "es.ants.felixgm.trmsim_wsn.";
             
@@ -1539,6 +1577,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             networkPanel.setBackground(Color.white);
             networkPanel.setSize(networkPanelContainer.getSize());
             applyVisualizationControls();
+            networkPanelContainer.revalidate();
+            networkPanelContainer.repaint();
+            renderCurrentNetworkOnPanel(networkPanel);
 
             int visibleCharts = 0;
             for (OutcomesPanel outcomesPanel : outcomesPanels) {
@@ -1549,6 +1590,8 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 outcomesPanel.setSize(outcomesTabbedPane.getSize());
                 visibleCharts++;
             }
+            outcomesTabbedPane.revalidate();
+            outcomesTabbedPane.repaint();
 
             resetWSNButton.setEnabled(false);
             runTRMButton.setEnabled(false);
@@ -1556,6 +1599,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             resetWSNmenuItem.setEnabled(false);
             runTRMmenuItem.setEnabled(false);
             saveWSNmenuItem.setEnabled(false);
+            lastAllowedTRModel = trModelName;
             updateParametersSourceView();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
@@ -1662,36 +1706,24 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
      * @param arg
      */
     public void update(Observable observable, Object arg) {
+        Runnable updateTask = new Runnable() {
+            public void run() {
+                try {
+                    handleSimulationUpdate(arg);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(TRMSim_WSN.this,ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
+                    stopSimulationsButtonActionPerformed(null);
+                    stopTRMButtonActionPerformed(null);
+                    ex.printStackTrace();
+                }
+            }
+        };
         try {
-            if (arg instanceof Network)
-                paintNetwork((Network)arg,C.get_requiredService());
-            else if (arg instanceof Collection) {
-                Collection<Outcome> outcomes = (Collection<Outcome>) arg;
-
-                SimulationResultRepository repository = SimulationResultRepository.getInstance();
-                repository.addAllOutcomes(outcomes);
-
-                for (OutcomesPanel outcomesPanel : outcomesPanels) {
-                    if (outcomesPanel.isShowing())
-                        outcomesPanel.plotOutcomes(outcomes);
-                    else
-                        outcomesPanel.setOutcomes(outcomes);
-                }
-            } else if (arg instanceof String) {
-                String msg = ((String)arg).replaceFirst("selected TRM",(String)TRModelComboBox.getSelectedItem());
-                messagesTextArea.setText(msg+messagesTextArea.getText());
-                if (msg.startsWith("Finishing")) {
-                    simulationComponentsEnabling(false);
-                    stopTRMButton.setEnabled(false);
-                    stopTRMmenuItem.setEnabled(false);
-                    stopSimulationsButton.setEnabled(false);
-                    stopSimulationsMenuItem.setEnabled(false);
-
-                    SimulationResultRepository repository = SimulationResultRepository.getInstance();
-                    messagesTextArea.setText("Simulation completed. " + repository.getResultCount() + " results saved. Use 'Export Data' to save to file.\n" + messagesTextArea.getText());
-                }
-            } else if (arg instanceof Exception)
-                throw (Exception) arg;
+            if (SwingUtilities.isEventDispatchThread()) {
+                updateTask.run();
+            } else {
+                SwingUtilities.invokeAndWait(updateTask);
+            }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
             stopSimulationsButtonActionPerformed(null);
@@ -1699,6 +1731,36 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             ex.printStackTrace();
         } finally {
             C.sleep();
+        }
+    }
+
+    private void handleSimulationUpdate(Object arg) throws Exception {
+        if (arg instanceof Network) {
+            paintNetwork((Network)arg,C.get_requiredService());
+        } else if (arg instanceof Collection) {
+            Collection<Outcome> outcomes = (Collection<Outcome>) arg;
+
+            SimulationResultRepository repository = SimulationResultRepository.getInstance();
+            repository.addAllOutcomes(outcomes);
+
+            for (OutcomesPanel outcomesPanel : outcomesPanels) {
+                outcomesPanel.plotOutcomes(outcomes);
+            }
+        } else if (arg instanceof String) {
+            String msg = ((String)arg).replaceFirst("selected TRM",(String)TRModelComboBox.getSelectedItem());
+            messagesTextArea.setText(msg+messagesTextArea.getText());
+            if (msg.startsWith("Finishing")) {
+                simulationComponentsEnabling(false);
+                stopTRMButton.setEnabled(false);
+                stopTRMmenuItem.setEnabled(false);
+                stopSimulationsButton.setEnabled(false);
+                stopSimulationsMenuItem.setEnabled(false);
+
+                SimulationResultRepository repository = SimulationResultRepository.getInstance();
+                messagesTextArea.setText("Simulation completed. " + repository.getResultCount() + " results saved. Use 'Export Data' to save to file.\n" + messagesTextArea.getText());
+            }
+        } else if (arg instanceof Exception) {
+            throw (Exception) arg;
         }
     }
     
@@ -2110,8 +2172,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         boolean showIds = showIdsCheckBox.isSelected();
         boolean showGrid = showGridCheckBox.isSelected();
 
-        if (networkPanel.isShowing())
-            networkPanel.paintNetwork(network, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
+        networkPanel.paintNetwork(network, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
         if (graphWorkspace != null)
             graphWorkspace.renderOnFullscreen(network, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
 
@@ -2604,6 +2665,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private TRMParametersPanel TRM_ParametersPanel;
     private NetworkPanel networkPanel = new JavaFXNetworkPanel();
     private SimulationGraphWorkspace graphWorkspace;
+    private String lastAllowedTRModel;
 
     private Collection<OutcomesPanel> outcomesPanels;
     private LegendPanel legendPanel = new LegendPanel();
@@ -2676,6 +2738,10 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         } else {
             bottomParametersSplitPane.setDividerLocation(1.0);
         }
+    }
+
+    private boolean isTRModelDisabled(String modelName) {
+        return PowerTrust.get_name().equals(modelName);
     }
 
 }
