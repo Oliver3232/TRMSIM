@@ -43,6 +43,7 @@ package es.ants.felixgm.trmsim_wsn.gui.legendpanels;
 
 import es.ants.felixgm.trmsim_wsn.gui.*;
 import java.awt.Color;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.util.Vector;
 
@@ -106,11 +107,23 @@ public class LegendPanel extends javax.swing.JPanel {
         graphics.setColor(backgroundColor);
         graphics.fillRect(0, 0, width, height);
 
+        if (legendElements.isEmpty()) {
+            return;
+        }
+
+        int y = Math.max(20, height / 2);
+        int x = 10;
+        FontMetrics metrics = graphics.getFontMetrics();
         for (int i = 0; i < legendElements.size(); i++) {
+            LegendElement element = legendElements.get(i);
             graphics.setColor(legendElements.get(i).getColor());
-            graphics.fillArc(5, (int)(height*((i+1)/(double)(legendElements.size()+1)))-5, 10, 10, 0, 360);
+            graphics.fillArc(x, y - 6, 10, 10, 0, 360);
             graphics.setColor(charactersColor);
-            graphics.drawString(legendElements.get(i).getLabel(),20,(int)(height*((i+1)/(double)(legendElements.size()+1)))+5);
+            graphics.drawString(element.getLabel(), x + 14, y + 4);
+            x += 14 + metrics.stringWidth(element.getLabel()) + 18;
+            if (x > width - 30) {
+                break;
+            }
         }
     }
 

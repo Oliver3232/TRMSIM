@@ -44,10 +44,15 @@ package es.ants.felixgm.trmsim_wsn.gui.networkpanels;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
 import es.ants.felixgm.trmsim_wsn.network.Service;
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.RenderingHints;
+import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
 
 /**
@@ -57,6 +62,13 @@ import java.awt.geom.AffineTransform;
  * @since 0.4
  */
 public class NetworkPanel extends javax.swing.JPanel {
+    private static final Stroke AXIS_STROKE = new BasicStroke(1.2f);
+    private static final Stroke GRID_STROKE = new BasicStroke(0.8f);
+    private static final Stroke LINK_STROKE = new BasicStroke(1.1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+    private static final Stroke RANGE_STROKE = new BasicStroke(1.0f);
+    private static final Color RANGE_COLOR = new Color(90, 130, 210, 65);
+    private static final Color NODE_STROKE_COLOR = new Color(32, 42, 52, 170);
+    private static final Font AXIS_FONT = new Font("SansSerif", Font.PLAIN, 11);
 
     protected double axesMargin = 0.06;
     protected double xOrigin = 0.0;
@@ -138,7 +150,7 @@ public class NetworkPanel extends javax.swing.JPanel {
         this.showLinks = showLinks;
         this.showIds = showIds;
         this.showGrid = showGrid;
-        paintNetwork(network, requiredService, radioRange, showRanges, showLinks, showIds, showGrid, this.getGraphics());
+        repaint();
     }
 
     /**
@@ -148,31 +160,42 @@ public class NetworkPanel extends javax.swing.JPanel {
      * @param graphics Graphic object where to plot the sensor
      */
     protected void paintSensor(Sensor sensor, Color color, Graphics graphics) {
+        if (graphics == null) {
+            return;
+        }
+        Graphics2D g2 = (Graphics2D) graphics;
         int height = this.getHeight();
         int width = this.getWidth();
         int radio = (int)(radioRange*Math.sqrt(Math.pow(width*(1.0-2*axesMargin), 2.0)+Math.pow(height*(1.0-2*axesMargin), 2.0)));
-        
-        int x = (int)(width*axesMargin+(sensor.getX()/Network.get_maxDistance())*width*(1.0-2*axesMargin));
-        int y = (int)(height*(1-axesMargin)-(sensor.getY()/Network.get_maxDistance())*height*(1.0-2*axesMargin));
-        graphics.setColor(color);
-        graphics.fillArc(x-5, y-5, 10, 10, 0, 360);
+
+        int x = mapX(sensor.getX());
+        int y = mapY(sensor.getY());
+        int nodeRadius = getNodeRadius();
+
+        g2.setColor(color);
+        g2.fillOval(x-nodeRadius, y-nodeRadius, nodeRadius*2, nodeRadius*2);
+        g2.setColor(NODE_STROKE_COLOR);
+        g2.drawOval(x-nodeRadius, y-nodeRadius, nodeRadius*2, nodeRadius*2);
 
         if ((showRanges) && (radio > 0))
-            graphics.drawArc(x-radio, y-radio, radio*2, radio*2, 0, 360);
+            drawRange(g2, x, y, radio);
         if ((showLinks) && (sensor.isActive())) {
-            graphics.setColor(linksColor);
+            Stroke oldStroke = g2.getStroke();
+            g2.setStroke(LINK_STROKE);
+            g2.setColor(new Color(linksColor.getRed(), linksColor.getGreen(), linksColor.getBlue(), 145));
             for (Sensor neighbor : sensor.getNeighbors())
                 if (neighbor.isActive()) {
-                    int x1 = (int)(width*axesMargin+(neighbor.getX()/Network.get_maxDistance())*width*(1.0-2*axesMargin));
-                    int y1 = (int)(height*(1-axesMargin)-(neighbor.getY()/Network.get_maxDistance())*height*(1.0-2*axesMargin));
-                    graphics.drawLine(x, y, x1, y1);
-                   drawArrow(this.getGraphics(),x, y, x1, y1); //Lefteris
+                    int x1 = mapX(neighbor.getX());
+                    int y1 = mapY(neighbor.getY());
+                    g2.drawLine(x, y, x1, y1);
+                    drawArrow(g2, x, y, x1, y1);
                 }
+            g2.setStroke(oldStroke);
         }
         if (showIds) {
-            graphics.setColor(linksColor);
-            graphics.drawString(String.valueOf(sensor.id()),x-2,y-2);
-       }
+            g2.setColor(new Color(38, 48, 64));
+            g2.drawString(String.valueOf(sensor.id()), x + nodeRadius + 1, y - nodeRadius - 1);
+        }
     }
 
     /** this method plots arrows Lefteris
@@ -195,6 +218,7 @@ public class NetworkPanel extends javax.swing.JPanel {
         g.drawLine(0, 0, len, 0);
         g.fillPolygon(new int[] {len, len-ARR_SIZE, len-ARR_SIZE, len},
                       new int[] {0, -ARR_SIZE, ARR_SIZE, 0}, 4);
+        g.dispose();
     }
     
     
@@ -214,17 +238,24 @@ public class NetworkPanel extends javax.swing.JPanel {
     protected void paintNetwork(Network network, Service requiredService,
             double radioRange, boolean showRanges, boolean showLinks,
             boolean showIds, boolean showGrid, Graphics graphics) throws Exception {
+        if (graphics == null) {
+            return;
+        }
+        Graphics2D g2 = (Graphics2D) graphics.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
         int height = this.getHeight();
         int width = this.getWidth();
         Color sensorColor;
 
-        graphics.setColor(backgroundColor);
-        graphics.fillRect(0, 0, width, height);
-        setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true));
+        g2.setColor(backgroundColor);
+        g2.fillRect(0, 0, width, height);
 
-        drawAxes(graphics);
+        drawAxes(g2);
         if (showGrid)
-            drawGrid(graphics);
+            drawGrid(g2);
 
         if (network != null) {
             for (Sensor client : network.get_clients()) {
@@ -233,7 +264,7 @@ public class NetworkPanel extends javax.swing.JPanel {
                 else
                     sensorColor = idleClientColor;
 
-                paintSensor(client,sensorColor,graphics);
+                paintSensor(client,sensorColor,g2);
             }
             
             if (requiredService != null)
@@ -248,44 +279,86 @@ public class NetworkPanel extends javax.swing.JPanel {
                             sensorColor = maliciousServerColor;
                     }
 
-                    paintSensor(server,sensorColor,graphics);
+                    paintSensor(server,sensorColor,g2);
                 }
         }
+
+        g2.dispose();
     }
     
     protected void drawGrid(Graphics graphics) {
+        Graphics2D g2 = (Graphics2D) graphics;
         int height = this.getHeight();
         int width = this.getWidth();
 
-        graphics.setColor(gridColor);
+        Stroke oldStroke = g2.getStroke();
+        g2.setStroke(GRID_STROKE);
+        g2.setColor(new Color(gridColor.getRed(), gridColor.getGreen(), gridColor.getBlue(), 165));
 
         for (int i = 1; i <= numTicks; i++) {
             //horizontal grid
-            graphics.drawLine((int)(width*axesMargin),(int)(height*(1.0-axesMargin)-height*(1.0-2*axesMargin)*(i/(double)numTicks)),(int)(width*(1.0-axesMargin)),(int)(height*(1.0-axesMargin)-height*(1.0-2*axesMargin)*(i/(double)numTicks)));
+            g2.drawLine((int)(width*axesMargin),(int)(height*(1.0-axesMargin)-height*(1.0-2*axesMargin)*(i/(double)numTicks)),(int)(width*(1.0-axesMargin)),(int)(height*(1.0-axesMargin)-height*(1.0-2*axesMargin)*(i/(double)numTicks)));
             //vertical grid
-            graphics.drawLine((int)(width*axesMargin+width*(1.0-2*axesMargin)*(i/(double)numTicks)),(int)(height*(1.0-axesMargin)),(int)(width*axesMargin+width*(1.0-2*axesMargin)*(i/(double)numTicks)),(int)(height*axesMargin));
+            g2.drawLine((int)(width*axesMargin+width*(1.0-2*axesMargin)*(i/(double)numTicks)),(int)(height*(1.0-axesMargin)),(int)(width*axesMargin+width*(1.0-2*axesMargin)*(i/(double)numTicks)),(int)(height*axesMargin));
         }
+        g2.setStroke(oldStroke);
     }
     
     protected void drawAxes(Graphics graphics) {
+        Graphics2D g2 = (Graphics2D) graphics;
         int height = this.getHeight();
         int width = this.getWidth();
 
-        graphics.setColor(axesColor);
+        Stroke oldStroke = g2.getStroke();
+        Font oldFont = g2.getFont();
+        g2.setStroke(AXIS_STROKE);
+        g2.setFont(AXIS_FONT);
+        g2.setColor(new Color(axesColor.getRed(), axesColor.getGreen(), axesColor.getBlue(), 210));
+        FontMetrics fm = g2.getFontMetrics();
         
         //X axis
-        graphics.drawLine((int)(width*axesMargin), (int)(height*(1-axesMargin)), (int)(width*(1.0-axesMargin)), (int)(height*(1.0-axesMargin)));
+        g2.drawLine((int)(width*axesMargin), (int)(height*(1-axesMargin)), (int)(width*(1.0-axesMargin)), (int)(height*(1.0-axesMargin)));
         for (int i = 0; i <= numTicks; i++) {
-            graphics.drawLine((int)(width*axesMargin+width*(1.0-2*axesMargin)*(i/(double)numTicks)),(int)(height*(1.0-axesMargin))+5,(int)(width*axesMargin+width*(1.0-2*axesMargin)*(i/(double)numTicks)),(int)(height*(1.0-axesMargin))-5);
-            graphics.drawString(String.valueOf((int)((xOrigin+xAxisLength)*(i/(double)numTicks))), (int)(width*axesMargin+width*(1.0-2*axesMargin)*(i/(double)numTicks))-5, (int)(height)-5);
+            int x = (int)(width*axesMargin+width*(1.0-2*axesMargin)*(i/(double)numTicks));
+            g2.drawLine(x, (int)(height*(1.0-axesMargin))+4, x, (int)(height*(1.0-axesMargin))-4);
+            String label = String.valueOf((int)((xOrigin+xAxisLength)*(i/(double)numTicks)));
+            g2.drawString(label, x - (fm.stringWidth(label) / 2), (int)(height)-6);
         }
         
         //Y axis
-        graphics.drawLine((int)(width*axesMargin), (int)(height*(1-axesMargin)), (int)(width*axesMargin), (int)(height*axesMargin));
+        g2.drawLine((int)(width*axesMargin), (int)(height*(1-axesMargin)), (int)(width*axesMargin), (int)(height*axesMargin));
         for (int i = 0; i <= numTicks; i++) {
-            graphics.drawLine((int)(width*axesMargin)-5,(int)(height*(1.0-axesMargin)-height*(1.0-2*axesMargin)*(i/(double)numTicks)),(int)(width*axesMargin)+5,(int)(height*(1.0-axesMargin)-height*(1.0-2*axesMargin)*(i/(double)numTicks)));
-            graphics.drawString(String.valueOf((int)((xOrigin+xAxisLength)*(i/(double)numTicks))), 1, (int)(height*(1.0-axesMargin)-height*(1.0-2*axesMargin)*(i/(double)numTicks))+5);
+            int y = (int)(height*(1.0-axesMargin)-height*(1.0-2*axesMargin)*(i/(double)numTicks));
+            g2.drawLine((int)(width*axesMargin)-4, y, (int)(width*axesMargin)+4, y);
+            String label = String.valueOf((int)((xOrigin+xAxisLength)*(i/(double)numTicks)));
+            g2.drawString(label, 3, y + (fm.getAscent() / 2) - 1);
         }
+
+        g2.setStroke(oldStroke);
+        g2.setFont(oldFont);
+    }
+
+    private int mapX(double x) {
+        int width = this.getWidth();
+        return (int)(width*axesMargin+(x/Network.get_maxDistance())*width*(1.0-2*axesMargin));
+    }
+
+    private int mapY(double y) {
+        int height = this.getHeight();
+        return (int)(height*(1-axesMargin)-(y/Network.get_maxDistance())*height*(1.0-2*axesMargin));
+    }
+
+    private int getNodeRadius() {
+        int base = Math.min(this.getWidth(), this.getHeight());
+        return Math.max(4, Math.min(9, base / 80));
+    }
+
+    private void drawRange(Graphics2D g2, int x, int y, int radio) {
+        Stroke oldStroke = g2.getStroke();
+        g2.setStroke(RANGE_STROKE);
+        g2.setColor(RANGE_COLOR);
+        g2.drawArc(x-radio, y-radio, radio*2, radio*2, 0, 360);
+        g2.setStroke(oldStroke);
     }
     
     public Point getCoordinateAtPosition(int x, int y) {

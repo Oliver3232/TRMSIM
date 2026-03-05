@@ -47,10 +47,8 @@ import es.ants.felixgm.trmsim_wsn.gui.legendpanels.EigenTrustLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.LegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.PowerTrustLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.TRIPLegendPanel;
-import es.ants.felixgm.trmsim_wsn.gui.networkpanels.EigenTrustNetworkPanel;
+import es.ants.felixgm.trmsim_wsn.gui.networkpanels.JavaFXNetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.NetworkPanel;
-import es.ants.felixgm.trmsim_wsn.gui.networkpanels.PowerTrustNetworkPanel;
-import es.ants.felixgm.trmsim_wsn.gui.networkpanels.TRIPNetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.*;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.TRMParametersPanel;
 
@@ -74,6 +72,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.util.*;
 import javax.swing.*;
@@ -115,9 +114,16 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         try {
             // 1. Run the old init to create components and attach listeners
             initComponents();
+            graphWorkspace = new SimulationGraphWorkspace(new SimulationGraphWorkspace.PanelRenderer() {
+                public void render(NetworkPanel panel) {
+                    renderCurrentNetworkOnPanel(panel);
+                }
+            });
+            graphWorkspace.initializeControls();
 
             // 2. Run our new layout logic to rearrange everything
-            setupModernLayout();
+            applyModernLayout();
+            updateParametersSourceView();
 
             // 3. Standard setup code from the original file...
             this.setSize((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()*0.9),
@@ -1445,7 +1451,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new LegendPanel();
-                networkPanel = new NetworkPanel();
+                networkPanel = new JavaFXNetworkPanel();
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1457,7 +1463,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(false);
 
                 legendPanel = new EigenTrustLegendPanel();
-                networkPanel = new EigenTrustNetworkPanel();
+                networkPanel = new JavaFXNetworkPanel();
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1469,7 +1475,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new LegendPanel();
-                networkPanel = new NetworkPanel();
+                networkPanel = new JavaFXNetworkPanel();
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1481,7 +1487,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new PowerTrustLegendPanel();
-                networkPanel = new PowerTrustNetworkPanel();
+                networkPanel = new JavaFXNetworkPanel();
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1493,7 +1499,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new LegendPanel();
-                networkPanel = new NetworkPanel();
+                networkPanel = new JavaFXNetworkPanel();
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1506,7 +1512,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(false);
 
                 legendPanel = new TRIPLegendPanel();
-                networkPanel = new TRIPNetworkPanel();
+                networkPanel = new JavaFXNetworkPanel();
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1518,7 +1524,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new LegendPanel();
-                networkPanel = new NetworkPanel();
+                networkPanel = new JavaFXNetworkPanel();
                 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1532,10 +1538,16 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             networkPanelContainer.add(networkPanel);
             networkPanel.setBackground(Color.white);
             networkPanel.setSize(networkPanelContainer.getSize());
+            applyVisualizationControls();
 
+            int visibleCharts = 0;
             for (OutcomesPanel outcomesPanel : outcomesPanels) {
+                if (visibleCharts >= 3) {
+                    break;
+                }
                 outcomesTabbedPane.addTab(outcomesPanel.getLabel(), outcomesPanel);
                 outcomesPanel.setSize(outcomesTabbedPane.getSize());
+                visibleCharts++;
             }
 
             resetWSNButton.setEnabled(false);
@@ -1544,6 +1556,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             resetWSNmenuItem.setEnabled(false);
             runTRMmenuItem.setEnabled(false);
             saveWSNmenuItem.setEnabled(false);
+            updateParametersSourceView();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
@@ -1827,6 +1840,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         TRM_ParametersPanel.setEnabled(!parametersFileRadioButton.isSelected());
         applyParametersChangesButton.setEnabled(!parametersFileRadioButton.isSelected());
         applyParametersChangesMenuItem.setEnabled(!parametersFileRadioButton.isSelected());
+        updateParametersSourceView();
     }//GEN-LAST:event_parametersFileRadioButtonItemStateChanged
 
     private void runTRMButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runTRMButtonActionPerformed
@@ -2098,6 +2112,8 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
         if (networkPanel.isShowing())
             networkPanel.paintNetwork(network, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
+        if (graphWorkspace != null)
+            graphWorkspace.renderOnFullscreen(network, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
 
         C.sleep();
     }
@@ -2586,171 +2602,80 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private javax.swing.JTextField yCoordinateTextField;
     // End of variables declaration//GEN-END:variables
     private TRMParametersPanel TRM_ParametersPanel;
-    private NetworkPanel networkPanel = new NetworkPanel();
+    private NetworkPanel networkPanel = new JavaFXNetworkPanel();
+    private SimulationGraphWorkspace graphWorkspace;
 
     private Collection<OutcomesPanel> outcomesPanels;
     private LegendPanel legendPanel = new LegendPanel();
 
     /**
-     * Re-organizes the components initialized by initComponents() into a modern dashboard layout.
+     * Re-organizes components initialized by initComponents() into the custom dashboard layout.
      */
-    private void setupModernLayout() {
-        // 1. Clear the old "Generated" Layout
-        this.getContentPane().removeAll();
-        this.setLayout(new BorderLayout());
-
-        // =========================================================================
-        // SECTION A: THE TOOLBAR (Top Actions)
-        // =========================================================================
-        JToolBar toolbar = new JToolBar();
-        toolbar.setFloatable(false);
-        toolbar.setBorder(new EmptyBorder(5, 5, 5, 5));
-
-        // Re-use existing buttons.
-        // Note: We don't create new buttons, we move the existing ones
-        // so we keep the ActionListeners.
-        toolbar.add(newWSNButton);
-        toolbar.add(loadWSNButton);
-        toolbar.add(saveWSNButton);
-        toolbar.addSeparator();
-        toolbar.add(resetWSNButton);
-        toolbar.addSeparator();
-        toolbar.add(runTRMButton);
-        toolbar.add(stopTRMButton);
-        toolbar.addSeparator();
-        toolbar.add(runSimulationsButton);
-        toolbar.add(stopSimulationsButton);
-        toolbar.addSeparator();
-        toolbar.add(exportDataButton);
-
-        this.add(toolbar, BorderLayout.NORTH);
-
-        // =========================================================================
-        // SECTION B: THE SIDEBAR (Configuration)
-        // =========================================================================
-        JPanel sidebar = new JPanel(new BorderLayout());
-        sidebar.setPreferredSize(new Dimension(260, 0));
-        sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.LIGHT_GRAY));
-
-        JTabbedPane settingsTabs = new JTabbedPane();
-
-        // --- Tab 1: Topology ---
-        JPanel topologyPanel = new JPanel();
-        topologyPanel.setLayout(new BoxLayout(topologyPanel, BoxLayout.Y_AXIS));
-        topologyPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-
-        // Helper to group label + component
-        topologyPanel.add(wrapConfig(minNumSensorsLabel, minNumSensorsSpinner));
-        topologyPanel.add(wrapConfig(maxNumSensorsLabel, maxNumSensorsSpinner));
-        topologyPanel.add(wrapConfig(radioRangeLabel, radioRangeSlider));
-        // Add the text field for range (visual feedback)
-        JPanel rangeFeedback = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
-        rangeFeedback.add(new javax.swing.JLabel("Current Range Value:"));
-        rangeFeedback.add(radioRangeTextField);
-        topologyPanel.add(rangeFeedback);
-
-        // --- Tab 2: Scenario ---
-        JPanel scenarioPanel = new JPanel();
-        scenarioPanel.setLayout(new BoxLayout(scenarioPanel, BoxLayout.Y_AXIS));
-        scenarioPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-
-        scenarioPanel.add(wrapConfig(percentageClientsLabel, percentageClientsSlider));
-        scenarioPanel.add(wrapConfig(percentageMaliciousServersLabel, percentageMaliciousServersSlider));
-        scenarioPanel.add(wrapConfig(percentageRelayServersLabel, percentageRelayServersSlider));
-        scenarioPanel.add(wrapConfig(delayLabel, delaySlider));
-
-        // --- Tab 3: Simulation ---
-        JPanel simSettingsPanel = new JPanel();
-        simSettingsPanel.setLayout(new BoxLayout(simSettingsPanel, BoxLayout.Y_AXIS));
-        simSettingsPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-
-        simSettingsPanel.add(wrapConfig(numExecutionsLabel, numExecutionsSpinner));
-        simSettingsPanel.add(wrapConfig(numNetworksLabel, numNetworksSpinner));
-
-        JPanel checkPanel = new JPanel(new GridLayout(0, 1, 5, 5));
-        checkPanel.setBorder(BorderFactory.createTitledBorder("Threats & Dynamics"));
-        checkPanel.add(collusionCheckBox);
-        checkPanel.add(oscillatingWSNsCheckBox);
-        checkPanel.add(dynamicWSNsCheckBox);
-        simSettingsPanel.add(checkPanel);
-
-        // --- Tab 4: View ---
-        JPanel viewPanel = new JPanel(new GridLayout(0, 1, 5, 5));
-        viewPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        viewPanel.add(showIdsCheckBox);
-        viewPanel.add(showLinksCheckBox);
-        viewPanel.add(showRangesCheckBox);
-        viewPanel.add(showGridCheckBox);
-
-        // Add tabs
-        settingsTabs.addTab("Topology", topologyPanel);
-        settingsTabs.addTab("Scenario", scenarioPanel);
-        settingsTabs.addTab("Sim Settings", simSettingsPanel);
-        settingsTabs.addTab("View", viewPanel);
-
-        sidebar.add(settingsTabs, BorderLayout.CENTER);
-
-        // Trust Model Selector (Bottom of Sidebar)
-        JPanel modelPanel = new JPanel(new BorderLayout(5, 5));
-        modelPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        modelPanel.add(TRModelLabel, BorderLayout.NORTH);
-        modelPanel.add(TRModelComboBox, BorderLayout.CENTER);
-        sidebar.add(modelPanel, BorderLayout.SOUTH);
-
-        this.add(sidebar, BorderLayout.WEST);
-
-        // =========================================================================
-        // SECTION C: CENTER & BOTTOM (Map + Outcomes)
-        // =========================================================================
-
-        // Center Split Pane
-        JSplitPane centerSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-        centerSplit.setResizeWeight(0.7); // 70% height for the map
-        centerSplit.setBorder(null);
-
-        // 1. The Map Container (Top of Split)
-        JPanel mapContainer = new JPanel(new BorderLayout());
-        mapContainer.add(networkPanelContainer, BorderLayout.CENTER);
-
-        // Legend on the Right of the Map
-        JPanel legendWrapper = new JPanel(new BorderLayout());
-        legendWrapper.setBorder(BorderFactory.createTitledBorder("Legend"));
-        legendWrapper.setPreferredSize(new Dimension(150, 0));
-        legendWrapper.add(legendPanelContainer, BorderLayout.CENTER);
-        mapContainer.add(legendWrapper, BorderLayout.EAST);
-
-        centerSplit.setTopComponent(mapContainer);
-
-        // 2. The Bottom Tabs (Bottom of Split)
-        JTabbedPane bottomTabs = new JTabbedPane();
-        outcomesPanelsPanel.setPreferredSize(new Dimension(960, 320));
-        outcomesPanelsPanel.setMinimumSize(new Dimension(640, 260));
-        outcomesTabbedPane.setPreferredSize(new Dimension(930, 280));
-
-        // Fix: Ensure the parametersPanel uses a layout that fits
-        parametersPanel.setPreferredSize(null);
-
-        bottomTabs.addTab("Charts & Outcomes", outcomesPanelsPanel);
-        bottomTabs.addTab("Console Log", messagePanel);
-        bottomTabs.addTab("Parameters", parametersPanel);
-
-        centerSplit.setBottomComponent(bottomTabs);
-
-        this.add(centerSplit, BorderLayout.CENTER);
-
-        // Force UI to re-calculate layout
+    private void applyModernLayout() {
+        ModernLayoutInstaller.install(
+                this,
+                newWSNButton, loadWSNButton, saveWSNButton, resetWSNButton,
+                runTRMButton, stopTRMButton, runSimulationsButton, stopSimulationsButton, exportDataButton,
+                TRModelLabel, TRModelComboBox,
+                minNumSensorsLabel, minNumSensorsSpinner, maxNumSensorsLabel, maxNumSensorsSpinner,
+                radioRangeLabel, radioRangeSlider, radioRangeTextField,
+                percentageClientsLabel, percentageClientsSlider, percentageClientsTextField,
+                percentageMaliciousServersLabel, percentageMaliciousServersSlider, percentageMaliciousServersTextField,
+                percentageRelayServersLabel, percentageRelayServersSlider, percentageRelayServersTextField,
+                delayLabel, delaySlider, delayTextField,
+                numExecutionsLabel, numExecutionsSpinner,
+                numNetworksLabel, numNetworksSpinner,
+                collusionCheckBox, oscillatingWSNsCheckBox, dynamicWSNsCheckBox,
+                showIdsCheckBox, showLinksCheckBox, showRangesCheckBox, showGridCheckBox,
+                graphWorkspace.getVisualThemeComboBox(), graphWorkspace.getCameraPresetComboBox(),
+                graphWorkspace.getEnable3DNavigationCheckBox(), graphWorkspace.getFullscreenGraphButton(),
+                parametersPanel, messagePanel,
+                networkPanelContainer, legendPanelContainer, outcomesPanelsPanel, outcomesTabbedPane
+        );
         this.validate();
         this.repaint();
     }
 
-    /** * Helper method to create a standard labeled row for the settings
-     */
-    private JPanel wrapConfig(javax.swing.JLabel label, javax.swing.JComponent component) {
-        JPanel p = new JPanel(new BorderLayout(5, 5));
-        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        p.add(label, BorderLayout.WEST);
-        p.add(component, BorderLayout.CENTER);
-        return p;
+    private void applyVisualizationControls() {
+        if (graphWorkspace != null) {
+            graphWorkspace.applyVisualizationControlsToPanels(networkPanel);
+        }
+    }
+
+    private void renderCurrentNetworkOnPanel(NetworkPanel targetPanel) {
+        if (targetPanel == null || C == null) {
+            return;
+        }
+        try {
+            Network network = C.get_currentNetwork();
+            Service requiredService = C.get_requiredService();
+            if (network == null) {
+                return;
+            }
+            double radioRange = radioRangeSlider.getValue()/(double)radioRangeSlider.getMaximum();
+            boolean showRanges = showRangesCheckBox.isSelected();
+            boolean showLinks = showLinksCheckBox.isSelected();
+            boolean showIds = showIdsCheckBox.isSelected();
+            boolean showGrid = showGridCheckBox.isSelected();
+            targetPanel.paintNetwork(network, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
+        } catch (Exception ignored) {}
+    }
+
+    private void updateParametersSourceView() {
+        boolean fileSource = parametersFileRadioButton.isSelected();
+
+        parametersFileLabel.setVisible(fileSource);
+        parametersFileTextField.setVisible(fileSource);
+        browseButton.setVisible(fileSource);
+        saveParametersFileContentButton.setVisible(fileSource);
+
+        TRMParametersScrollPane.setVisible(!fileSource);
+        parametersFileContentScrollPane.setVisible(fileSource);
+        if (fileSource) {
+            bottomParametersSplitPane.setDividerLocation(0.0);
+        } else {
+            bottomParametersSplitPane.setDividerLocation(1.0);
+        }
     }
 
 }
