@@ -119,6 +119,8 @@ public class Simulation extends Observable implements Runnable {
 	private Collection<Outcome> globalOutcomes;
 	/** It determines whether to stop and interrupt the current simulation */
 	private boolean stop;
+	/** It determines whether the simulation is temporarily paused */
+	private boolean paused;
 
 	/**
 	 * Creates a new Simulation
@@ -182,6 +184,7 @@ public class Simulation extends Observable implements Runnable {
 
 		globalOutcomes = new ArrayList<Outcome>();
 		stop = false;
+		paused = false;
 		for (Observer observer : observers)
 			addObserver(observer);
 	}
@@ -223,6 +226,7 @@ public class Simulation extends Observable implements Runnable {
 
 		globalOutcomes = new ArrayList<Outcome>();
 		stop = false;
+		paused = false;
 		for (Observer observer : observers)
 			addObserver(observer);
 	}
@@ -232,6 +236,40 @@ public class Simulation extends Observable implements Runnable {
 	 */
 	public synchronized void stop() {
 		stop = true;
+		paused = false;
+		notifyAll();
+	}
+
+	/**
+	 * Pauses the current simulation
+	 */
+	public synchronized void pause() {
+		paused = true;
+	}
+
+	/**
+	 * Resumes the current simulation after a pause
+	 */
+	public synchronized void resume() {
+		paused = false;
+		notifyAll();
+	}
+
+	/**
+	 * Indicates whether the current simulation is paused
+	 * 
+	 * @return true if the simulation is paused; false otherwise
+	 */
+	public synchronized boolean isPaused() {
+		return paused;
+	}
+
+	private void waitIfPaused() throws InterruptedException {
+		synchronized (this) {
+			while (paused && !stop) {
+				wait();
+			}
+		}
 	}
 
 	/**
@@ -241,6 +279,7 @@ public class Simulation extends Observable implements Runnable {
 		Sensor.setRunningSimulation(true);
 		try {
 			for (int net = 0; (net < numNetworks) && !stop; net++) {
+				waitIfPaused();
 				if ((network == null) || (numNetworks != 1))
 					network = Controller.C().createNewNetwork(minNumSensors,
 							maxNumSensors, probClients, probRelay,
@@ -259,6 +298,7 @@ public class Simulation extends Observable implements Runnable {
 				Collection<Outcome> outcomes = new ArrayList<Outcome>();
 				int Ne = 0;
 				for (; (Ne < numExecutions) && !stop; Ne++) {
+					waitIfPaused();
 					Thread[] clients = new Thread[network.get_numClients()];
 					int j = 0;
 					for (Sensor client : network.get_clients())

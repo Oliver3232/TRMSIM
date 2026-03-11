@@ -64,6 +64,7 @@ import es.ants.felixgm.trmsim_wsn.network.Sensor;
 import es.ants.felixgm.trmsim_wsn.network.Service;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.Outcome;
+import es.ants.felixgm.trmsim_wsn.outcomes.NodeMetric;
 
 import es.ants.felixgm.trmsim_wsn.trm.TRMParameters;
 import es.ants.felixgm.trmsim_wsn.trm.TRModel_WSN;
@@ -109,6 +110,12 @@ import java.util.logging.Logger;
  */
 public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private static final Logger LOGGER = Logger.getLogger(TRMSim_WSN.class.getName());
+
+    private enum BatchSimulationState {
+        IDLE,
+        RUNNING,
+        PAUSED
+    }
     
     /**
     * Current version of TRMSim-WSN: {@value}
@@ -130,10 +137,61 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 }
             });
             graphWorkspace.initializeControls();
+            graphWorkspace.setNodeSelectionListener(nodeId -> {
+                if (nodeId == null) {
+                    clearNodeInspector();
+                } else {
+                    selectNodeById(nodeId.intValue());
+                }
+            });
+            graphWorkspace.setSimulationControlListener(new SimulationGraphWorkspace.SimulationControlListener() {
+                @Override
+                public void onPauseResumeRequested() {
+                    handlePauseResumeRequest();
+                }
+
+                @Override
+                public void onStopRequested() {
+                    handleStopRequest();
+                }
+            });
+            graphWorkspace.setDisplayControlListener(new SimulationGraphWorkspace.DisplayControlListener() {
+                @Override
+                public void onShowIdsChanged(boolean selected) {
+                    showIdsCheckBox.setSelected(selected);
+                }
+
+                @Override
+                public void onShowLinksChanged(boolean selected) {
+                    showLinksCheckBox.setSelected(selected);
+                }
+
+                @Override
+                public void onShowRangesChanged(boolean selected) {
+                    showRangesCheckBox.setSelected(selected);
+                }
+
+                @Override
+                public void onShowGridChanged(boolean selected) {
+                    showGridCheckBox.setSelected(selected);
+                }
+
+                @Override
+                public void onDelayChanged(int value) {
+                    delaySlider.setValue(value);
+                }
+            });
+            installNetworkPanelSelectionHandler(networkPanel);
 
             // 2. Run our new layout logic to rearrange everything
             applyModernLayout();
+            installGraphInfoStrip();
+            installEmbeddedNodeInspector();
             updateParametersSourceView();
+            updateRunSimulationsControls();
+            clearNodeInspector();
+            graphWorkspace.setFullscreenLegendItems(createLegendItems());
+            syncEmbeddedAndFullscreenDisplayControls();
 
             // 3. Standard setup code from the original file...
             this.setSize((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()*0.9),
@@ -1590,11 +1648,17 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             }
 
             legendPanelContainer.add(legendPanel,null);
+            if (graphWorkspace != null) {
+                graphWorkspace.setFullscreenLegendItems(createLegendItems());
+            }
+            refreshInspectorLegendPanel();
             legendPanel.setBackground(Color.white);
             legendPanel.setSize(legendPanelContainer.getSize());
             legendPanel.plotLegend();
+            legendPanelContainer.setPreferredSize(new Dimension(100, 64));
 
             networkPanelContainer.add(networkPanel, java.awt.BorderLayout.CENTER);
+            installNetworkPanelSelectionHandler(networkPanel);
             networkPanel.setBackground(Color.white);
             networkPanel.setSize(networkPanelContainer.getSize());
             applyVisualizationControls();
@@ -1628,6 +1692,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             runTRMmenuItem.setEnabled(false);
             saveWSNmenuItem.setEnabled(false);
             sensorPropertiesPanel.setVisible(false);
+            clearNodeInspector();
             messagesTextArea.setText("Model changed to " + trModelName + ". Network state cleared. Create or load a new WSN.\n");
             lastAllowedTRModel = trModelName;
             LOGGER.info("Model switch completed: " + trModelName + ", newPanel=" +
@@ -1661,6 +1726,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private void stopSimulationsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopSimulationsButtonActionPerformed
         try {
             C.stopSimulations();
+            resetBatchSimulationState();
             simulationComponentsEnabling(false);
             stopSimulationsButton.setEnabled(false);
             stopSimulationsMenuItem.setEnabled(false);
@@ -1770,6 +1836,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private void handleSimulationUpdate(Object arg) throws Exception {
         if (arg instanceof Network) {
             paintNetwork((Network)arg,C.get_requiredService());
+            refreshSelectedNodeDetails();
         } else if (arg instanceof Collection) {
             Collection<Outcome> outcomes = (Collection<Outcome>) arg;
 
@@ -1779,10 +1846,12 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             for (OutcomesPanel outcomesPanel : outcomesPanels) {
                 outcomesPanel.plotOutcomes(outcomes);
             }
+            refreshSelectedNodeDetails();
         } else if (arg instanceof String) {
             String msg = ((String)arg).replaceFirst("selected TRM",(String)TRModelComboBox.getSelectedItem());
             messagesTextArea.setText(msg+messagesTextArea.getText());
             if (msg.startsWith("Finishing")) {
+                resetBatchSimulationState();
                 simulationComponentsEnabling(false);
                 stopTRMButton.setEnabled(false);
                 stopTRMmenuItem.setEnabled(false);
@@ -1839,6 +1908,23 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     
     private void runSimulationsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runSimulationsButtonActionPerformed
         try {
+            if (batchSimulationState == BatchSimulationState.RUNNING) {
+                C.pauseSimulation();
+                batchSimulationState = BatchSimulationState.PAUSED;
+                updateRunSimulationsControls();
+                refreshSelectedNodeDetails();
+                messagesTextArea.setText("Simulations paused.\n" + messagesTextArea.getText());
+                return;
+            }
+            if (batchSimulationState == BatchSimulationState.PAUSED) {
+                C.resumeSimulation();
+                batchSimulationState = BatchSimulationState.RUNNING;
+                updateRunSimulationsControls();
+                refreshSelectedNodeDetails();
+                messagesTextArea.setText("Simulations resumed.\n" + messagesTextArea.getText());
+                return;
+            }
+
             SimulationResultRepository.getInstance().clearRepository();
             int numExecutions = (Integer)numExecutionsSpinner.getValue();
             int numNetworks = (Integer)numNetworksSpinner.getValue();
@@ -1857,6 +1943,10 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             
             messagesTextArea.setText("Starting simulations at "+(new java.util.Date())+"...\n"+messagesTextArea.getText());
             simulationComponentsEnabling(true);
+            batchSimulationState = BatchSimulationState.RUNNING;
+            updateRunSimulationsControls();
+            runSimulationsButton.setEnabled(true);
+            runSimulationsMenuItem.setEnabled(true);
             stopSimulationsButton.setEnabled(true);
             stopSimulationsMenuItem.setEnabled(true);
             for (OutcomesPanel outcomesPanel : outcomesPanels) {
@@ -1876,6 +1966,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
     private void showIdsCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_showIdsCheckBoxItemStateChanged
         try {
+            syncEmbeddedAndFullscreenDisplayControls();
             Network network = C.get_currentNetwork();
             if (network != null) {
                 boolean showIds = showIdsCheckBox.isSelected();
@@ -1974,6 +2065,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
     private void showLinksCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_showLinksCheckBoxItemStateChanged
         try {
+            syncEmbeddedAndFullscreenDisplayControls();
             Network network = C.get_currentNetwork();
             if (network != null) {
                 boolean showLinks = showLinksCheckBox.isSelected();
@@ -1991,6 +2083,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
     private void showRangesCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_showRangesCheckBoxItemStateChanged
         try {
+            syncEmbeddedAndFullscreenDisplayControls();
             Network network = C.get_currentNetwork();
             if (network != null) {
                 boolean showRanges = showRangesCheckBox.isSelected();
@@ -2009,6 +2102,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private void delaySliderStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_delaySliderStateChanged
         delayTextField.setText(String.valueOf(delaySlider.getValue()));
         C.set_delay(1000*delaySlider.getValue()/delaySlider.getMaximum());
+        syncEmbeddedAndFullscreenDisplayControls();
     }//GEN-LAST:event_delaySliderStateChanged
 
     private void radioRangeSliderStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_radioRangeSliderStateChanged
@@ -2053,6 +2147,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 saveWSNButton.setEnabled(true);
                 saveWSNmenuItem.setEnabled(true);
                 sensorPropertiesPanel.setVisible(false);
+                clearNodeInspector();
                 messagesTextArea.setText("New WSN created\n"+messagesTextArea.getText());
                 for (OutcomesPanel outcomesPanel : outcomesPanels) {
                     outcomesPanel.setOutcomes(null);
@@ -2124,28 +2219,12 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
     private void networkPanelContainerMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_networkPanelContainerMouseClicked
         try {
-            if (!C.isSimulationRunning()) {
-                int x = evt.getX();
-                int y = evt.getY();
-
-                Point coordinate = networkPanel.getCoordinateAtPosition(x, y);
-                Sensor sensor = C.getSensorAtCoordinate(coordinate.getX(), coordinate.getY());
-                if (sensor != null) {
-                    sensorPropertiesPanel.setVisible(true);
-                    sensorIdTextField.setText(String.valueOf(sensor.id()));
-                    xCoordinateTextField.setText(String.valueOf((int)sensor.getX()));
-                    yCoordinateTextField.setText(String.valueOf((int)sensor.getY()));
-                    neighborsLabel.setText(sensor.getNeighbors().size()+" Neighbor(s)");
-                    //javax.swing.DefaultListModel defaultListModel = new javax.swing.DefaultListModel();
-                    Vector<String> neighborsIDs = new Vector<String>();
-                    for (Sensor neighbor : sensor.getNeighbors()) {
-                        neighborsIDs.add(String.valueOf(neighbor.id()));
-                        //defaultListModel.addElement(neighbor.id());
-                    }
-                    //neighborsList.setModel(defaultListModel);
-                    neighborsList.setListData(neighborsIDs);
-                    neighborsScrollPane.setViewportView(neighborsList);
-                }
+            Point point = SwingUtilities.convertPoint(networkPanelContainer, evt.getPoint(), networkPanel);
+            Sensor sensor = networkPanel.getSensorAtPosition(point.x, point.y);
+            if (sensor != null) {
+                selectNodeById(sensor.id());
+            } else {
+                clearNodeInspector();
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
@@ -2163,6 +2242,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
     private void showGridCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_showGridCheckBoxItemStateChanged
         try {
+            syncEmbeddedAndFullscreenDisplayControls();
             Network network = C.get_currentNetwork();
             boolean showGrid = showGridCheckBox.isSelected();
             paintNetwork(network, C.get_requiredService());
@@ -2179,15 +2259,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private void neighborsListMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_neighborsListMouseClicked
         if (evt.getClickCount() == 2) {
             Sensor sensor = C.getSensor(Integer.valueOf((String)neighborsList.getSelectedValue()));
-            sensorIdTextField.setText(String.valueOf(sensor.id()));
-            xCoordinateTextField.setText(String.valueOf((int)sensor.getX()));
-            yCoordinateTextField.setText(String.valueOf((int)sensor.getY()));
-            Vector<String> neighborsIDs = new Vector<String>();
-            for (Sensor neighbor : sensor.getNeighbors()) {
-                neighborsIDs.add(String.valueOf(neighbor.id()));
+            if (sensor != null) {
+                selectNodeById(sensor.id());
             }
-            neighborsList.setListData(neighborsIDs);
-            neighborsScrollPane.setViewportView(neighborsList);
         }
     }//GEN-LAST:event_neighborsListMouseClicked
     
@@ -2698,9 +2772,649 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private NetworkPanel networkPanel = new NetworkPanel();
     private SimulationGraphWorkspace graphWorkspace;
     private String lastAllowedTRModel;
+    private BatchSimulationState batchSimulationState = BatchSimulationState.IDLE;
+    private Integer selectedNodeId;
+    private JPanel graphNodeInspectorPanel;
+    private JLabel graphNodeInspectorTitleLabel;
+    private JTextArea graphNodeInspectorTextArea;
+    private JPanel graphInfoStripPanel;
+    private JPanel graphTopLiveControlsPanel;
+    private JButton graphStripRunButton;
+    private JButton graphStripStopButton;
+    private JLabel graphStripSimulationStateLabel;
+    private JTextArea graphTopControlsInfoArea;
+    private javax.swing.Timer graphNodeInspectorAnimator;
+    private int graphNodeInspectorCurrentWidth = 16;
+    private int graphNodeInspectorTargetWidth = 16;
+    private boolean graphInspectorPinned = false;
+    private JCheckBox graphInspectorPinCheckBox;
+    private JButton graphInspectorPauseResumeButton;
+    private JButton graphInspectorStopButton;
+    private JLabel graphInspectorSimulationStateLabel;
+    private JCheckBox graphInspectorShowIdsCheckBox;
+    private JCheckBox graphInspectorShowLinksCheckBox;
+    private JCheckBox graphInspectorShowRangesCheckBox;
+    private JCheckBox graphInspectorShowGridCheckBox;
+    private JSlider graphInspectorDelaySlider;
+    private MiniLegendPanel graphInspectorLegendPanel;
+    private JPanel graphInspectorLegendWrapper;
+    private MiniLegendPanel graphStripLegendPanel;
 
     private Collection<OutcomesPanel> outcomesPanels;
     private LegendPanel legendPanel = new LegendPanel();
+
+    private void installNetworkPanelSelectionHandler(NetworkPanel panel) {
+        if (panel == null) {
+            return;
+        }
+        panel.setSensorSelectionListener(new NetworkPanel.SensorSelectionListener() {
+            @Override
+            public void sensorSelected(Sensor sensor) {
+                if (sensor != null) {
+                    selectNodeById(sensor.id());
+                } else {
+                    clearNodeInspector();
+                }
+            }
+        });
+    }
+
+    private void installGraphInfoStrip() {
+        graphTopLiveControlsPanel = new JPanel();
+        graphTopLiveControlsPanel.setOpaque(false);
+        graphTopLiveControlsPanel.setLayout(new BoxLayout(graphTopLiveControlsPanel, BoxLayout.Y_AXIS));
+        JLabel liveLabel = new JLabel("Live Simulation");
+        liveLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
+        liveLabel.setForeground(new Color(77, 111, 153));
+        liveLabel.setAlignmentX(0.0f);
+        graphStripSimulationStateLabel = new JLabel("Idle");
+        graphStripSimulationStateLabel.setForeground(new Color(44, 56, 77));
+        graphStripSimulationStateLabel.setAlignmentX(0.0f);
+        JPanel controlsButtons = new JPanel();
+        controlsButtons.setOpaque(false);
+        controlsButtons.setLayout(new BoxLayout(controlsButtons, BoxLayout.X_AXIS));
+        graphStripRunButton = new JButton("Run Simulations");
+        graphStripRunButton.addActionListener(evt -> handlePauseResumeRequest());
+        graphStripStopButton = new JButton("Stop Simulations");
+        graphStripStopButton.addActionListener(evt -> handleStopRequest());
+        controlsButtons.add(graphStripRunButton);
+        controlsButtons.add(Box.createHorizontalStrut(8));
+        controlsButtons.add(graphStripStopButton);
+        controlsButtons.setAlignmentX(0.0f);
+        graphTopControlsInfoArea = new JTextArea(
+                "Use Run/Pause/Resume for the current batch. Stop ends the active batch. " +
+                "Display toggles, delay, render mode and fullscreen stay available next to this block.");
+        graphTopControlsInfoArea.setEditable(false);
+        graphTopControlsInfoArea.setOpaque(false);
+        graphTopControlsInfoArea.setLineWrap(true);
+        graphTopControlsInfoArea.setWrapStyleWord(true);
+        graphTopControlsInfoArea.setRows(2);
+        graphTopControlsInfoArea.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        graphTopControlsInfoArea.setForeground(new Color(77, 88, 105));
+        graphTopLiveControlsPanel.add(liveLabel);
+        graphTopLiveControlsPanel.add(Box.createVerticalStrut(2));
+        graphTopLiveControlsPanel.add(graphStripSimulationStateLabel);
+        graphTopLiveControlsPanel.add(Box.createVerticalStrut(6));
+        graphTopLiveControlsPanel.add(controlsButtons);
+        graphTopLiveControlsPanel.add(Box.createVerticalStrut(6));
+        graphTopLiveControlsPanel.add(graphTopControlsInfoArea);
+        graphTopLiveControlsPanel.setPreferredSize(new Dimension(280, 82));
+        graphTopLiveControlsPanel.setMinimumSize(new Dimension(240, 82));
+
+        graphStripLegendPanel = new MiniLegendPanel();
+        graphStripLegendPanel.setItems(createLegendItems());
+        graphStripLegendPanel.setPreferredSize(new Dimension(240, 48));
+        graphStripLegendPanel.setMinimumSize(new Dimension(200, 48));
+    }
+
+    private void installEmbeddedNodeInspector() {
+        if (graphNodeInspectorPanel != null) {
+            networkPanelContainer.remove(graphNodeInspectorPanel);
+        }
+
+        graphNodeInspectorPanel = new JPanel(new BorderLayout(0, 10));
+        graphNodeInspectorPanel.setBackground(new Color(245, 249, 255));
+        graphNodeInspectorPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 1, 0, 0, new Color(214, 226, 241)),
+                new EmptyBorder(14, 14, 14, 14)));
+        graphNodeInspectorPanel.setPreferredSize(new Dimension(16, 100));
+        graphNodeInspectorCurrentWidth = 16;
+        graphNodeInspectorTargetWidth = 16;
+
+        JPanel header = new JPanel(new BorderLayout(0, 6));
+        header.setOpaque(false);
+        JPanel headerTop = new JPanel(new BorderLayout(8, 0));
+        headerTop.setOpaque(false);
+        JLabel badgeLabel = new JLabel("NODE INSPECTOR");
+        badgeLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
+        badgeLabel.setForeground(new Color(77, 111, 153));
+        graphInspectorPinCheckBox = new JCheckBox("Pin panel");
+        graphInspectorPinCheckBox.setOpaque(false);
+        graphInspectorPinCheckBox.setSelected(graphInspectorPinned);
+        graphInspectorPinCheckBox.addActionListener(evt -> {
+            graphInspectorPinned = graphInspectorPinCheckBox.isSelected();
+            setGraphInspectorExpanded(graphInspectorPinned);
+        });
+        headerTop.add(badgeLabel, BorderLayout.WEST);
+        headerTop.add(graphInspectorPinCheckBox, BorderLayout.EAST);
+        graphNodeInspectorTitleLabel = new JLabel("No node selected");
+        graphNodeInspectorTitleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        graphNodeInspectorTitleLabel.setForeground(new Color(23, 35, 58));
+        header.add(headerTop, BorderLayout.NORTH);
+        header.add(graphNodeInspectorTitleLabel, BorderLayout.CENTER);
+
+        JPanel simulationControlsPanel = new JPanel();
+        simulationControlsPanel.setOpaque(false);
+        simulationControlsPanel.setLayout(new BoxLayout(simulationControlsPanel, BoxLayout.Y_AXIS));
+        JLabel simulationControlsLabel = new JLabel("Live Simulation");
+        simulationControlsLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
+        simulationControlsLabel.setForeground(new Color(77, 111, 153));
+        simulationControlsLabel.setAlignmentX(0.0f);
+        graphInspectorSimulationStateLabel = new JLabel("Idle");
+        graphInspectorSimulationStateLabel.setForeground(new Color(44, 56, 77));
+        graphInspectorSimulationStateLabel.setAlignmentX(0.0f);
+        JPanel simulationButtonsRow = new JPanel();
+        simulationButtonsRow.setOpaque(false);
+        simulationButtonsRow.setLayout(new BoxLayout(simulationButtonsRow, BoxLayout.X_AXIS));
+        graphInspectorPauseResumeButton = new JButton("Pause");
+        graphInspectorPauseResumeButton.addActionListener(evt -> handlePauseResumeRequest());
+        graphInspectorStopButton = new JButton("Stop");
+        graphInspectorStopButton.addActionListener(evt -> handleStopRequest());
+        simulationButtonsRow.add(graphInspectorPauseResumeButton);
+        simulationButtonsRow.add(Box.createHorizontalStrut(8));
+        simulationButtonsRow.add(graphInspectorStopButton);
+        simulationButtonsRow.setAlignmentX(0.0f);
+        simulationControlsPanel.add(simulationControlsLabel);
+        simulationControlsPanel.add(Box.createVerticalStrut(4));
+        simulationControlsPanel.add(graphInspectorSimulationStateLabel);
+        simulationControlsPanel.add(Box.createVerticalStrut(6));
+        simulationControlsPanel.add(simulationButtonsRow);
+
+        JPanel liveDisplayPanel = new JPanel();
+        liveDisplayPanel.setOpaque(false);
+        liveDisplayPanel.setLayout(new BoxLayout(liveDisplayPanel, BoxLayout.Y_AXIS));
+        JLabel displayLabel = new JLabel("Display");
+        displayLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
+        displayLabel.setForeground(new Color(77, 111, 153));
+        displayLabel.setAlignmentX(0.0f);
+        graphInspectorShowIdsCheckBox = createInspectorCheckBox("Show IDs", showIdsCheckBox.isSelected(), selected -> showIdsCheckBox.setSelected(selected));
+        graphInspectorShowLinksCheckBox = createInspectorCheckBox("Show links", showLinksCheckBox.isSelected(), selected -> showLinksCheckBox.setSelected(selected));
+        graphInspectorShowRangesCheckBox = createInspectorCheckBox("Show ranges", showRangesCheckBox.isSelected(), selected -> showRangesCheckBox.setSelected(selected));
+        graphInspectorShowGridCheckBox = createInspectorCheckBox("Show grid", showGridCheckBox.isSelected(), selected -> showGridCheckBox.setSelected(selected));
+        JLabel delayLabel = new JLabel("Delay");
+        delayLabel.setForeground(new Color(44, 56, 77));
+        delayLabel.setAlignmentX(0.0f);
+        graphInspectorDelaySlider = new JSlider(delaySlider.getMinimum(), delaySlider.getMaximum(), delaySlider.getValue());
+        graphInspectorDelaySlider.setOpaque(false);
+        graphInspectorDelaySlider.setAlignmentX(0.0f);
+        graphInspectorDelaySlider.addChangeListener(evt -> {
+            if (delaySlider.getValue() != graphInspectorDelaySlider.getValue()) {
+                delaySlider.setValue(graphInspectorDelaySlider.getValue());
+            }
+        });
+        liveDisplayPanel.add(displayLabel);
+        liveDisplayPanel.add(Box.createVerticalStrut(4));
+        liveDisplayPanel.add(graphInspectorShowIdsCheckBox);
+        liveDisplayPanel.add(graphInspectorShowLinksCheckBox);
+        liveDisplayPanel.add(graphInspectorShowRangesCheckBox);
+        liveDisplayPanel.add(graphInspectorShowGridCheckBox);
+        liveDisplayPanel.add(Box.createVerticalStrut(6));
+        liveDisplayPanel.add(delayLabel);
+        liveDisplayPanel.add(graphInspectorDelaySlider);
+
+        graphInspectorLegendWrapper = new JPanel(new BorderLayout());
+        graphInspectorLegendWrapper.setOpaque(true);
+        graphInspectorLegendWrapper.setBackground(Color.white);
+        graphInspectorLegendWrapper.setBorder(BorderFactory.createLineBorder(new Color(217, 227, 238), 1, true));
+        graphInspectorLegendPanel = createLegendPanel();
+        if (graphInspectorLegendPanel != null) {
+            graphInspectorLegendPanel.setPreferredSize(new Dimension(250, 52));
+            graphInspectorLegendPanel.setBackground(Color.white);
+            graphInspectorLegendWrapper.add(graphInspectorLegendPanel, BorderLayout.CENTER);
+        }
+
+        graphNodeInspectorTextArea = new JTextArea();
+        graphNodeInspectorTextArea.setEditable(false);
+        graphNodeInspectorTextArea.setLineWrap(true);
+        graphNodeInspectorTextArea.setWrapStyleWord(true);
+        graphNodeInspectorTextArea.setBackground(new Color(255, 255, 255));
+        graphNodeInspectorTextArea.setForeground(new Color(44, 56, 77));
+        graphNodeInspectorTextArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        graphNodeInspectorTextArea.setBorder(new EmptyBorder(10, 10, 10, 10));
+        JScrollPane inspectorScrollPane = new JScrollPane(graphNodeInspectorTextArea);
+        inspectorScrollPane.setBorder(BorderFactory.createLineBorder(new Color(217, 227, 238), 1, true));
+
+        JPanel footer = new JPanel();
+        footer.setOpaque(false);
+        footer.setLayout(new BoxLayout(footer, BoxLayout.X_AXIS));
+        JButton clearSelectionButton = new JButton("Clear Selection");
+        clearSelectionButton.setFocusable(false);
+        clearSelectionButton.addActionListener(evt -> clearNodeInspector());
+        footer.add(clearSelectionButton);
+
+        JPanel content = new JPanel(new BorderLayout(0, 10));
+        content.setOpaque(false);
+        content.add(header, BorderLayout.NORTH);
+        content.add(simulationControlsPanel, BorderLayout.CENTER);
+
+        JPanel drawerContentPanel = new JPanel(new BorderLayout(0, 10));
+        drawerContentPanel.setOpaque(false);
+
+        JPanel centerPanel = new JPanel(new BorderLayout(0, 10));
+        centerPanel.setOpaque(false);
+        JPanel topStack = new JPanel();
+        topStack.setOpaque(false);
+        topStack.setLayout(new BoxLayout(topStack, BoxLayout.Y_AXIS));
+        content.setAlignmentX(0.0f);
+        liveDisplayPanel.setAlignmentX(0.0f);
+        graphInspectorLegendWrapper.setAlignmentX(0.0f);
+        topStack.add(content);
+        topStack.add(Box.createVerticalStrut(10));
+        topStack.add(liveDisplayPanel);
+        topStack.add(Box.createVerticalStrut(10));
+        topStack.add(graphInspectorLegendWrapper);
+        centerPanel.add(topStack, BorderLayout.NORTH);
+        centerPanel.add(inspectorScrollPane, BorderLayout.CENTER);
+
+        drawerContentPanel.add(centerPanel, BorderLayout.CENTER);
+        drawerContentPanel.add(footer, BorderLayout.SOUTH);
+
+        graphNodeInspectorPanel.add(drawerContentPanel, BorderLayout.CENTER);
+        graphNodeInspectorPanel.putClientProperty("drawerContent", drawerContentPanel);
+        networkPanelContainer.add(graphNodeInspectorPanel, BorderLayout.EAST);
+        graphNodeInspectorPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                setGraphInspectorExpanded(true);
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                scheduleGraphInspectorCollapseCheck();
+            }
+        });
+        networkPanelContainer.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(java.awt.event.MouseEvent e) {
+                int threshold = Math.max(26, networkPanelContainer.getWidth() - 26);
+                if (!graphInspectorPinned) {
+                    setGraphInspectorExpanded(e.getX() >= threshold);
+                }
+            }
+        });
+        networkPanelContainer.revalidate();
+        networkPanelContainer.repaint();
+        updateInspectorSimulationControls();
+        setGraphInspectorExpanded(graphInspectorPinned);
+    }
+
+    private void updateRunSimulationsControls() {
+        String buttonLabel = "Run Simulations";
+        if (batchSimulationState == BatchSimulationState.RUNNING) {
+            buttonLabel = "Pause Simulations";
+        } else if (batchSimulationState == BatchSimulationState.PAUSED) {
+            buttonLabel = "Resume Simulations";
+        }
+        runSimulationsButton.setText(buttonLabel);
+        runSimulationsMenuItem.setText(buttonLabel);
+        updateInspectorSimulationControls();
+    }
+
+    private void resetBatchSimulationState() {
+        batchSimulationState = BatchSimulationState.IDLE;
+        updateRunSimulationsControls();
+        updateInspectorSimulationControls();
+    }
+
+    private void updateInspectorSimulationControls() {
+        String stateText = "Idle";
+        String pauseResumeText = "Pause";
+        boolean canPauseResume = false;
+        boolean canStop = false;
+        if (batchSimulationState == BatchSimulationState.RUNNING) {
+            stateText = "Running";
+            pauseResumeText = "Pause";
+            canPauseResume = true;
+            canStop = true;
+        } else if (batchSimulationState == BatchSimulationState.PAUSED) {
+            stateText = "Paused";
+            pauseResumeText = "Resume";
+            canPauseResume = true;
+            canStop = true;
+        }
+        if (batchSimulationState == BatchSimulationState.IDLE) {
+            pauseResumeText = runSimulationsButton.getText();
+            canPauseResume = runSimulationsButton.isEnabled();
+        }
+        if (graphInspectorSimulationStateLabel != null) {
+            graphInspectorSimulationStateLabel.setText(stateText);
+        }
+        if (graphInspectorPauseResumeButton != null) {
+            graphInspectorPauseResumeButton.setText(pauseResumeText);
+            graphInspectorPauseResumeButton.setEnabled(canPauseResume);
+        }
+        if (graphInspectorStopButton != null) {
+            graphInspectorStopButton.setEnabled(canStop);
+        }
+        if (graphStripSimulationStateLabel != null) {
+            graphStripSimulationStateLabel.setText(stateText);
+        }
+        if (graphStripRunButton != null) {
+            graphStripRunButton.setText(runSimulationsButton.getText());
+            graphStripRunButton.setEnabled(batchSimulationState != BatchSimulationState.IDLE || runSimulationsButton.isEnabled());
+        }
+        if (graphStripStopButton != null) {
+            graphStripStopButton.setEnabled(canStop);
+        }
+        if (graphWorkspace != null) {
+            graphWorkspace.updateSimulationControlsState(stateText, runSimulationsButton.getText(), canPauseResume, canStop);
+        }
+    }
+
+    private void syncEmbeddedAndFullscreenDisplayControls() {
+        if (graphInspectorShowIdsCheckBox != null) {
+            graphInspectorShowIdsCheckBox.setSelected(showIdsCheckBox.isSelected());
+        }
+        if (graphInspectorShowLinksCheckBox != null) {
+            graphInspectorShowLinksCheckBox.setSelected(showLinksCheckBox.isSelected());
+        }
+        if (graphInspectorShowRangesCheckBox != null) {
+            graphInspectorShowRangesCheckBox.setSelected(showRangesCheckBox.isSelected());
+        }
+        if (graphInspectorShowGridCheckBox != null) {
+            graphInspectorShowGridCheckBox.setSelected(showGridCheckBox.isSelected());
+        }
+        if (graphInspectorDelaySlider != null && graphInspectorDelaySlider.getValue() != delaySlider.getValue()) {
+            graphInspectorDelaySlider.setValue(delaySlider.getValue());
+        }
+        if (graphWorkspace != null) {
+            graphWorkspace.updateDisplayControlsState(
+                    showIdsCheckBox.isSelected(),
+                    showLinksCheckBox.isSelected(),
+                    showRangesCheckBox.isSelected(),
+                    showGridCheckBox.isSelected(),
+                    delaySlider.getValue(),
+                    delaySlider.getMinimum(),
+                    delaySlider.getMaximum()
+            );
+        }
+    }
+
+    private void handlePauseResumeRequest() {
+        runSimulationsButtonActionPerformed(null);
+    }
+
+    private void handleStopRequest() {
+        stopSimulationsButtonActionPerformed(null);
+    }
+
+    private void scheduleGraphInspectorCollapseCheck() {
+        javax.swing.Timer collapseTimer = new javax.swing.Timer(140, evt -> {
+            if (graphNodeInspectorPanel == null || graphInspectorPinned) {
+                return;
+            }
+            try {
+                Point pointer = java.awt.MouseInfo.getPointerInfo().getLocation();
+                Point panelLocation = graphNodeInspectorPanel.getLocationOnScreen();
+                int relX = pointer.x - panelLocation.x;
+                int relY = pointer.y - panelLocation.y;
+                if (!graphNodeInspectorPanel.contains(relX, relY)) {
+                    setGraphInspectorExpanded(false);
+                }
+            } catch (Exception ignored) {}
+        });
+        collapseTimer.setRepeats(false);
+        collapseTimer.start();
+    }
+
+    private void setGraphInspectorExpanded(boolean expanded) {
+        if (graphNodeInspectorPanel == null) {
+            return;
+        }
+        boolean shouldExpand = expanded || graphInspectorPinned;
+        graphNodeInspectorTargetWidth = shouldExpand ? 320 : 16;
+        Object contentObj = graphNodeInspectorPanel.getClientProperty("drawerContent");
+        if (contentObj instanceof JComponent) {
+            ((JComponent) contentObj).setVisible(shouldExpand || graphNodeInspectorCurrentWidth > 28);
+        }
+        if (graphNodeInspectorAnimator == null) {
+            graphNodeInspectorAnimator = new javax.swing.Timer(16, evt -> {
+                int delta = graphNodeInspectorTargetWidth - graphNodeInspectorCurrentWidth;
+                if (Math.abs(delta) <= 1) {
+                    graphNodeInspectorCurrentWidth = graphNodeInspectorTargetWidth;
+                } else {
+                    int step = Math.max(1, Math.abs(delta) / 4);
+                    graphNodeInspectorCurrentWidth += (delta > 0) ? step : -step;
+                }
+                graphNodeInspectorPanel.setPreferredSize(new Dimension(graphNodeInspectorCurrentWidth, 100));
+                Object drawerContentObj = graphNodeInspectorPanel.getClientProperty("drawerContent");
+                if (drawerContentObj instanceof JComponent) {
+                    ((JComponent) drawerContentObj).setVisible(graphNodeInspectorCurrentWidth > 30);
+                }
+                networkPanelContainer.revalidate();
+                networkPanelContainer.repaint();
+                if (graphNodeInspectorCurrentWidth == graphNodeInspectorTargetWidth) {
+                    graphNodeInspectorAnimator.stop();
+                }
+            });
+        }
+        if (!graphNodeInspectorAnimator.isRunning()) {
+            graphNodeInspectorAnimator.start();
+        }
+    }
+
+    private JCheckBox createInspectorCheckBox(String label, boolean selected, java.util.function.Consumer<Boolean> consumer) {
+        JCheckBox checkBox = new JCheckBox(label);
+        checkBox.setOpaque(false);
+        checkBox.setSelected(selected);
+        checkBox.setAlignmentX(0.0f);
+        checkBox.addActionListener(evt -> consumer.accept(checkBox.isSelected()));
+        return checkBox;
+    }
+
+    private MiniLegendPanel createLegendPanel() {
+        MiniLegendPanel panel = new MiniLegendPanel();
+        panel.setItems(createLegendItems());
+        return panel;
+    }
+
+    private void refreshInspectorLegendPanel() {
+        if (graphInspectorLegendWrapper == null) {
+            return;
+        }
+        graphInspectorLegendWrapper.removeAll();
+        graphInspectorLegendPanel = createLegendPanel();
+        if (graphInspectorLegendPanel != null) {
+            graphInspectorLegendPanel.setPreferredSize(new Dimension(250, 52));
+            graphInspectorLegendPanel.setBackground(Color.white);
+            graphInspectorLegendWrapper.add(graphInspectorLegendPanel, BorderLayout.CENTER);
+        }
+        graphInspectorLegendWrapper.revalidate();
+        graphInspectorLegendWrapper.repaint();
+        if (graphStripLegendPanel != null) {
+            graphStripLegendPanel.setItems(createLegendItems());
+            graphStripLegendPanel.repaint();
+        }
+    }
+
+    private java.util.List<MiniLegendPanel.Item> createLegendItems() {
+        java.util.List<MiniLegendPanel.Item> items = new ArrayList<MiniLegendPanel.Item>();
+        items.add(new MiniLegendPanel.Item("Client", Color.ORANGE));
+        items.add(new MiniLegendPanel.Item("Benevolent", Color.GREEN));
+        items.add(new MiniLegendPanel.Item("Malicious", Color.RED));
+        items.add(new MiniLegendPanel.Item("Relay", Color.BLUE));
+        items.add(new MiniLegendPanel.Item("Idle", Color.DARK_GRAY));
+        if (legendPanel instanceof TRIPLegendPanel) {
+            items.add(new MiniLegendPanel.Item("RSU", Color.MAGENTA));
+        } else if (legendPanel instanceof EigenTrustLegendPanel) {
+            items.add(new MiniLegendPanel.Item("Pre-Trusted", Color.MAGENTA));
+        } else if (legendPanel instanceof PowerTrustLegendPanel) {
+            items.add(new MiniLegendPanel.Item("Power Node", Color.MAGENTA));
+        }
+        return items;
+    }
+
+    private void clearNodeInspector() {
+        selectedNodeId = null;
+        graphWorkspace.setSelectedSensorId(null);
+        if (graphNodeInspectorTitleLabel != null) {
+            graphNodeInspectorTitleLabel.setText("No node selected");
+        }
+        if (graphNodeInspectorTextArea != null) {
+            graphNodeInspectorTextArea.setText("Click any node in the graph to inspect its live state, services and latest node-level metrics.");
+            graphNodeInspectorTextArea.setCaretPosition(0);
+        }
+        if (graphWorkspace != null) {
+            graphWorkspace.updateSelectedNodeSummary(
+                    "No node selected",
+                    "Click any node in the graph to inspect its live state, services and latest node-level metrics.");
+        }
+    }
+
+    private void selectNodeById(int nodeId) {
+        selectedNodeId = Integer.valueOf(nodeId);
+        setGraphInspectorExpanded(true);
+        refreshSelectedNodeDetails();
+    }
+
+    private void refreshSelectedNodeDetails() {
+        if (selectedNodeId == null) {
+            clearNodeInspector();
+            return;
+        }
+        Sensor sensor = C.getSensor(selectedNodeId.intValue());
+        if (sensor == null) {
+            clearNodeInspector();
+            return;
+        }
+        updateNodeInspector(sensor);
+    }
+
+    private void populateSensorPropertiesPanel(Sensor sensor) {
+        if (sensor == null) {
+            return;
+        }
+        sensorPropertiesPanel.setVisible(true);
+        sensorIdTextField.setText(String.valueOf(sensor.id()));
+        xCoordinateTextField.setText(String.format(Locale.US, "%.2f", sensor.getX()));
+        yCoordinateTextField.setText(String.format(Locale.US, "%.2f", sensor.getY()));
+        neighborsLabel.setText(sensor.getNeighbors().size() + " Neighbor(s)");
+        Vector<String> neighborsIDs = new Vector<String>();
+        for (Sensor neighbor : sensor.getNeighbors()) {
+            neighborsIDs.add(String.valueOf(neighbor.id()));
+        }
+        neighborsList.setListData(neighborsIDs);
+        neighborsScrollPane.setViewportView(neighborsList);
+    }
+
+    private void updateNodeInspector(Sensor sensor) {
+        populateSensorPropertiesPanel(sensor);
+        if (graphWorkspace != null) {
+            graphWorkspace.setSelectedSensorId(Integer.valueOf(sensor.id()));
+        }
+        String title = "Node " + sensor.id() + (sensor.isActive() ? "  ACTIVE" : "  SLEEP");
+        String body = buildNodeDetailsText(sensor);
+        if (graphNodeInspectorTitleLabel != null) {
+            graphNodeInspectorTitleLabel.setText(title);
+        }
+        if (graphNodeInspectorTextArea != null) {
+            graphNodeInspectorTextArea.setText(body);
+            graphNodeInspectorTextArea.setCaretPosition(0);
+        }
+        if (graphWorkspace != null) {
+            graphWorkspace.updateSelectedNodeSummary(title, body);
+        }
+    }
+
+    private String buildNodeDetailsText(Sensor sensor) {
+        StringBuilder details = new StringBuilder();
+        details.append("Node ID: ").append(sensor.id()).append('\n');
+        details.append("Status: ").append(sensor.isActive() ? "Active" : "Sleeping").append('\n');
+        details.append("Position: (")
+                .append(String.format(Locale.US, "%.2f", sensor.getX()))
+                .append(", ")
+                .append(String.format(Locale.US, "%.2f", sensor.getY()))
+                .append(")\n");
+        details.append("Neighbors: ").append(sensor.getNeighbors().size()).append('\n');
+        details.append("Provided services: ").append(sensor.get_numServices()).append('\n');
+        details.append("Raw transmitted distance: ").append(sensor.get_transmittedDistance()).append('\n');
+        details.append('\n').append("Neighbor IDs: ");
+        boolean first = true;
+        for (Sensor neighbor : sensor.getNeighbors()) {
+            if (!first) {
+                details.append(", ");
+            }
+            details.append(neighbor.id());
+            first = false;
+        }
+        if (first) {
+            details.append("none");
+        }
+
+        details.append('\n').append('\n').append("Services:\n");
+        if (sensor.get_numServices() == 0) {
+            details.append("- client-only node\n");
+        } else {
+            boolean hasPrintedService = false;
+            Network currentNetwork = C.get_currentNetwork();
+            if (currentNetwork != null) {
+                for (Service service : currentNetwork.get_services()) {
+                    if (sensor.offersService(service)) {
+                        hasPrintedService = true;
+                        details.append("- ").append(service.id());
+                        try {
+                            details.append(" | goodness=")
+                                    .append(String.format(Locale.US, "%.4f", sensor.get_goodness(service)));
+                        } catch (Exception ignored) {}
+                        details.append('\n');
+                    }
+                }
+            }
+            if (!hasPrintedService) {
+                details.append("- service data unavailable\n");
+            }
+        }
+
+        NodeMetric latestMetric = findLatestNodeMetric(sensor.id());
+        details.append('\n').append("Latest exported metrics:\n");
+        if (latestMetric == null) {
+            details.append("- no node-level metrics available yet\n");
+        } else {
+            details.append("- Type: ").append(latestMetric.getType()).append('\n');
+            details.append("- Energy / execution: ")
+                    .append(String.format(Locale.US, "%.6f", latestMetric.getConsumedEnergy())).append('\n');
+            details.append("- Total transmitted distance: ")
+                    .append(String.format(Locale.US, "%.2f", latestMetric.getTransmittedDistance())).append('\n');
+            details.append("- Exported coordinates: (")
+                    .append(String.format(Locale.US, "%.2f", latestMetric.getX())).append(", ")
+                    .append(String.format(Locale.US, "%.2f", latestMetric.getY())).append(")\n");
+            details.append("- Exported neighbors: ").append(latestMetric.getNeighborsCount()).append('\n');
+            details.append("- Goodness: ");
+            if (latestMetric.getGoodness() < 0.0) {
+                details.append("n/a\n");
+            } else {
+                details.append(String.format(Locale.US, "%.4f", latestMetric.getGoodness())).append('\n');
+            }
+        }
+        return details.toString();
+    }
+
+    private NodeMetric findLatestNodeMetric(int sensorId) {
+        List<Outcome> results = SimulationResultRepository.getInstance().getResults();
+        for (int i = results.size() - 1; i >= 0; i--) {
+            Outcome outcome = results.get(i);
+            List<NodeMetric> metrics = outcome.getNodeMetrics();
+            if (metrics == null) {
+                continue;
+            }
+            for (NodeMetric metric : metrics) {
+                if (metric.getId() == sensorId) {
+                    return metric;
+                }
+            }
+        }
+        return null;
+    }
 
     /**
      * Re-organizes components initialized by initComponents() into the custom dashboard layout.
@@ -2767,6 +3481,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             if (graphWorkspace != null) {
                 graphWorkspace.renderOnFullscreen(null, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
             }
+            clearNodeInspector();
         } catch (Exception ex) {
             LOGGER.log(Level.WARNING, "Unable to clear network panel", ex);
         }

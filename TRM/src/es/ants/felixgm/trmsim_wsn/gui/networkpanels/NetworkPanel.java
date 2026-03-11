@@ -62,6 +62,10 @@ import java.awt.geom.AffineTransform;
  * @since 0.4
  */
 public class NetworkPanel extends javax.swing.JPanel {
+    public interface SensorSelectionListener {
+        void sensorSelected(Sensor sensor);
+    }
+
     private static final Stroke AXIS_STROKE = new BasicStroke(1.2f);
     private static final Stroke GRID_STROKE = new BasicStroke(0.8f);
     private static final Stroke LINK_STROKE = new BasicStroke(1.1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
@@ -112,10 +116,13 @@ public class NetworkPanel extends javax.swing.JPanel {
     protected boolean showIds;
     /** Indicates whether to plot a grid or not */
     protected boolean showGrid;
+    private transient SensorSelectionListener sensorSelectionListener;
+    protected Integer selectedSensorId;
 
     /** Creates new form NetworkPanel */
     public NetworkPanel() {
         initComponents();
+        installSelectionSupport();
     }
 
     @Override
@@ -171,16 +178,25 @@ public class NetworkPanel extends javax.swing.JPanel {
         int x = mapX(sensor.getX());
         int y = mapY(sensor.getY());
         int nodeRadius = getNodeRadius();
+        Stroke oldStroke = g2.getStroke();
 
         g2.setColor(color);
         g2.fillOval(x-nodeRadius, y-nodeRadius, nodeRadius*2, nodeRadius*2);
         g2.setColor(NODE_STROKE_COLOR);
         g2.drawOval(x-nodeRadius, y-nodeRadius, nodeRadius*2, nodeRadius*2);
+        if ((selectedSensorId != null) && (selectedSensorId.intValue() == sensor.id())) {
+            g2.setColor(new Color(255, 215, 64, 120));
+            g2.fillOval(x-nodeRadius-8, y-nodeRadius-8, (nodeRadius+8)*2, (nodeRadius+8)*2);
+            g2.setColor(new Color(255, 196, 0, 230));
+            g2.setStroke(new BasicStroke(2.2f));
+            g2.drawOval(x-nodeRadius-5, y-nodeRadius-5, (nodeRadius+5)*2, (nodeRadius+5)*2);
+            g2.setStroke(oldStroke);
+        }
 
         if ((showRanges) && (radio > 0))
             drawRange(g2, x, y, radio);
         if ((showLinks) && (sensor.isActive())) {
-            Stroke oldStroke = g2.getStroke();
+            Stroke linksOldStroke = g2.getStroke();
             g2.setStroke(LINK_STROKE);
             g2.setColor(new Color(linksColor.getRed(), linksColor.getGreen(), linksColor.getBlue(), 145));
             for (Sensor neighbor : sensor.getNeighbors())
@@ -190,7 +206,7 @@ public class NetworkPanel extends javax.swing.JPanel {
                     g2.drawLine(x, y, x1, y1);
                     drawArrow(g2, x, y, x1, y1);
                 }
-            g2.setStroke(oldStroke);
+            g2.setStroke(linksOldStroke);
         }
         if (showIds) {
             g2.setColor(new Color(38, 48, 64));
@@ -369,6 +385,50 @@ public class NetworkPanel extends javax.swing.JPanel {
         int Y = (int)Math.round((height*(1.0-axesMargin) -(y - getBounds().getY()))/((height*(1.0-2*axesMargin))/(yAxisLength-yOrigin)));
 
         return new Point(X,Y);
+    }
+
+    public void setSensorSelectionListener(SensorSelectionListener sensorSelectionListener) {
+        this.sensorSelectionListener = sensorSelectionListener;
+    }
+
+    public void setSelectedSensorId(Integer selectedSensorId) {
+        this.selectedSensorId = selectedSensorId;
+        repaint();
+    }
+
+    public Integer getSelectedSensorId() {
+        return selectedSensorId;
+    }
+
+    public Sensor getSensorAtPosition(int x, int y) {
+        if (network == null) {
+            return null;
+        }
+        int nodeRadius = getNodeRadius() + 3;
+        for (Sensor sensor : network.get_sensors()) {
+            int sensorX = mapX(sensor.getX());
+            int sensorY = mapY(sensor.getY());
+            double distance = Math.hypot(x - sensorX, y - sensorY);
+            if (distance <= nodeRadius) {
+                return sensor;
+            }
+        }
+        return null;
+    }
+
+    protected void notifySensorSelection(Sensor sensor) {
+        if (sensorSelectionListener != null) {
+            sensorSelectionListener.sensorSelected(sensor);
+        }
+    }
+
+    private void installSelectionSupport() {
+        addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                notifySensorSelection(getSensorAtPosition(evt.getX(), evt.getY()));
+            }
+        });
     }
     
 
