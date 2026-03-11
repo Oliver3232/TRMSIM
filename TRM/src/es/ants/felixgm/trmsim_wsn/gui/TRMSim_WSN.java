@@ -47,8 +47,15 @@ import es.ants.felixgm.trmsim_wsn.gui.legendpanels.EigenTrustLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.LegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.PowerTrustLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.TRIPLegendPanel;
+import es.ants.felixgm.trmsim_wsn.gui.networkpanels.BTRMFXNetworkPanel;
+import es.ants.felixgm.trmsim_wsn.gui.networkpanels.EigenTrustFXNetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.JavaFXNetworkPanel;
+import es.ants.felixgm.trmsim_wsn.gui.networkpanels.LFTMFXNetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.NetworkPanel;
+import es.ants.felixgm.trmsim_wsn.gui.networkpanels.PeerTrustFXNetworkPanel;
+import es.ants.felixgm.trmsim_wsn.gui.networkpanels.PowerTrustFXNetworkPanel;
+import es.ants.felixgm.trmsim_wsn.gui.networkpanels.TRIPFXNetworkPanel;
+import es.ants.felixgm.trmsim_wsn.gui.networkpanels.TemplateTRMFXNetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.*;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.TRMParametersPanel;
 
@@ -82,6 +89,8 @@ import java.awt.GridLayout;
 import java.awt.Font;
 import javax.swing.border.EmptyBorder;
 import com.formdev.flatlaf.FlatIntelliJLaf;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 /**
  * <p>This class represents the main window of TRMSim-WSN</p>
  * <ul>
@@ -99,6 +108,7 @@ import com.formdev.flatlaf.FlatIntelliJLaf;
  * @since 0.1
  */
 public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
+    private static final Logger LOGGER = Logger.getLogger(TRMSim_WSN.class.getName());
     
     /**
     * Current version of TRMSim-WSN: {@value}
@@ -182,7 +192,6 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                         return;
                     }
                     TRModelComboBox.setSelectedItem(trmodel);
-                    TRModelComboBoxItemStateChanged(null);
                 }
             });
             TRModelMenu.add(trmodelMenuItem);
@@ -853,7 +862,8 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
         networkAndSensorPropertiesContainerPanel.setLayout(new javax.swing.BoxLayout(networkAndSensorPropertiesContainerPanel, javax.swing.BoxLayout.LINE_AXIS));
 
-        networkPanelContainer.add(networkPanel,null);
+        networkPanelContainer.setLayout(new java.awt.BorderLayout());
+        networkPanelContainer.add(networkPanel, java.awt.BorderLayout.CENTER);
         networkPanel.setBackground(Color.white);
         networkPanelContainer.setBorder(javax.swing.BorderFactory.createTitledBorder("Network"));
         networkPanelContainer.setMinimumSize(new java.awt.Dimension(100, 100));
@@ -863,7 +873,6 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 networkPanelContainerMouseClicked(evt);
             }
         });
-        networkPanelContainer.setLayout(new java.awt.BorderLayout());
         networkAndSensorPropertiesContainerPanel.add(networkPanelContainer);
 
         sensorPropertiesPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Sensor properties"));
@@ -1444,6 +1453,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
     private void TRModelComboBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_TRModelComboBoxItemStateChanged
         try {
+            if ((evt != null) && (evt.getStateChange() != java.awt.event.ItemEvent.SELECTED)) {
+                return;
+            }
             String trModelName = (String)TRModelComboBox.getSelectedItem();
             if (isTRModelDisabled(trModelName)) {
                 if (lastAllowedTRModel != null && !lastAllowedTRModel.equals(trModelName)) {
@@ -1459,6 +1471,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                         JOptionPane.WARNING_MESSAGE);
                 return;
             }
+            LOGGER.info("Model switch requested: " + trModelName + ", currentPanel=" +
+                    ((networkPanel == null) ? "null" : networkPanel.getClass().getSimpleName() + "#" + System.identityHashCode(networkPanel)) +
+                    ", EDT=" + SwingUtilities.isEventDispatchThread() + ", thread=" + Thread.currentThread().getName());
             String defaultParametersFileName = "";
             String packageName = "es.ants.felixgm.trmsim_wsn.";
             
@@ -1470,6 +1485,8 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             }
 
             C.set_TRModel_WSN(trModelName);
+            C.clearCurrentNetwork();
+            SimulationResultRepository.getInstance().clearRepository();
             TRMParametersPanel trmParametersPanel = (TRMParametersPanel)Class.forName(packageName+"gui.parameterpanels."+trModelName+"_ParametersPanel").newInstance();
             trmParametersPanel.set_TRMParameters(C.get_TRMParameters());
             set_TRMParametersPanel(trmParametersPanel);
@@ -1479,9 +1496,13 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             parametersFileTextField.setText(defaultParametersFileName);
             parametersFileContentTextArea.setText(C.get_DefaultParametersFileContent(trModelName));
             
+            LOGGER.info("Before clear containers: networkPanelContainer.components=" + networkPanelContainer.getComponentCount() +
+                    ", legendPanelContainer.components=" + legendPanelContainer.getComponentCount());
             legendPanelContainer.removeAll();
             networkPanelContainer.removeAll();
             outcomesTabbedPane.removeAll();
+            LOGGER.info("After clear containers: networkPanelContainer.components=" + networkPanelContainer.getComponentCount() +
+                    ", legendPanelContainer.components=" + legendPanelContainer.getComponentCount());
             outcomesPanels = new ArrayList<OutcomesPanel>();
             if (trModelName.equals(BTRM_WSN.get_name())) {
                 percentageClientsLabel.setEnabled(true);
@@ -1489,7 +1510,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new LegendPanel();
-                networkPanel = new JavaFXNetworkPanel();
+                networkPanel = createNetworkPanelForModel(trModelName);
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1501,7 +1522,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(false);
 
                 legendPanel = new EigenTrustLegendPanel();
-                networkPanel = new JavaFXNetworkPanel();
+                networkPanel = createNetworkPanelForModel(trModelName);
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1513,7 +1534,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new LegendPanel();
-                networkPanel = new JavaFXNetworkPanel();
+                networkPanel = createNetworkPanelForModel(trModelName);
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1525,7 +1546,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new PowerTrustLegendPanel();
-                networkPanel = new JavaFXNetworkPanel();
+                networkPanel = createNetworkPanelForModel(trModelName);
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1537,7 +1558,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new LegendPanel();
-                networkPanel = new JavaFXNetworkPanel();
+                networkPanel = createNetworkPanelForModel(trModelName);
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1550,7 +1571,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(false);
 
                 legendPanel = new TRIPLegendPanel();
-                networkPanel = new JavaFXNetworkPanel();
+                networkPanel = createNetworkPanelForModel(trModelName);
 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1562,7 +1583,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 percentageClientsTextField.setEnabled(true);
 
                 legendPanel = new LegendPanel();
-                networkPanel = new JavaFXNetworkPanel();
+                networkPanel = createNetworkPanelForModel(trModelName);
                 
                 outcomesPanels.add(new AccuracyPanel());
                 outcomesPanels.add(new PathLengthPanel());
@@ -1573,13 +1594,17 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             legendPanel.setSize(legendPanelContainer.getSize());
             legendPanel.plotLegend();
 
-            networkPanelContainer.add(networkPanel);
+            networkPanelContainer.add(networkPanel, java.awt.BorderLayout.CENTER);
             networkPanel.setBackground(Color.white);
             networkPanel.setSize(networkPanelContainer.getSize());
             applyVisualizationControls();
             networkPanelContainer.revalidate();
             networkPanelContainer.repaint();
-            renderCurrentNetworkOnPanel(networkPanel);
+            LOGGER.info("After add new panel: networkPanelContainer.components=" + networkPanelContainer.getComponentCount() +
+                    ", newPanelClass=" + networkPanel.getClass().getSimpleName() +
+                    ", newPanelIdentity=" + System.identityHashCode(networkPanel) +
+                    ", panelSize=" + networkPanel.getWidth() + "x" + networkPanel.getHeight());
+            clearNetworkPanel(networkPanel);
 
             int visibleCharts = 0;
             for (OutcomesPanel outcomesPanel : outcomesPanels) {
@@ -1589,6 +1614,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 outcomesTabbedPane.addTab(outcomesPanel.getLabel(), outcomesPanel);
                 outcomesPanel.setSize(outcomesTabbedPane.getSize());
                 visibleCharts++;
+                outcomesPanel.setOutcomes(null);
+                outcomesPanel.clearPanel();
+                outcomesPanel.drawAxes();
             }
             outcomesTabbedPane.revalidate();
             outcomesTabbedPane.repaint();
@@ -1599,9 +1627,14 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             resetWSNmenuItem.setEnabled(false);
             runTRMmenuItem.setEnabled(false);
             saveWSNmenuItem.setEnabled(false);
+            sensorPropertiesPanel.setVisible(false);
+            messagesTextArea.setText("Model changed to " + trModelName + ". Network state cleared. Create or load a new WSN.\n");
             lastAllowedTRModel = trModelName;
+            LOGGER.info("Model switch completed: " + trModelName + ", newPanel=" +
+                    ((networkPanel == null) ? "null" : networkPanel.getClass().getSimpleName() + "#" + System.identityHashCode(networkPanel)));
             updateParametersSourceView();
         } catch (Exception ex) {
+            LOGGER.log(Level.SEVERE, "Model switch failed", ex);
             JOptionPane.showMessageDialog(this,ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }        
@@ -2233,14 +2266,13 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             splashScreen.setProgress("Please wait while loading TRMSim-WSN " + CURRENT_VERSION + "...", -1);
             Thread.sleep(2000+((int)Math.random()*2000));
             splashScreen.setScreenVisible(false);
-            
-            
-            /*java.awt.EventQueue.invokeLater(new Runnable() {
-                public void run() {*/
+
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
                     TRMSim_WSN trmsim_wsn = new TRMSim_WSN();
                     trmsim_wsn.setVisible(true);
-                /*}
-            });*/
+                }
+            });
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -2663,7 +2695,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private javax.swing.JTextField yCoordinateTextField;
     // End of variables declaration//GEN-END:variables
     private TRMParametersPanel TRM_ParametersPanel;
-    private NetworkPanel networkPanel = new JavaFXNetworkPanel();
+    private NetworkPanel networkPanel = new NetworkPanel();
     private SimulationGraphWorkspace graphWorkspace;
     private String lastAllowedTRModel;
 
@@ -2711,9 +2743,6 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         try {
             Network network = C.get_currentNetwork();
             Service requiredService = C.get_requiredService();
-            if (network == null) {
-                return;
-            }
             double radioRange = radioRangeSlider.getValue()/(double)radioRangeSlider.getMaximum();
             boolean showRanges = showRangesCheckBox.isSelected();
             boolean showLinks = showLinksCheckBox.isSelected();
@@ -2721,6 +2750,51 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             boolean showGrid = showGridCheckBox.isSelected();
             targetPanel.paintNetwork(network, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
         } catch (Exception ignored) {}
+    }
+
+    private void clearNetworkPanel(NetworkPanel targetPanel) {
+        if (targetPanel == null) {
+            return;
+        }
+        try {
+            double radioRange = radioRangeSlider.getValue()/(double)radioRangeSlider.getMaximum();
+            boolean showRanges = showRangesCheckBox.isSelected();
+            boolean showLinks = showLinksCheckBox.isSelected();
+            boolean showIds = showIdsCheckBox.isSelected();
+            boolean showGrid = showGridCheckBox.isSelected();
+            Service requiredService = (C == null) ? null : C.get_requiredService();
+            targetPanel.paintNetwork(null, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
+            if (graphWorkspace != null) {
+                graphWorkspace.renderOnFullscreen(null, requiredService, radioRange, showRanges, showLinks, showIds, showGrid);
+            }
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Unable to clear network panel", ex);
+        }
+    }
+
+    private NetworkPanel createNetworkPanelForModel(String trModelName) {
+        if (BTRM_WSN.get_name().equals(trModelName)) {
+            return new BTRMFXNetworkPanel();
+        }
+        if (EigenTrust.get_name().equals(trModelName)) {
+            return new EigenTrustFXNetworkPanel();
+        }
+        if (PeerTrust.get_name().equals(trModelName)) {
+            return new PeerTrustFXNetworkPanel();
+        }
+        if (PowerTrust.get_name().equals(trModelName)) {
+            return new PowerTrustFXNetworkPanel();
+        }
+        if (LFTM.get_name().equals(trModelName)) {
+            return new LFTMFXNetworkPanel();
+        }
+        if (TRIP.get_name().equals(trModelName)) {
+            return new TRIPFXNetworkPanel();
+        }
+        if (TemplateTRM.get_name().equals(trModelName)) {
+            return new TemplateTRMFXNetworkPanel();
+        }
+        return new JavaFXNetworkPanel();
     }
 
     private void updateParametersSourceView() {

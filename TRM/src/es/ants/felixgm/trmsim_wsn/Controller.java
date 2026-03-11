@@ -272,6 +272,13 @@ public class Controller implements Observer {
     public Network get_currentNetwork() { return currentNetwork; }
 
     /**
+     * Clears the current network reference so UI starts from a clean state.
+     */
+    public void clearCurrentNetwork() {
+        currentNetwork = null;
+    }
+
+    /**
      * This method returns the service requested by every client in the network
      * @return The service requested by every client in the network
      */
