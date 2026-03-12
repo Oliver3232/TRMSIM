@@ -76,7 +76,7 @@ final class SimulationGraphWorkspace {
     private JButton fullscreenStopButton;
     private JLabel fullscreenSimulationStateLabel;
     private JCheckBox fullscreenPinDrawerCheckBox;
-    private MiniLegendPanel fullscreenLegendPanel;
+    private CompactLegendPanel fullscreenLegendPanel;
     private JCheckBox fullscreenShowIdsCheckBox;
     private JCheckBox fullscreenShowLinksCheckBox;
     private JCheckBox fullscreenShowRangesCheckBox;
@@ -141,15 +141,16 @@ final class SimulationGraphWorkspace {
         }
     }
 
-    void updateSimulationControlsState(String stateLabel, String pauseResumeLabel, boolean canPauseResume, boolean canStop) {
+    void updateSimulationControlsState(String stateLabel, String runLabel, String pauseResumeLabel,
+                                       boolean canRun, boolean canPauseResume, boolean canStop) {
         currentSimulationStateLabel = stateLabel;
         currentPauseResumeLabel = pauseResumeLabel;
         if (fullscreenSimulationStateLabel != null) {
             fullscreenSimulationStateLabel.setText(stateLabel);
         }
         if (fullscreenPauseResumeButton != null) {
-            fullscreenPauseResumeButton.setText(pauseResumeLabel);
-            fullscreenPauseResumeButton.setEnabled(canPauseResume);
+            fullscreenPauseResumeButton.setText(canRun ? runLabel : pauseResumeLabel);
+            fullscreenPauseResumeButton.setEnabled(canRun || canPauseResume);
         }
         if (fullscreenStopButton != null) {
             fullscreenStopButton.setEnabled(canStop);
@@ -194,7 +195,7 @@ final class SimulationGraphWorkspace {
     }
 
     void setFullscreenLegendItems(java.util.List<MiniLegendPanel.Item> items) {
-        fullscreenLegendPanel = new MiniLegendPanel();
+        fullscreenLegendPanel = new CompactLegendPanel();
         fullscreenLegendPanel.setItems(items);
     }
 
@@ -212,6 +213,7 @@ final class SimulationGraphWorkspace {
                 new String[]{"Isometric", "Top", "Front"}));
         cameraPresetComboBox.setSelectedItem("Isometric");
         cameraPresetComboBox.addActionListener(e -> applyVisualizationControlsToPanels(null));
+        cameraPresetComboBox.setEnabled(enable3DNavigationCheckBox.isSelected());
 
         fullscreenGraphButton.setText("Open Fullscreen");
         fullscreenGraphButton.addActionListener(e -> toggleFullscreenGraphWindow());
@@ -241,9 +243,13 @@ final class SimulationGraphWorkspace {
     }
 
     private void applyVisualizationControls(JavaFXNetworkPanel panel) {
+        boolean enable3D = enable3DNavigationCheckBox.isSelected();
+        cameraPresetComboBox.setEnabled(enable3D);
         panel.setVisualTheme((String) visualThemeComboBox.getSelectedItem());
-        panel.set3DNavigationEnabled(enable3DNavigationCheckBox.isSelected());
-        panel.applyCameraPreset((String) cameraPresetComboBox.getSelectedItem());
+        panel.set3DNavigationEnabled(enable3D);
+        if (enable3D) {
+            panel.applyCameraPreset((String) cameraPresetComboBox.getSelectedItem());
+        }
     }
 
     private void toggleFullscreenGraphWindow() {
@@ -378,6 +384,7 @@ final class SimulationGraphWorkspace {
         presetCombo.setSelectedItem(cameraPresetComboBox.getSelectedItem());
         presetCombo.setMaximumSize(new Dimension(230, 26));
         presetCombo.setAlignmentX(0.0f);
+        presetCombo.setEnabled(enable3DNavigationCheckBox.isSelected());
         presetCombo.addActionListener(e -> {
             cameraPresetComboBox.setSelectedItem(presetCombo.getSelectedItem());
             applyVisualizationControlsToPanels(null);
@@ -392,6 +399,7 @@ final class SimulationGraphWorkspace {
         enable3D.setAlignmentX(0.0f);
         enable3D.addActionListener(e -> {
             enable3DNavigationCheckBox.setSelected(enable3D.isSelected());
+            presetCombo.setEnabled(enable3D.isSelected());
             applyVisualizationControlsToPanels(null);
         });
         content.add(enable3D);
@@ -513,11 +521,10 @@ final class SimulationGraphWorkspace {
                 new EmptyBorder(8, 8, 8, 8)));
         if (fullscreenLegendPanel != null) {
             legendHolder.add(fullscreenLegendPanel, BorderLayout.CENTER);
-            fullscreenLegendPanel.setPreferredSize(new Dimension(214, 54));
-            fullscreenLegendPanel.setSize(new Dimension(214, 54));
+            fullscreenLegendPanel.setPreferredSize(new Dimension(248, 96));
         }
-        legendHolder.setMaximumSize(new Dimension(230, 72));
-        legendHolder.setPreferredSize(new Dimension(230, 72));
+        legendHolder.setMaximumSize(new Dimension(264, 156));
+        legendHolder.setPreferredSize(new Dimension(264, 116));
         legendHolder.setAlignmentX(0.0f);
         content.add(legendHolder);
         content.add(Box.createVerticalStrut(14));
@@ -588,8 +595,14 @@ final class SimulationGraphWorkspace {
         });
 
         drawer.putClientProperty("drawerContent", content);
-        boolean canControl = !"Idle".equalsIgnoreCase(currentSimulationStateLabel);
-        updateSimulationControlsState(currentSimulationStateLabel, currentPauseResumeLabel, canControl, canControl);
+        boolean isIdle = "Idle".equalsIgnoreCase(currentSimulationStateLabel);
+        updateSimulationControlsState(
+                currentSimulationStateLabel,
+                "Run Simulations",
+                currentPauseResumeLabel,
+                isIdle,
+                !isIdle,
+                !isIdle);
         setFullscreenDrawerExpanded(drawerPinned);
         return drawer;
     }
@@ -652,6 +665,7 @@ final class SimulationGraphWorkspace {
         popup.add(themeMenu);
 
         JMenu presetMenu = new JMenu("3D View");
+        presetMenu.setEnabled(enable3DNavigationCheckBox.isSelected());
         ButtonGroup presetGroup = new ButtonGroup();
         addPresetItem(presetMenu, presetGroup, "Isometric");
         addPresetItem(presetMenu, presetGroup, "Top");
@@ -662,6 +676,7 @@ final class SimulationGraphWorkspace {
         enable3DItem.setSelected(enable3DNavigationCheckBox.isSelected());
         enable3DItem.addActionListener(e -> {
             enable3DNavigationCheckBox.setSelected(enable3DItem.isSelected());
+            presetMenu.setEnabled(enable3DItem.isSelected());
             applyVisualizationControlsToPanels(null);
         });
         popup.add(enable3DItem);
@@ -688,6 +703,7 @@ final class SimulationGraphWorkspace {
     private void addPresetItem(JMenu menu, ButtonGroup group, String presetName) {
         JRadioButtonMenuItem item = new JRadioButtonMenuItem(presetName);
         item.setSelected(presetName.equals(cameraPresetComboBox.getSelectedItem()));
+        item.setEnabled(enable3DNavigationCheckBox.isSelected());
         item.addActionListener(e -> {
             cameraPresetComboBox.setSelectedItem(presetName);
             applyVisualizationControlsToPanels(null);

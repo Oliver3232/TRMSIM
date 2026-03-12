@@ -3,8 +3,6 @@ package es.ants.felixgm.trmsim_wsn.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.GridLayout;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JCheckBox;
@@ -30,7 +28,7 @@ final class ModernLayoutInstaller {
     private static final Color PAGE_BG = new Color(246, 249, 255);
     private static final Color CARD_BG = new Color(255, 255, 255);
     private static final Color EDGE = new Color(206, 218, 236);
-    private static final int CONFIG_LABEL_WIDTH = 190;
+    private static final int CONFIG_LABEL_WIDTH = 235;
     private static final int CONFIG_INPUT_WIDTH = 72;
 
     private ModernLayoutInstaller() {}
@@ -53,7 +51,7 @@ final class ModernLayoutInstaller {
             JCheckBox showIdsCheckBox, JCheckBox showLinksCheckBox, JCheckBox showRangesCheckBox, JCheckBox showGridCheckBox,
             JComboBox visualThemeComboBox, JComboBox cameraPresetComboBox, JCheckBox enable3DNavigationCheckBox, javax.swing.JButton fullscreenGraphButton,
             JPanel parametersPanel, JPanel messagePanel,
-            JPanel networkPanelContainer, JPanel legendPanelContainer,
+            JPanel networkPanelContainer, JComponent dashboardLegendPanel,
             JPanel outcomesPanelsPanel, JTabbedPane outcomesTabbedPane
     ) {
         frame.getContentPane().removeAll();
@@ -81,7 +79,7 @@ final class ModernLayoutInstaller {
         ), BorderLayout.WEST);
 
         frame.add(createMainContent(
-                networkPanelContainer, legendPanelContainer, outcomesPanelsPanel, outcomesTabbedPane,
+                networkPanelContainer, dashboardLegendPanel, outcomesPanelsPanel, outcomesTabbedPane,
                 delayLabel, delaySlider, delayTextField,
                 showIdsCheckBox, showLinksCheckBox, showRangesCheckBox, showGridCheckBox,
                 visualThemeComboBox, cameraPresetComboBox, enable3DNavigationCheckBox, fullscreenGraphButton
@@ -94,11 +92,12 @@ final class ModernLayoutInstaller {
             javax.swing.JButton runSimulationsButton, javax.swing.JButton stopSimulationsButton, javax.swing.JButton exportDataButton,
             JLabel TRModelLabel, JComboBox TRModelComboBox
     ) {
-        JPanel header = new JPanel(new BorderLayout());
+        JPanel header = new JPanel();
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, EDGE));
         header.setBackground(CARD_BG);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
+        JPanel actions = new JPanel(new WrapLayout(WrapLayout.CENTER, 8, 4));
         actions.setOpaque(false);
         actions.add(newWSNButton);
         actions.add(loadWSNButton);
@@ -109,16 +108,22 @@ final class ModernLayoutInstaller {
         actions.add(runSimulationsButton);
         actions.add(stopSimulationsButton);
         actions.add(exportDataButton);
-        header.add(actions, BorderLayout.CENTER);
+        actions.setAlignmentX(0.0f);
+        header.add(actions);
 
+        JPanel modelRow = new JPanel(new BorderLayout());
+        modelRow.setOpaque(false);
+        modelRow.setBorder(new EmptyBorder(0, 8, 4, 8));
         JPanel modelBox = new JPanel(new BorderLayout(4, 4));
         modelBox.setOpaque(false);
-        modelBox.setBorder(new EmptyBorder(6, 6, 6, 10));
+        modelBox.setPreferredSize(new Dimension(220, 44));
         TRModelLabel.setHorizontalAlignment(SwingConstants.LEFT);
         modelBox.add(TRModelLabel, BorderLayout.NORTH);
         TRModelComboBox.setPreferredSize(new Dimension(170, 28));
         modelBox.add(TRModelComboBox, BorderLayout.CENTER);
-        header.add(modelBox, BorderLayout.EAST);
+        modelRow.add(modelBox, BorderLayout.EAST);
+        modelRow.setAlignmentX(0.0f);
+        header.add(modelRow);
 
         return header;
     }
@@ -137,7 +142,8 @@ final class ModernLayoutInstaller {
             JPanel parametersPanel, JPanel messagePanel
     ) {
         JPanel sidebar = createCard(new BorderLayout());
-        sidebar.setPreferredSize(new Dimension(470, 0));
+        sidebar.setPreferredSize(new Dimension(500, 0));
+        sidebar.setMinimumSize(new Dimension(430, 0));
         sidebar.setBorder(new CompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 0, 1, EDGE),
                 new EmptyBorder(8, 8, 8, 8)
@@ -157,12 +163,14 @@ final class ModernLayoutInstaller {
                 showIdsCheckBox, showLinksCheckBox, showRangesCheckBox, showGridCheckBox
         ));
 
-        parametersPanel.setBorder(new EmptyBorder(6, 6, 6, 6));
+        parametersPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
         parametersPanel.setPreferredSize(null);
         parametersPanel.setMinimumSize(new Dimension(0, 0));
+        parametersPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         JScrollPane parametersScroll = new JScrollPane(parametersPanel);
         parametersScroll.setBorder(BorderFactory.createEmptyBorder());
         parametersScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        parametersScroll.getVerticalScrollBar().setUnitIncrement(14);
         settingsTabs.addTab("Simulation Parameters", parametersScroll);
         JSplitPane leftSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         leftSplit.setBorder(null);
@@ -224,7 +232,7 @@ final class ModernLayoutInstaller {
     }
 
     private static JSplitPane createMainContent(
-            JPanel networkPanelContainer, JPanel legendPanelContainer, JPanel outcomesPanelsPanel, JTabbedPane outcomesTabbedPane,
+            JPanel networkPanelContainer, JComponent dashboardLegendPanel, JPanel outcomesPanelsPanel, JTabbedPane outcomesTabbedPane,
             JLabel delayLabel, JSlider delaySlider, JTextField delayTextField,
             JCheckBox showIdsCheckBox, JCheckBox showLinksCheckBox, JCheckBox showRangesCheckBox, JCheckBox showGridCheckBox,
             JComboBox visualThemeComboBox, JComboBox cameraPresetComboBox, JCheckBox enable3DNavigationCheckBox, javax.swing.JButton fullscreenGraphButton
@@ -233,7 +241,7 @@ final class ModernLayoutInstaller {
         centerSplit.setResizeWeight(0.68);
         centerSplit.setBorder(null);
         centerSplit.setTopComponent(createMapContainer(
-                networkPanelContainer, legendPanelContainer,
+                networkPanelContainer, dashboardLegendPanel,
                 delayLabel, delaySlider, delayTextField,
                 showIdsCheckBox, showLinksCheckBox, showRangesCheckBox, showGridCheckBox,
                 visualThemeComboBox, cameraPresetComboBox, enable3DNavigationCheckBox, fullscreenGraphButton
@@ -243,7 +251,7 @@ final class ModernLayoutInstaller {
     }
 
     private static JPanel createMapContainer(
-            JPanel networkPanelContainer, JPanel legendPanelContainer,
+            JPanel networkPanelContainer, JComponent dashboardLegendPanel,
             JLabel delayLabel, JSlider delaySlider, JTextField delayTextField,
             JCheckBox showIdsCheckBox, JCheckBox showLinksCheckBox, JCheckBox showRangesCheckBox, JCheckBox showGridCheckBox,
             JComboBox visualThemeComboBox, JComboBox cameraPresetComboBox, JCheckBox enable3DNavigationCheckBox, javax.swing.JButton fullscreenGraphButton
@@ -252,11 +260,8 @@ final class ModernLayoutInstaller {
         mapContainer.setBorder(new EmptyBorder(10, 10, 10, 10));
         mapContainer.setBackground(PAGE_BG);
 
-        JPanel topStrip = new JPanel(new GridLayout(1, 2, 10, 0));
+        JPanel topStrip = new JPanel(new BorderLayout(10, 0));
         topStrip.setOpaque(false);
-
-        JPanel networkCard = createCard(new BorderLayout());
-        networkCard.add(networkPanelContainer, BorderLayout.CENTER);
 
         JPanel legendCard = createCard(new BorderLayout());
         legendCard.setBorder(new CompoundBorder(
@@ -266,8 +271,9 @@ final class ModernLayoutInstaller {
         JLabel legendTitle = new JLabel("Legend");
         legendTitle.setBorder(new EmptyBorder(0, 2, 0, 2));
         legendCard.add(legendTitle, BorderLayout.NORTH);
-        legendCard.add(legendPanelContainer, BorderLayout.CENTER);
-        topStrip.add(legendCard);
+        legendCard.add(dashboardLegendPanel, BorderLayout.CENTER);
+        legendCard.setPreferredSize(new Dimension(360, 112));
+        legendCard.setMinimumSize(new Dimension(320, 100));
 
         JPanel liveControlsCard = createCard(new BorderLayout());
         liveControlsCard.setBorder(new CompoundBorder(
@@ -277,13 +283,17 @@ final class ModernLayoutInstaller {
         JLabel liveTitle = new JLabel("Live Simulation Controls");
         liveTitle.setBorder(new EmptyBorder(0, 2, 8, 2));
         liveControlsCard.add(liveTitle, BorderLayout.NORTH);
-        JPanel liveContent = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        JPanel liveContent = new JPanel(new WrapLayout(WrapLayout.LEFT, 8, 4));
         liveContent.setOpaque(false);
         liveContent.add(wrapInlineDelay(delayLabel, delaySlider, delayTextField));
         liveContent.add(checkGroupInline(showIdsCheckBox, showLinksCheckBox, showRangesCheckBox, showGridCheckBox));
         liveContent.add(wrapRenderControls(visualThemeComboBox, cameraPresetComboBox, enable3DNavigationCheckBox, fullscreenGraphButton));
         liveControlsCard.add(liveContent, BorderLayout.CENTER);
-        topStrip.add(liveControlsCard);
+        topStrip.add(liveControlsCard, BorderLayout.CENTER);
+        topStrip.add(legendCard, BorderLayout.EAST);
+
+        JPanel networkCard = createCard(new BorderLayout());
+        networkCard.add(networkPanelContainer, BorderLayout.CENTER);
 
         mapContainer.add(topStrip, BorderLayout.NORTH);
         mapContainer.add(networkCard, BorderLayout.CENTER);
@@ -297,9 +307,9 @@ final class ModernLayoutInstaller {
                 new EmptyBorder(8, 8, 8, 8)
         ));
 
-        outcomesPanelsPanel.setPreferredSize(new Dimension(960, 320));
-        outcomesPanelsPanel.setMinimumSize(new Dimension(640, 260));
-        outcomesTabbedPane.setPreferredSize(new Dimension(930, 280));
+        outcomesPanelsPanel.setPreferredSize(null);
+        outcomesPanelsPanel.setMinimumSize(new Dimension(0, 220));
+        outcomesTabbedPane.setPreferredSize(null);
 
         chartsCard.add(outcomesPanelsPanel, BorderLayout.CENTER);
         return chartsCard;
@@ -360,7 +370,7 @@ final class ModernLayoutInstaller {
     }
 
     private static JPanel checkGroupInline(JCheckBox... checkBoxes) {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel panel = new JPanel(new WrapLayout(WrapLayout.LEFT, 6, 2));
         panel.setOpaque(false);
         panel.setBorder(new EmptyBorder(2, 0, 2, 0));
         for (JCheckBox checkBox : checkBoxes) {
@@ -414,10 +424,10 @@ final class ModernLayoutInstaller {
     }
 
     private static JPanel wrapInlineDelay(JLabel label, JSlider slider, JTextField valueField) {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel panel = new JPanel(new WrapLayout(WrapLayout.LEFT, 4, 2));
         panel.setOpaque(false);
         panel.add(label);
-        slider.setPreferredSize(new Dimension(180, 24));
+        slider.setPreferredSize(new Dimension(132, 24));
         panel.add(slider);
         valueField.setEditable(false);
         valueField.setHorizontalAlignment(SwingConstants.CENTER);
@@ -427,13 +437,13 @@ final class ModernLayoutInstaller {
     }
 
     private static JPanel wrapRenderControls(JComboBox visualThemeComboBox, JComboBox cameraPresetComboBox, JCheckBox enable3DNavigationCheckBox, javax.swing.JButton fullscreenGraphButton) {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel panel = new JPanel(new WrapLayout(WrapLayout.LEFT, 4, 2));
         panel.setOpaque(false);
         JLabel renderLabel = new JLabel("Render");
         panel.add(renderLabel);
-        visualThemeComboBox.setPreferredSize(new Dimension(135, 24));
+        visualThemeComboBox.setPreferredSize(new Dimension(120, 24));
         panel.add(visualThemeComboBox);
-        cameraPresetComboBox.setPreferredSize(new Dimension(98, 24));
+        cameraPresetComboBox.setPreferredSize(new Dimension(88, 24));
         panel.add(cameraPresetComboBox);
         enable3DNavigationCheckBox.setOpaque(false);
         panel.add(enable3DNavigationCheckBox);

@@ -93,7 +93,7 @@ public class LegendPanel extends javax.swing.JPanel {
      * This method plots this legend
      */
     public void plotLegend() {
-        plotLegend(this.getGraphics());
+        repaint();
     }
 
     /**
@@ -101,6 +101,10 @@ public class LegendPanel extends javax.swing.JPanel {
      * @param graphics Graphics object where to plot this legend
      */
     protected void plotLegend(Graphics graphics) {
+        if (graphics == null) {
+            return;
+        }
+
         int height = this.getHeight();
         int width = this.getWidth();
 

@@ -184,8 +184,8 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             installNetworkPanelSelectionHandler(networkPanel);
 
             // 2. Run our new layout logic to rearrange everything
-            applyModernLayout();
             installGraphInfoStrip();
+            applyModernLayout();
             installEmbeddedNodeInspector();
             updateParametersSourceView();
             updateRunSimulationsControls();
@@ -405,12 +405,13 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         upperPanel.setPreferredSize(new Dimension((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()),(int)(Toolkit.getDefaultToolkit().getScreenSize().getHeight()*0.6)));
         upperPanel.setLayout(new javax.swing.BoxLayout(upperPanel, javax.swing.BoxLayout.X_AXIS));
 
-        upperSplitPane.setDividerLocation((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()*0.49));
-        upperSplitPane.setDividerSize(3);
+        upperSplitPane.setDividerLocation(360);
+        upperSplitPane.setDividerSize(7);
         upperSplitPane.setPreferredSize(upperPanel.getPreferredSize());
 
         controlsScrollPane.setBorder(javax.swing.BorderFactory.createTitledBorder("Settings"));
-        controlsScrollPane.setPreferredSize(new Dimension((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()*0.5),(int)(Toolkit.getDefaultToolkit().getScreenSize().getHeight()*0.7)));
+        controlsScrollPane.setMinimumSize(new Dimension(300, 400));
+        controlsScrollPane.setPreferredSize(new Dimension(360, (int) (Toolkit.getDefaultToolkit().getScreenSize().getHeight() * 0.7)));
 
         controlsPanel.setPreferredSize(new java.awt.Dimension(400, 460));
 
@@ -555,7 +556,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         spinnersControlPanel.setLayout(new javax.swing.BoxLayout(spinnersControlPanel, javax.swing.BoxLayout.Y_AXIS));
 
         numExecutionsLabel.setText("Num executions");
-        numExecutionsLabel.setPreferredSize(new java.awt.Dimension(150, 25));
+        numExecutionsLabel.setPreferredSize(new java.awt.Dimension(210, 25));
         spinnersControlPanel.add(numExecutionsLabel);
 
         numExecutionsSpinner.setModel(new javax.swing.SpinnerNumberModel(100,1,Integer.MAX_VALUE,1));
@@ -564,7 +565,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         spinnersControlPanel.add(numExecutionsSpinner);
 
         numNetworksLabel.setText("Num networks");
-        numNetworksLabel.setPreferredSize(new java.awt.Dimension(150, 25));
+        numNetworksLabel.setPreferredSize(new java.awt.Dimension(210, 25));
         spinnersControlPanel.add(numNetworksLabel);
 
         numNetworksSpinner.setModel(new javax.swing.SpinnerNumberModel(100,1,Integer.MAX_VALUE,1));
@@ -573,7 +574,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         spinnersControlPanel.add(numNetworksSpinner);
 
         minNumSensorsLabel.setText("Min Num Sensors");
-        minNumSensorsLabel.setPreferredSize(new java.awt.Dimension(150, 25));
+        minNumSensorsLabel.setPreferredSize(new java.awt.Dimension(210, 25));
         spinnersControlPanel.add(minNumSensorsLabel);
 
         minNumSensorsSpinner.setModel(new javax.swing.SpinnerNumberModel(50,1,Integer.MAX_VALUE,1));
@@ -587,7 +588,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         spinnersControlPanel.add(minNumSensorsSpinner);
 
         maxNumSensorsLabel.setText("Max Num Sensors");
-        maxNumSensorsLabel.setPreferredSize(new java.awt.Dimension(150, 25));
+        maxNumSensorsLabel.setPreferredSize(new java.awt.Dimension(210, 25));
         spinnersControlPanel.add(maxNumSensorsLabel);
 
         maxNumSensorsSpinner.setModel(new javax.swing.SpinnerNumberModel(50,1,Integer.MAX_VALUE,1));
@@ -603,7 +604,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         slidersControlsPanel.setLayout(new java.awt.GridBagLayout());
 
         percentageClientsLabel.setText("% Clients");
-        percentageClientsLabel.setPreferredSize(new java.awt.Dimension(150, 15));
+        percentageClientsLabel.setPreferredSize(new java.awt.Dimension(210, 15));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
@@ -637,7 +638,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         slidersControlsPanel.add(percentageClientsTextField, gridBagConstraints);
 
         percentageRelayServersLabel.setText("% Relay Servers");
-        percentageRelayServersLabel.setPreferredSize(new java.awt.Dimension(150, 15));
+        percentageRelayServersLabel.setPreferredSize(new java.awt.Dimension(210, 15));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 2;
@@ -672,7 +673,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         slidersControlsPanel.add(percentageRelayServersTextField, gridBagConstraints);
 
         percentageMaliciousServersLabel.setText("% Malicious Servers");
-        percentageMaliciousServersLabel.setPreferredSize(new java.awt.Dimension(150, 15));
+        percentageMaliciousServersLabel.setPreferredSize(new java.awt.Dimension(210, 15));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 4;
@@ -707,7 +708,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         slidersControlsPanel.add(percentageMaliciousServersTextField, gridBagConstraints);
 
         radioRangeLabel.setText("Radio Range");
-        radioRangeLabel.setPreferredSize(new java.awt.Dimension(150, 15));
+        radioRangeLabel.setPreferredSize(new java.awt.Dimension(210, 15));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 6;
@@ -742,7 +743,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         slidersControlsPanel.add(radioRangeTextField, gridBagConstraints);
 
         delayLabel.setText("Delay");
-        delayLabel.setPreferredSize(new java.awt.Dimension(150, 15));
+        delayLabel.setPreferredSize(new java.awt.Dimension(210, 15));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 8;
@@ -1132,8 +1133,10 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
         parametersPanel.setLayout(new javax.swing.BoxLayout(parametersPanel, javax.swing.BoxLayout.Y_AXIS));
 
-        parametersSettingsPanel.setMinimumSize(new Dimension((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()),130));
-        parametersSettingsPanel.setPreferredSize(new Dimension((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()),130));
+        parametersSettingsPanel.setMinimumSize(new Dimension(320, 150));
+        parametersSettingsPanel.setPreferredSize(new Dimension(380, 150));
+        parametersSettingsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
+        parametersSettingsPanel.setAlignmentX(0.0f);
 
         separator1.setOrientation(javax.swing.SwingConstants.VERTICAL);
 
@@ -1157,7 +1160,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             }
         });
 
-        parametersSourceLabel.setText("Parameters source");
+        parametersSourceLabel.setText("Source");
 
         applyParametersChangesButton.setText("Apply changes");
         applyParametersChangesButton.setEnabled(false);
@@ -1184,74 +1187,78 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         javax.swing.GroupLayout parametersSettingsPanelLayout = new javax.swing.GroupLayout(parametersSettingsPanel);
         parametersSettingsPanel.setLayout(parametersSettingsPanelLayout);
         parametersSettingsPanelLayout.setHorizontalGroup(
-            parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
-                        .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(parametersSourceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(customizedParametersRadioButton, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(separator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(parametersFileLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
-                                .addComponent(parametersFileTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 259, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(browseButton))))
-                    .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
-                        .addComponent(applyParametersChangesButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(saveParametersFileContentButton))
-                    .addComponent(separator2)
-                    .addComponent(parametersFileRadioButton, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(589, Short.MAX_VALUE))
+                parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
+                                                .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        // INCREASED widths here to prevent "Customized" from being cut off
+                                                        .addComponent(parametersSourceLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(customizedParametersRadioButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(parametersFileRadioButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(separator1, javax.swing.GroupLayout.PREFERRED_SIZE, 8, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addComponent(parametersFileLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 104, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(parametersFileTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 150, Short.MAX_VALUE)
+                                                        .addComponent(browseButton)))
+                                        .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
+                                                .addComponent(applyParametersChangesButton)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(saveParametersFileContentButton))
+                                        .addComponent(separator2))
+                                .addContainerGap())
         );
         parametersSettingsPanelLayout.setVerticalGroup(
-            parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
-                        .addComponent(parametersSourceLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(parametersFileRadioButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(customizedParametersRadioButton))
-                    .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
-                        .addComponent(parametersFileLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(parametersFileTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(browseButton)))
-                    .addComponent(separator1))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(separator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(applyParametersChangesButton)
-                    .addComponent(saveParametersFileContentButton))
-                .addContainerGap())
+                parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
+                                                .addComponent(parametersSourceLabel)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(parametersFileRadioButton)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(customizedParametersRadioButton))
+                                        .addGroup(parametersSettingsPanelLayout.createSequentialGroup()
+                                                .addComponent(parametersFileLabel)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(parametersFileTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(browseButton))
+                                        .addComponent(separator1, javax.swing.GroupLayout.DEFAULT_SIZE, 75, Short.MAX_VALUE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(separator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(parametersSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(applyParametersChangesButton)
+                                        .addComponent(saveParametersFileContentButton))
+                                // Added enough bottom padding below so the buttons aren't cut off
+                                .addContainerGap(15, Short.MAX_VALUE))
         );
 
         parametersPanel.add(parametersSettingsPanel);
         parametersPanel.add(separator3);
 
-        bottomParametersContainerPanel.setLayout(new javax.swing.BoxLayout(bottomParametersContainerPanel, javax.swing.BoxLayout.LINE_AXIS));
-
-        bottomParametersSplitPane.setBorder(null);
-        bottomParametersSplitPane.setDividerLocation((int)(Toolkit.getDefaultToolkit().getScreenSize().getWidth()*0.5));
-        bottomParametersSplitPane.setDividerSize(3);
+        bottomParametersContainerPanel.setLayout(new javax.swing.BoxLayout(bottomParametersContainerPanel, javax.swing.BoxLayout.Y_AXIS));
+        bottomParametersContainerPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 0, 0, 0));
+        bottomParametersContainerPanel.setAlignmentX(0.0f);
+        bottomParametersContainerPanel.setMinimumSize(new Dimension(0, 0));
+        bottomParametersContainerPanel.setPreferredSize(new Dimension(0, 0));
+        bottomParametersContainerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
         TRMParametersScrollPane.setBorder(javax.swing.BorderFactory.createTitledBorder("Trust & Reputation model parameters"));
+        TRMParametersScrollPane.setMinimumSize(new Dimension(0, 0));
+        TRMParametersScrollPane.setPreferredSize(new Dimension(0, 0));
+        TRMParametersScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
         javax.swing.GroupLayout TRM_ParametersPanelAuxLayout = new javax.swing.GroupLayout(TRM_ParametersPanelAux);
         TRM_ParametersPanelAux.setLayout(TRM_ParametersPanelAuxLayout);
         TRM_ParametersPanelAuxLayout.setHorizontalGroup(
             TRM_ParametersPanelAuxLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 747, Short.MAX_VALUE)
+            .addGap(0, 0, Short.MAX_VALUE)
         );
         TRM_ParametersPanelAuxLayout.setVerticalGroup(
             TRM_ParametersPanelAuxLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1260,18 +1267,19 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
         TRMParametersScrollPane.setViewportView(TRM_ParametersPanelAux);
 
-        bottomParametersSplitPane.setLeftComponent(TRMParametersScrollPane);
-
         parametersFileContentScrollPane.setBorder(javax.swing.BorderFactory.createTitledBorder("Parameters file content"));
+        parametersFileContentScrollPane.setMinimumSize(new Dimension(0, 0));
+        parametersFileContentScrollPane.setPreferredSize(new Dimension(0, 0));
+        parametersFileContentScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
         parametersFileContentTextArea.setColumns(20);
         parametersFileContentTextArea.setRows(5);
         parametersFileContentTextArea.setAutoscrolls(false);
         parametersFileContentScrollPane.setViewportView(parametersFileContentTextArea);
 
-        bottomParametersSplitPane.setRightComponent(parametersFileContentScrollPane);
-
-        bottomParametersContainerPanel.add(bottomParametersSplitPane);
+        bottomParametersContainerPanel.add(TRMParametersScrollPane);
+        bottomParametersContainerPanel.add(Box.createVerticalStrut(10));
+        bottomParametersContainerPanel.add(parametersFileContentScrollPane);
 
         parametersPanel.add(bottomParametersContainerPanel);
 
@@ -2798,7 +2806,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private JSlider graphInspectorDelaySlider;
     private MiniLegendPanel graphInspectorLegendPanel;
     private JPanel graphInspectorLegendWrapper;
-    private MiniLegendPanel graphStripLegendPanel;
+    private CompactLegendPanel dashboardLegendPanel;
 
     private Collection<OutcomesPanel> outcomesPanels;
     private LegendPanel legendPanel = new LegendPanel();
@@ -2861,10 +2869,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         graphTopLiveControlsPanel.setPreferredSize(new Dimension(280, 82));
         graphTopLiveControlsPanel.setMinimumSize(new Dimension(240, 82));
 
-        graphStripLegendPanel = new MiniLegendPanel();
-        graphStripLegendPanel.setItems(createLegendItems());
-        graphStripLegendPanel.setPreferredSize(new Dimension(240, 48));
-        graphStripLegendPanel.setMinimumSize(new Dimension(200, 48));
+        dashboardLegendPanel = new CompactLegendPanel();
+        dashboardLegendPanel.setItems(createLegendItems());
+        dashboardLegendPanel.setOpaque(false);
     }
 
     private void installEmbeddedNodeInspector() {
@@ -3068,7 +3075,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
 
     private void updateInspectorSimulationControls() {
         String stateText = "Idle";
+        String runText = "Run Simulations";
         String pauseResumeText = "Pause";
+        boolean canRun = runSimulationsButton.isEnabled();
         boolean canPauseResume = false;
         boolean canStop = false;
         if (batchSimulationState == BatchSimulationState.RUNNING) {
@@ -3083,8 +3092,11 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             canStop = true;
         }
         if (batchSimulationState == BatchSimulationState.IDLE) {
-            pauseResumeText = runSimulationsButton.getText();
-            canPauseResume = runSimulationsButton.isEnabled();
+            pauseResumeText = "Pause";
+            canPauseResume = false;
+        } else {
+            runText = "Run Simulations";
+            canRun = false;
         }
         if (graphInspectorSimulationStateLabel != null) {
             graphInspectorSimulationStateLabel.setText(stateText);
@@ -3107,7 +3119,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             graphStripStopButton.setEnabled(canStop);
         }
         if (graphWorkspace != null) {
-            graphWorkspace.updateSimulationControlsState(stateText, runSimulationsButton.getText(), canPauseResume, canStop);
+            graphWorkspace.updateSimulationControlsState(stateText, runText, runSimulationsButton.getText(), canRun, canPauseResume, canStop);
         }
     }
 
@@ -3231,9 +3243,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         }
         graphInspectorLegendWrapper.revalidate();
         graphInspectorLegendWrapper.repaint();
-        if (graphStripLegendPanel != null) {
-            graphStripLegendPanel.setItems(createLegendItems());
-            graphStripLegendPanel.repaint();
+        if (dashboardLegendPanel != null) {
+            dashboardLegendPanel.setItems(createLegendItems());
+            dashboardLegendPanel.repaint();
         }
     }
 
@@ -3438,7 +3450,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 graphWorkspace.getVisualThemeComboBox(), graphWorkspace.getCameraPresetComboBox(),
                 graphWorkspace.getEnable3DNavigationCheckBox(), graphWorkspace.getFullscreenGraphButton(),
                 parametersPanel, messagePanel,
-                networkPanelContainer, legendPanelContainer, outcomesPanelsPanel, outcomesTabbedPane
+                networkPanelContainer, dashboardLegendPanel, outcomesPanelsPanel, outcomesTabbedPane
         );
         this.validate();
         this.repaint();

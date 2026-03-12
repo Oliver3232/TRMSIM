@@ -108,77 +108,77 @@ public class BTRM_WSN_ParametersPanel extends TRMParametersPanel {
 
         phiTextField.setEditable(false);
         phiTextField.setText("0.1784");
-        phiTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        phiTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         rhoLabel.setText("rho");
         rhoLabel.setEnabled(false);
 
         rhoTextField.setEditable(false);
         rhoTextField.setText("0.3044");
-        rhoTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        rhoTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         q0Label.setText("q0");
         q0Label.setEnabled(false);
 
         q0TextField.setEditable(false);
         q0TextField.setText("0.8331");
-        q0TextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        q0TextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         numAntsLabel.setText("Num ants");
         numAntsLabel.setEnabled(false);
 
         numAntsTextField.setEditable(false);
         numAntsTextField.setText("0.3973");
-        numAntsTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        numAntsTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         numIterationsLabel.setText("Num iterations");
         numIterationsLabel.setEnabled(false);
 
         numIterationsTextField.setEditable(false);
         numIterationsTextField.setText("0.5404");
-        numIterationsTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        numIterationsTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         alphaLabel.setText("alpha");
         alphaLabel.setEnabled(false);
 
         alphaTextField.setEditable(false);
         alphaTextField.setText("1.0");
-        alphaTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        alphaTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         betaLabel.setText("beta");
         betaLabel.setEnabled(false);
 
         betaTextField.setEditable(false);
         betaTextField.setText("1.0");
-        betaTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        betaTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         initialPheromoneLabel.setText("Initial pheromone");
         initialPheromoneLabel.setEnabled(false);
 
         initialPheromoneTextField.setEditable(false);
         initialPheromoneTextField.setText("0.4928");
-        initialPheromoneTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        initialPheromoneTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         punishmentThresholdLabel.setText("Punishment threshold");
         punishmentThresholdLabel.setEnabled(false);
 
         punishmentThresholdTextField.setEditable(false);
         punishmentThresholdTextField.setText("0.6806");
-        punishmentThresholdTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        punishmentThresholdTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         pathLengthFactorLabel.setText("Path length factor");
         pathLengthFactorLabel.setEnabled(false);
 
         pathLengthFactorTextField.setEditable(false);
         pathLengthFactorTextField.setText("0.5651");
-        pathLengthFactorTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        pathLengthFactorTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         transitionThresholdLabel.setText("Transition threshold");
         transitionThresholdLabel.setEnabled(false);
 
         transitionThresholdTextField.setEditable(false);
         transitionThresholdTextField.setText("0.4972");
-        transitionThresholdTextField.setPreferredSize(new java.awt.Dimension(45, 25));
+        transitionThresholdTextField.setPreferredSize(new java.awt.Dimension(58, 25));
 
         phiSlider.setMaximum(10000);
         phiSlider.setValue(1784);
@@ -301,12 +301,12 @@ public class BTRM_WSN_ParametersPanel extends TRMParametersPanel {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(numIterationsSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(numIterationsTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(numIterationsTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(numAntsLabel)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(numAntsSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(numAntsTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(numAntsTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(phiSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -314,13 +314,13 @@ public class BTRM_WSN_ParametersPanel extends TRMParametersPanel {
                             .addComponent(rhoSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(rhoTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(phiTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addComponent(rhoTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(phiTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)))
                     .addComponent(phiLabel)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(q0Slider, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(q0TextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(q0TextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(q0Label, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -342,12 +342,12 @@ public class BTRM_WSN_ParametersPanel extends TRMParametersPanel {
                                 .addComponent(punishmentThresholdLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addGap(12, 12, 12)
                             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(alphaTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(pathLengthFactorTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(punishmentThresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(betaTextField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(transitionThresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(initialPheromoneTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                .addComponent(alphaTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(pathLengthFactorTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(punishmentThresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(betaTextField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(transitionThresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(initialPheromoneTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE))))
                     .addComponent(alphaLabel))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
