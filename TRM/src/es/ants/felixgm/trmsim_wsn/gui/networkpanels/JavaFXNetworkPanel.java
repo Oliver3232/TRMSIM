@@ -250,6 +250,8 @@ public class JavaFXNetworkPanel extends NetworkPanel {
         });
 
         canvas.setOnMouseClicked(event -> {
+            Sensor selectedSensor = getSensorAtPosition((int) Math.round(event.getX()), (int) Math.round(event.getY()));
+            notifySensorSelection(selectedSensor);
             if (event.getClickCount() == 2) {
                 viewScale = 1.0;
                 viewOffsetX = 0.0;
@@ -260,6 +262,30 @@ public class JavaFXNetworkPanel extends NetworkPanel {
                 requestFxRender();
             }
         });
+    }
+
+    @Override
+    public Sensor getSensorAtPosition(int x, int y) {
+        Network currentNetwork = this.network;
+        if (currentNetwork == null) {
+            return null;
+        }
+        double w = Math.max(10, fxPanel.getWidth());
+        double h = Math.max(10, fxPanel.getHeight());
+        boolean use3D = this.enable3DNavigation;
+        Sensor closestSensor = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (Sensor sensor : currentNetwork.get_sensors()) {
+            ProjectedPoint point = projectPoint(sensor, w, h, use3D);
+            double radius = getNodeRadius(w, h) * point.depthScale + 5.0;
+            double distance = Math.hypot(x - point.x, y - point.y);
+            if ((distance <= radius) && (distance < minDistance)) {
+                minDistance = distance;
+                closestSensor = sensor;
+            }
+        }
+        return closestSensor;
     }
 
     @Override
@@ -516,6 +542,17 @@ public class JavaFXNetworkPanel extends NetworkPanel {
             gc.setStroke(javafx.scene.paint.Color.rgb(45, 45, 45, 0.85));
             gc.setLineWidth(1.0);
             gc.strokeOval(x - nodeRadius, y - nodeRadius, nodeRadius * 2.0, nodeRadius * 2.0);
+        }
+
+        if ((selectedSensorId != null) && (selectedSensorId.intValue() == sensor.id())) {
+            double selectionRadius = nodeRadius + 7.0 + pulse * 1.5;
+            gc.setStroke(javafx.scene.paint.Color.rgb(255, 212, 72, 0.98));
+            gc.setLineWidth(2.8);
+            gc.strokeOval(x - selectionRadius, y - selectionRadius, selectionRadius * 2.0, selectionRadius * 2.0);
+            gc.setStroke(javafx.scene.paint.Color.rgb(255, 243, 184, 0.7));
+            gc.setLineWidth(1.2);
+            gc.strokeOval(x - selectionRadius - 4.0, y - selectionRadius - 4.0,
+                    (selectionRadius + 4.0) * 2.0, (selectionRadius + 4.0) * 2.0);
         }
 
         if (currentShowIds) {

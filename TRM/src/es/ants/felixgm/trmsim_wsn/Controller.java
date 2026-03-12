@@ -212,6 +212,22 @@ public class Controller implements Observer {
         if (simulationThread != null)
             simulation.stop();
     }
+
+    /**
+     * Pauses the current simulation process
+     */
+    public void pauseSimulation() {
+        if (simulation != null)
+            simulation.pause();
+    }
+
+    /**
+     * Resumes the current simulation process
+     */
+    public void resumeSimulation() {
+        if (simulation != null)
+            simulation.resume();
+    }
     
     /**
      * This method runs a set of simulations over current WSN, showing its outcomes
@@ -301,6 +317,14 @@ public class Controller implements Observer {
      * @return Boolean indicating whether there is currently a simulation running or not
      */
     public boolean isSimulationRunning() { return Sensor.isRunningSimulation(); }
+
+    /**
+     * This method returns whether the current simulation is paused
+     * @return true if the current simulation is paused
+     */
+    public boolean isSimulationPaused() {
+        return (simulation != null) && simulation.isPaused();
+    }
     
     /**
      * This method sets the parameters of current Trust and Reputation Model
