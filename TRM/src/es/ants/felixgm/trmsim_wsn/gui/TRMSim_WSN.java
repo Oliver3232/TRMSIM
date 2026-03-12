@@ -78,7 +78,10 @@ import es.ants.felixgm.trmsim_wsn.trm.trip.TRIP;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.io.File;
@@ -1665,10 +1668,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             legendPanel.plotLegend();
             legendPanelContainer.setPreferredSize(new Dimension(100, 64));
 
-            networkPanelContainer.add(networkPanel, java.awt.BorderLayout.CENTER);
-            installNetworkPanelSelectionHandler(networkPanel);
-            networkPanel.setBackground(Color.white);
-            networkPanel.setSize(networkPanelContainer.getSize());
+            attachNetworkPanelToOverlay(networkPanel);
             applyVisualizationControls();
             networkPanelContainer.revalidate();
             networkPanelContainer.repaint();
@@ -2782,6 +2782,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private String lastAllowedTRModel;
     private BatchSimulationState batchSimulationState = BatchSimulationState.IDLE;
     private Integer selectedNodeId;
+    private JLayeredPane networkOverlayPane;
     private JPanel graphNodeInspectorPanel;
     private JLabel graphNodeInspectorTitleLabel;
     private JTextArea graphNodeInspectorTextArea;
@@ -2792,9 +2793,11 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private JLabel graphStripSimulationStateLabel;
     private JTextArea graphTopControlsInfoArea;
     private javax.swing.Timer graphNodeInspectorAnimator;
+    private javax.swing.Timer graphNodeInspectorAutoHideTimer;
     private int graphNodeInspectorCurrentWidth = 16;
     private int graphNodeInspectorTargetWidth = 16;
     private boolean graphInspectorPinned = false;
+    private JCheckBox graphInspectorPinToggleButton;
     private JCheckBox graphInspectorPinCheckBox;
     private JButton graphInspectorPauseResumeButton;
     private JButton graphInspectorStopButton;
@@ -2807,9 +2810,112 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private MiniLegendPanel graphInspectorLegendPanel;
     private JPanel graphInspectorLegendWrapper;
     private CompactLegendPanel dashboardLegendPanel;
+    private static final int GRAPH_INSPECTOR_MARGIN = 14;
+    private static final int GRAPH_INSPECTOR_COLLAPSED_WIDTH = 18;
+    private static final int GRAPH_INSPECTOR_EXPANDED_WIDTH = 364;
+    private static final int GRAPH_INSPECTOR_MIN_HEIGHT = 260;
+    private static final int GRAPH_INSPECTOR_MAX_HEIGHT = 430;
 
     private Collection<OutcomesPanel> outcomesPanels;
     private LegendPanel legendPanel = new LegendPanel();
+
+    private JPanel createInspectorShellPanel() {
+        return new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(19, 28, 42, 172));
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 18, 18);
+                g2.setColor(new Color(255, 255, 255, 44));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 18, 18);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+    }
+
+    private void ensureNetworkOverlayPane() {
+        if (networkOverlayPane == null) {
+            networkOverlayPane = new JLayeredPane();
+            networkOverlayPane.setOpaque(false);
+            networkOverlayPane.addComponentListener(new java.awt.event.ComponentAdapter() {
+                @Override
+                public void componentResized(java.awt.event.ComponentEvent e) {
+                    layoutNetworkOverlayComponents();
+                }
+            });
+        }
+        if (networkOverlayPane.getParent() != networkPanelContainer) {
+            networkPanelContainer.removeAll();
+            networkPanelContainer.add(networkOverlayPane, java.awt.BorderLayout.CENTER);
+        }
+        layoutNetworkOverlayComponents();
+    }
+
+    private void attachNetworkPanelToOverlay(NetworkPanel panel) {
+        if (panel == null) {
+            return;
+        }
+        ensureNetworkOverlayPane();
+        for (java.awt.Component component : networkOverlayPane.getComponentsInLayer(JLayeredPane.DEFAULT_LAYER.intValue())) {
+            networkOverlayPane.remove(component);
+        }
+        if (panel.getParent() != null) {
+            panel.getParent().remove(panel);
+        }
+        networkOverlayPane.add(panel, JLayeredPane.DEFAULT_LAYER);
+        networkOverlayPane.moveToBack(panel);
+        installNetworkPanelSelectionHandler(panel);
+        panel.setBackground(Color.white);
+        panel.setSize(networkPanelContainer.getSize());
+        layoutNetworkOverlayComponents();
+        networkOverlayPane.revalidate();
+        networkOverlayPane.repaint();
+    }
+
+    private void layoutNetworkOverlayComponents() {
+        if (networkOverlayPane == null) {
+            return;
+        }
+        int width = Math.max(networkOverlayPane.getWidth(), networkPanelContainer.getWidth());
+        int height = Math.max(networkOverlayPane.getHeight(), networkPanelContainer.getHeight());
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+        if (networkPanel != null && networkPanel.getParent() == networkOverlayPane) {
+            networkPanel.setBounds(0, 0, width, height);
+        }
+        if (graphNodeInspectorPanel != null && graphNodeInspectorPanel.getParent() == networkOverlayPane) {
+            int inspectorHeight = Math.min(GRAPH_INSPECTOR_MAX_HEIGHT, Math.max(GRAPH_INSPECTOR_MIN_HEIGHT, height - (GRAPH_INSPECTOR_MARGIN * 2)));
+            int inspectorWidth = Math.max(GRAPH_INSPECTOR_COLLAPSED_WIDTH, graphNodeInspectorCurrentWidth);
+            int x = Math.max(0, width - inspectorWidth - GRAPH_INSPECTOR_MARGIN);
+            graphNodeInspectorPanel.setBounds(x, GRAPH_INSPECTOR_MARGIN, inspectorWidth, inspectorHeight);
+            graphNodeInspectorPanel.revalidate();
+        }
+    }
+
+    private void stopGraphInspectorAutoHide() {
+        if (graphNodeInspectorAutoHideTimer != null) {
+            graphNodeInspectorAutoHideTimer.stop();
+        }
+    }
+
+    private void scheduleGraphInspectorAutoHide() {
+        stopGraphInspectorAutoHide();
+        if (graphInspectorPinned) {
+            return;
+        }
+        if (graphNodeInspectorAutoHideTimer == null) {
+            graphNodeInspectorAutoHideTimer = new javax.swing.Timer(2000, evt -> {
+                if (!graphInspectorPinned) {
+                    setGraphInspectorExpanded(false);
+                }
+            });
+            graphNodeInspectorAutoHideTimer.setRepeats(false);
+        }
+        graphNodeInspectorAutoHideTimer.restart();
+    }
 
     private void installNetworkPanelSelectionHandler(NetworkPanel panel) {
         if (panel == null) {
@@ -2875,18 +2981,35 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     }
 
     private void installEmbeddedNodeInspector() {
-        if (graphNodeInspectorPanel != null) {
-            networkPanelContainer.remove(graphNodeInspectorPanel);
+        ensureNetworkOverlayPane();
+        attachNetworkPanelToOverlay(networkPanel);
+        if (graphNodeInspectorPanel != null && graphNodeInspectorPanel.getParent() != null) {
+            graphNodeInspectorPanel.getParent().remove(graphNodeInspectorPanel);
         }
 
-        graphNodeInspectorPanel = new JPanel(new BorderLayout(0, 10));
-        graphNodeInspectorPanel.setBackground(new Color(245, 249, 255));
-        graphNodeInspectorPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 1, 0, 0, new Color(214, 226, 241)),
-                new EmptyBorder(14, 14, 14, 14)));
-        graphNodeInspectorPanel.setPreferredSize(new Dimension(16, 100));
-        graphNodeInspectorCurrentWidth = 16;
-        graphNodeInspectorTargetWidth = 16;
+        graphNodeInspectorPanel = createInspectorShellPanel();
+        graphNodeInspectorPanel.setOpaque(false);
+        graphNodeInspectorPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        graphNodeInspectorPanel.setPreferredSize(new Dimension(GRAPH_INSPECTOR_COLLAPSED_WIDTH, GRAPH_INSPECTOR_MIN_HEIGHT));
+        graphNodeInspectorCurrentWidth = GRAPH_INSPECTOR_COLLAPSED_WIDTH;
+        graphNodeInspectorTargetWidth = GRAPH_INSPECTOR_COLLAPSED_WIDTH;
+
+        graphInspectorPinToggleButton = new JCheckBox();
+        graphInspectorPinToggleButton.setFocusable(false);
+        graphInspectorPinToggleButton.setOpaque(false);
+        graphInspectorPinToggleButton.setForeground(new Color(220, 245, 255));
+        graphInspectorPinToggleButton.setToolTipText("Pin node inspector");
+        graphInspectorPinToggleButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        graphInspectorPinToggleButton.setIconTextGap(0);
+        graphInspectorPinToggleButton.setSelected(graphInspectorPinned);
+        graphInspectorPinToggleButton.addActionListener(evt -> {
+            graphInspectorPinned = graphInspectorPinToggleButton.isSelected();
+            stopGraphInspectorAutoHide();
+            setGraphInspectorExpanded(graphInspectorPinned);
+            if (!graphInspectorPinned) {
+                scheduleGraphInspectorCollapseCheck();
+            }
+        });
 
         JPanel header = new JPanel(new BorderLayout(0, 6));
         header.setOpaque(false);
@@ -2894,102 +3017,40 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         headerTop.setOpaque(false);
         JLabel badgeLabel = new JLabel("NODE INSPECTOR");
         badgeLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
-        badgeLabel.setForeground(new Color(77, 111, 153));
-        graphInspectorPinCheckBox = new JCheckBox("Pin panel");
-        graphInspectorPinCheckBox.setOpaque(false);
-        graphInspectorPinCheckBox.setSelected(graphInspectorPinned);
-        graphInspectorPinCheckBox.addActionListener(evt -> {
-            graphInspectorPinned = graphInspectorPinCheckBox.isSelected();
-            setGraphInspectorExpanded(graphInspectorPinned);
-        });
+        badgeLabel.setForeground(new Color(193, 213, 240));
+        graphInspectorPinCheckBox = null;
         headerTop.add(badgeLabel, BorderLayout.WEST);
-        headerTop.add(graphInspectorPinCheckBox, BorderLayout.EAST);
         graphNodeInspectorTitleLabel = new JLabel("No node selected");
         graphNodeInspectorTitleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
-        graphNodeInspectorTitleLabel.setForeground(new Color(23, 35, 58));
+        graphNodeInspectorTitleLabel.setForeground(Color.WHITE);
         header.add(headerTop, BorderLayout.NORTH);
         header.add(graphNodeInspectorTitleLabel, BorderLayout.CENTER);
-
-        JPanel simulationControlsPanel = new JPanel();
-        simulationControlsPanel.setOpaque(false);
-        simulationControlsPanel.setLayout(new BoxLayout(simulationControlsPanel, BoxLayout.Y_AXIS));
-        JLabel simulationControlsLabel = new JLabel("Live Simulation");
-        simulationControlsLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
-        simulationControlsLabel.setForeground(new Color(77, 111, 153));
-        simulationControlsLabel.setAlignmentX(0.0f);
-        graphInspectorSimulationStateLabel = new JLabel("Idle");
-        graphInspectorSimulationStateLabel.setForeground(new Color(44, 56, 77));
-        graphInspectorSimulationStateLabel.setAlignmentX(0.0f);
-        JPanel simulationButtonsRow = new JPanel();
-        simulationButtonsRow.setOpaque(false);
-        simulationButtonsRow.setLayout(new BoxLayout(simulationButtonsRow, BoxLayout.X_AXIS));
-        graphInspectorPauseResumeButton = new JButton("Pause");
-        graphInspectorPauseResumeButton.addActionListener(evt -> handlePauseResumeRequest());
-        graphInspectorStopButton = new JButton("Stop");
-        graphInspectorStopButton.addActionListener(evt -> handleStopRequest());
-        simulationButtonsRow.add(graphInspectorPauseResumeButton);
-        simulationButtonsRow.add(Box.createHorizontalStrut(8));
-        simulationButtonsRow.add(graphInspectorStopButton);
-        simulationButtonsRow.setAlignmentX(0.0f);
-        simulationControlsPanel.add(simulationControlsLabel);
-        simulationControlsPanel.add(Box.createVerticalStrut(4));
-        simulationControlsPanel.add(graphInspectorSimulationStateLabel);
-        simulationControlsPanel.add(Box.createVerticalStrut(6));
-        simulationControlsPanel.add(simulationButtonsRow);
-
-        JPanel liveDisplayPanel = new JPanel();
-        liveDisplayPanel.setOpaque(false);
-        liveDisplayPanel.setLayout(new BoxLayout(liveDisplayPanel, BoxLayout.Y_AXIS));
-        JLabel displayLabel = new JLabel("Display");
-        displayLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
-        displayLabel.setForeground(new Color(77, 111, 153));
-        displayLabel.setAlignmentX(0.0f);
-        graphInspectorShowIdsCheckBox = createInspectorCheckBox("Show IDs", showIdsCheckBox.isSelected(), selected -> showIdsCheckBox.setSelected(selected));
-        graphInspectorShowLinksCheckBox = createInspectorCheckBox("Show links", showLinksCheckBox.isSelected(), selected -> showLinksCheckBox.setSelected(selected));
-        graphInspectorShowRangesCheckBox = createInspectorCheckBox("Show ranges", showRangesCheckBox.isSelected(), selected -> showRangesCheckBox.setSelected(selected));
-        graphInspectorShowGridCheckBox = createInspectorCheckBox("Show grid", showGridCheckBox.isSelected(), selected -> showGridCheckBox.setSelected(selected));
-        JLabel delayLabel = new JLabel("Delay");
-        delayLabel.setForeground(new Color(44, 56, 77));
-        delayLabel.setAlignmentX(0.0f);
-        graphInspectorDelaySlider = new JSlider(delaySlider.getMinimum(), delaySlider.getMaximum(), delaySlider.getValue());
-        graphInspectorDelaySlider.setOpaque(false);
-        graphInspectorDelaySlider.setAlignmentX(0.0f);
-        graphInspectorDelaySlider.addChangeListener(evt -> {
-            if (delaySlider.getValue() != graphInspectorDelaySlider.getValue()) {
-                delaySlider.setValue(graphInspectorDelaySlider.getValue());
-            }
-        });
-        liveDisplayPanel.add(displayLabel);
-        liveDisplayPanel.add(Box.createVerticalStrut(4));
-        liveDisplayPanel.add(graphInspectorShowIdsCheckBox);
-        liveDisplayPanel.add(graphInspectorShowLinksCheckBox);
-        liveDisplayPanel.add(graphInspectorShowRangesCheckBox);
-        liveDisplayPanel.add(graphInspectorShowGridCheckBox);
-        liveDisplayPanel.add(Box.createVerticalStrut(6));
-        liveDisplayPanel.add(delayLabel);
-        liveDisplayPanel.add(graphInspectorDelaySlider);
-
-        graphInspectorLegendWrapper = new JPanel(new BorderLayout());
-        graphInspectorLegendWrapper.setOpaque(true);
-        graphInspectorLegendWrapper.setBackground(Color.white);
-        graphInspectorLegendWrapper.setBorder(BorderFactory.createLineBorder(new Color(217, 227, 238), 1, true));
-        graphInspectorLegendPanel = createLegendPanel();
-        if (graphInspectorLegendPanel != null) {
-            graphInspectorLegendPanel.setPreferredSize(new Dimension(250, 52));
-            graphInspectorLegendPanel.setBackground(Color.white);
-            graphInspectorLegendWrapper.add(graphInspectorLegendPanel, BorderLayout.CENTER);
-        }
+        graphInspectorSimulationStateLabel = null;
+        graphInspectorPauseResumeButton = null;
+        graphInspectorStopButton = null;
+        graphInspectorShowIdsCheckBox = null;
+        graphInspectorShowLinksCheckBox = null;
+        graphInspectorShowRangesCheckBox = null;
+        graphInspectorShowGridCheckBox = null;
+        graphInspectorDelaySlider = null;
+        graphInspectorLegendPanel = null;
+        graphInspectorLegendWrapper = null;
 
         graphNodeInspectorTextArea = new JTextArea();
         graphNodeInspectorTextArea.setEditable(false);
         graphNodeInspectorTextArea.setLineWrap(true);
         graphNodeInspectorTextArea.setWrapStyleWord(true);
-        graphNodeInspectorTextArea.setBackground(new Color(255, 255, 255));
-        graphNodeInspectorTextArea.setForeground(new Color(44, 56, 77));
+        graphNodeInspectorTextArea.setOpaque(false);
+        graphNodeInspectorTextArea.setBackground(new Color(0, 0, 0, 0));
+        graphNodeInspectorTextArea.setForeground(new Color(236, 242, 252));
         graphNodeInspectorTextArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         graphNodeInspectorTextArea.setBorder(new EmptyBorder(10, 10, 10, 10));
         JScrollPane inspectorScrollPane = new JScrollPane(graphNodeInspectorTextArea);
-        inspectorScrollPane.setBorder(BorderFactory.createLineBorder(new Color(217, 227, 238), 1, true));
+        inspectorScrollPane.setOpaque(false);
+        inspectorScrollPane.getViewport().setOpaque(false);
+        inspectorScrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(255, 255, 255, 32), 1, true),
+                new EmptyBorder(0, 0, 0, 0)));
 
         JPanel footer = new JPanel();
         footer.setOpaque(false);
@@ -2999,39 +3060,31 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         clearSelectionButton.addActionListener(evt -> clearNodeInspector());
         footer.add(clearSelectionButton);
 
-        JPanel content = new JPanel(new BorderLayout(0, 10));
-        content.setOpaque(false);
-        content.add(header, BorderLayout.NORTH);
-        content.add(simulationControlsPanel, BorderLayout.CENTER);
-
         JPanel drawerContentPanel = new JPanel(new BorderLayout(0, 10));
         drawerContentPanel.setOpaque(false);
-
-        JPanel centerPanel = new JPanel(new BorderLayout(0, 10));
-        centerPanel.setOpaque(false);
-        JPanel topStack = new JPanel();
-        topStack.setOpaque(false);
-        topStack.setLayout(new BoxLayout(topStack, BoxLayout.Y_AXIS));
-        content.setAlignmentX(0.0f);
-        liveDisplayPanel.setAlignmentX(0.0f);
-        graphInspectorLegendWrapper.setAlignmentX(0.0f);
-        topStack.add(content);
-        topStack.add(Box.createVerticalStrut(10));
-        topStack.add(liveDisplayPanel);
-        topStack.add(Box.createVerticalStrut(10));
-        topStack.add(graphInspectorLegendWrapper);
-        centerPanel.add(topStack, BorderLayout.NORTH);
-        centerPanel.add(inspectorScrollPane, BorderLayout.CENTER);
-
-        drawerContentPanel.add(centerPanel, BorderLayout.CENTER);
+        drawerContentPanel.add(header, BorderLayout.NORTH);
+        drawerContentPanel.add(inspectorScrollPane, BorderLayout.CENTER);
         drawerContentPanel.add(footer, BorderLayout.SOUTH);
 
+        JPanel handlePanel = new JPanel(new BorderLayout());
+        handlePanel.setOpaque(false);
+        JPanel handleStack = new JPanel();
+        handleStack.setOpaque(false);
+        handleStack.setLayout(new BoxLayout(handleStack, BoxLayout.Y_AXIS));
+        graphInspectorPinToggleButton.setAlignmentX(0.5f);
+        handleStack.add(Box.createVerticalStrut(8));
+        handleStack.add(graphInspectorPinToggleButton);
+        handleStack.add(Box.createVerticalGlue());
+        handlePanel.add(handleStack, BorderLayout.CENTER);
+
+        graphNodeInspectorPanel.add(handlePanel, BorderLayout.WEST);
         graphNodeInspectorPanel.add(drawerContentPanel, BorderLayout.CENTER);
         graphNodeInspectorPanel.putClientProperty("drawerContent", drawerContentPanel);
-        networkPanelContainer.add(graphNodeInspectorPanel, BorderLayout.EAST);
-        graphNodeInspectorPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+        networkOverlayPane.add(graphNodeInspectorPanel, JLayeredPane.PALETTE_LAYER);
+        java.awt.event.MouseAdapter inspectorHoverAdapter = new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
+                stopGraphInspectorAutoHide();
                 setGraphInspectorExpanded(true);
             }
 
@@ -3039,18 +3092,13 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             public void mouseExited(java.awt.event.MouseEvent e) {
                 scheduleGraphInspectorCollapseCheck();
             }
-        });
-        networkPanelContainer.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
-            @Override
-            public void mouseMoved(java.awt.event.MouseEvent e) {
-                int threshold = Math.max(26, networkPanelContainer.getWidth() - 26);
-                if (!graphInspectorPinned) {
-                    setGraphInspectorExpanded(e.getX() >= threshold);
-                }
-            }
-        });
-        networkPanelContainer.revalidate();
-        networkPanelContainer.repaint();
+        };
+        graphNodeInspectorPanel.addMouseListener(inspectorHoverAdapter);
+        handlePanel.addMouseListener(inspectorHoverAdapter);
+        drawerContentPanel.addMouseListener(inspectorHoverAdapter);
+        layoutNetworkOverlayComponents();
+        networkOverlayPane.revalidate();
+        networkOverlayPane.repaint();
         updateInspectorSimulationControls();
         setGraphInspectorExpanded(graphInspectorPinned);
     }
@@ -3102,8 +3150,8 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             graphInspectorSimulationStateLabel.setText(stateText);
         }
         if (graphInspectorPauseResumeButton != null) {
-            graphInspectorPauseResumeButton.setText(pauseResumeText);
-            graphInspectorPauseResumeButton.setEnabled(canPauseResume);
+            graphInspectorPauseResumeButton.setText(canRun ? runText : pauseResumeText);
+            graphInspectorPauseResumeButton.setEnabled(canRun || canPauseResume);
         }
         if (graphInspectorStopButton != null) {
             graphInspectorStopButton.setEnabled(canStop);
@@ -3171,6 +3219,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                 int relX = pointer.x - panelLocation.x;
                 int relY = pointer.y - panelLocation.y;
                 if (!graphNodeInspectorPanel.contains(relX, relY)) {
+                    stopGraphInspectorAutoHide();
                     setGraphInspectorExpanded(false);
                 }
             } catch (Exception ignored) {}
@@ -3184,10 +3233,10 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             return;
         }
         boolean shouldExpand = expanded || graphInspectorPinned;
-        graphNodeInspectorTargetWidth = shouldExpand ? 320 : 16;
+        graphNodeInspectorTargetWidth = shouldExpand ? GRAPH_INSPECTOR_EXPANDED_WIDTH : GRAPH_INSPECTOR_COLLAPSED_WIDTH;
         Object contentObj = graphNodeInspectorPanel.getClientProperty("drawerContent");
         if (contentObj instanceof JComponent) {
-            ((JComponent) contentObj).setVisible(shouldExpand || graphNodeInspectorCurrentWidth > 28);
+            ((JComponent) contentObj).setVisible(shouldExpand || graphNodeInspectorCurrentWidth > (GRAPH_INSPECTOR_COLLAPSED_WIDTH + 10));
         }
         if (graphNodeInspectorAnimator == null) {
             graphNodeInspectorAnimator = new javax.swing.Timer(16, evt -> {
@@ -3198,13 +3247,16 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
                     int step = Math.max(1, Math.abs(delta) / 4);
                     graphNodeInspectorCurrentWidth += (delta > 0) ? step : -step;
                 }
-                graphNodeInspectorPanel.setPreferredSize(new Dimension(graphNodeInspectorCurrentWidth, 100));
+                graphNodeInspectorPanel.setPreferredSize(new Dimension(graphNodeInspectorCurrentWidth, GRAPH_INSPECTOR_MIN_HEIGHT));
                 Object drawerContentObj = graphNodeInspectorPanel.getClientProperty("drawerContent");
                 if (drawerContentObj instanceof JComponent) {
-                    ((JComponent) drawerContentObj).setVisible(graphNodeInspectorCurrentWidth > 30);
+                    ((JComponent) drawerContentObj).setVisible(graphNodeInspectorCurrentWidth > (GRAPH_INSPECTOR_COLLAPSED_WIDTH + 10));
                 }
-                networkPanelContainer.revalidate();
-                networkPanelContainer.repaint();
+                layoutNetworkOverlayComponents();
+                if (networkOverlayPane != null) {
+                    networkOverlayPane.revalidate();
+                    networkOverlayPane.repaint();
+                }
                 if (graphNodeInspectorCurrentWidth == graphNodeInspectorTargetWidth) {
                     graphNodeInspectorAnimator.stop();
                 }
@@ -3218,6 +3270,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private JCheckBox createInspectorCheckBox(String label, boolean selected, java.util.function.Consumer<Boolean> consumer) {
         JCheckBox checkBox = new JCheckBox(label);
         checkBox.setOpaque(false);
+        checkBox.setForeground(new Color(236, 242, 252));
         checkBox.setSelected(selected);
         checkBox.setAlignmentX(0.0f);
         checkBox.addActionListener(evt -> consumer.accept(checkBox.isSelected()));
@@ -3238,7 +3291,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
         graphInspectorLegendPanel = createLegendPanel();
         if (graphInspectorLegendPanel != null) {
             graphInspectorLegendPanel.setPreferredSize(new Dimension(250, 52));
-            graphInspectorLegendPanel.setBackground(Color.white);
+            graphInspectorLegendPanel.setOpaque(false);
             graphInspectorLegendWrapper.add(graphInspectorLegendPanel, BorderLayout.CENTER);
         }
         graphInspectorLegendWrapper.revalidate();
@@ -3269,6 +3322,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private void clearNodeInspector() {
         selectedNodeId = null;
         graphWorkspace.setSelectedSensorId(null);
+        stopGraphInspectorAutoHide();
         if (graphNodeInspectorTitleLabel != null) {
             graphNodeInspectorTitleLabel.setText("No node selected");
         }
@@ -3286,6 +3340,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
     private void selectNodeById(int nodeId) {
         selectedNodeId = Integer.valueOf(nodeId);
         setGraphInspectorExpanded(true);
+        scheduleGraphInspectorAutoHide();
         refreshSelectedNodeDetails();
     }
 
