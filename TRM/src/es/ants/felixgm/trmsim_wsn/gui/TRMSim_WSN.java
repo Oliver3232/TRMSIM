@@ -2231,8 +2231,6 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             Sensor sensor = networkPanel.getSensorAtPosition(point.x, point.y);
             if (sensor != null) {
                 selectNodeById(sensor.id());
-            } else {
-                clearNodeInspector();
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
@@ -2926,8 +2924,6 @@ public class TRMSim_WSN extends javax.swing.JFrame implements Observer {
             public void sensorSelected(Sensor sensor) {
                 if (sensor != null) {
                     selectNodeById(sensor.id());
-                } else {
-                    clearNodeInspector();
                 }
             }
         });
