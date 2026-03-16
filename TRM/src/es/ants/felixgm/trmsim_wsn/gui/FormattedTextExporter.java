@@ -1,6 +1,7 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.*;
+import java.awt.Component;
 import java.io.*;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -13,7 +14,7 @@ public class FormattedTextExporter {
     private static final DecimalFormat numberFormat = new DecimalFormat("0.######");
     private static final DecimalFormat percentageFormat = new DecimalFormat("0.00%");
 
-    public static void exportToFormattedText(TRMSim_WSN parentFrame, List<Outcome> outcomes) {
+    public static void exportToFormattedText(Component parentFrame, List<Outcome> outcomes) {
         try {
             JFileChooser fileChooser = new JFileChooser("simulation_results/");
             fileChooser.setDialogTitle("Export Simulation Data to Formatted Text");

@@ -41,6 +41,7 @@
 
 package es.ants.felixgm.trmsim_wsn.network;
 
+import es.ants.felixgm.trmsim_wsn.SimulationContext;
 import es.ants.felixgm.trmsim_wsn.search.ISearchCondition;
 import es.ants.felixgm.trmsim_wsn.search.IsServerSearchCondition;
 import es.ants.felixgm.trmsim_wsn.trm.GatheredInformation;
@@ -69,6 +70,7 @@ import java.util.Vector;
  * @since 0.1
  */
 public abstract class Sensor implements Runnable {
+    private static final SimulationContext simulationContext = new SimulationContext();
     /** Indicates whether a collusion among malicious sensors is built */
     public static boolean collusion = false;
     /** Indicates whether some sensors will switch off sometimes in order to save energy */
@@ -149,14 +151,15 @@ public abstract class Sensor implements Runnable {
      */
     public void run() {
         if (reachesQualifiedService(requiredService)) {
-            GatheredInformation gi = trmmodelWSN.gatherInformation(this, requiredService);
-            Vector<Sensor> path = trmmodelWSN.scoreAndRanking(this,gi);
-            outcome = trmmodelWSN.performTransaction(path,requiredService);
+            TRModel_WSN trustModel = simulationContext.getTrustModel();
+            GatheredInformation gi = trustModel.gatherInformation(this, requiredService);
+            Vector<Sensor> path = trustModel.scoreAndRanking(this,gi);
+            outcome = trustModel.performTransaction(path,requiredService);
             if (outcome != null) {
                 if (outcome.get_satisfaction().isSatisfied())
-                    outcome = trmmodelWSN.reward(path,outcome);
+                    outcome = trustModel.reward(path,outcome);
                 else
-                    outcome = trmmodelWSN.punish(path,outcome);
+                    outcome = trustModel.punish(path,outcome);
             }
         } else
             outcome = null;
@@ -188,7 +191,7 @@ public abstract class Sensor implements Runnable {
         numRequests++;
         if (numRequests == numRequestsThreshold) { // Edited by Hamed Khiabani
             numRequests = 0;
-            if (dynamic && runningSimulation) {
+            if (simulationContext.isDynamic() && simulationContext.isRunningSimulation()) {
                 activeState = false;
                 numRequestsTimer = new Timer();
                 numRequestsTimer.schedule(new TimerTask(){
@@ -478,7 +481,7 @@ public abstract class Sensor implements Runnable {
      * Edited by Hamed Khiabani
      */
     private void sleepIfInactive(final long time) {
-        if (dynamic && runningSimulation) {
+        if (simulationContext.isDynamic() && simulationContext.isRunningSimulation()) {
             sleepTimer = new Timer();
             sleepTimer.schedule(new TimerTask() {
                 @Override
@@ -535,13 +538,33 @@ public abstract class Sensor implements Runnable {
      * This method returns a boolean indicating whether there is currently a simulation running or not
      * @return Boolean indicating whether there is currently a simulation running or not
      */
-    public static boolean isRunningSimulation() { return runningSimulation; }
+    public static boolean isRunningSimulation() { return simulationContext.isRunningSimulation(); }
     
     /**
      * Returns Current Trust and Reputation model used by every Sensor
      * @return Current Trust and Reputation model used by every Sensor
      */
-    public static TRModel_WSN get_TRModel_WSN() { return trmmodelWSN; }
+    public static TRModel_WSN get_TRModel_WSN() { return simulationContext.getTrustModel(); }
+
+    protected final TRModel_WSN trustModel() { return simulationContext.getTrustModel(); }
+
+    protected final boolean isCollusionEnabled() { return simulationContext.isCollusion(); }
+
+    protected final boolean isDynamicNetwork() { return simulationContext.isDynamic(); }
+
+    protected final boolean isSimulationRunningFlag() { return simulationContext.isRunningSimulation(); }
+
+    protected static TRModel_WSN currentTrustModel() { return simulationContext.getTrustModel(); }
+
+    protected static boolean isCollusionConfigured() { return simulationContext.isCollusion(); }
+
+    protected static boolean isDynamicConfigured() { return simulationContext.isDynamic(); }
+
+    /**
+     * Returns the central runtime context currently backing sensor state.
+     * @return Active simulation context
+     */
+    public static SimulationContext getSimulationContext() { return simulationContext; }
 
 
     /**
@@ -561,19 +584,28 @@ public abstract class Sensor implements Runnable {
      * Updates the collusion value.
      * @param coll New collusion value.
      */
-    public static void setCollusion(boolean coll) {collusion = coll; }
+    public static void setCollusion(boolean coll) {
+        collusion = coll;
+        simulationContext.setCollusion(coll);
+    }
 
     /**
      * Updates the dynamic value.
      * @param dyn New dynamic value.
      */
-    public static void setDynamic(boolean dyn) { dynamic = dyn; }
+    public static void setDynamic(boolean dyn) {
+        dynamic = dyn;
+        simulationContext.setDynamic(dyn);
+    }
     
     /**
      * Updates the runningSimulation attribute.
      * @param _runningSimulation New runningSimulation value.
      */
-    public static void setRunningSimulation(boolean _runningSimulation) { runningSimulation = _runningSimulation; }
+    public static void setRunningSimulation(boolean _runningSimulation) {
+        runningSimulation = _runningSimulation;
+        simulationContext.setRunningSimulation(_runningSimulation);
+    }
     
     /**
      * This method sets the maximum distance between two nodes in the network
@@ -591,7 +623,10 @@ public abstract class Sensor implements Runnable {
      * This method sets the current Trust and Reputation model used by every Sensor
      * @param TRModel_WSN New Trust and Reputation model used by every Sensor
      */
-    public static void set_TRModel_WSN(TRModel_WSN TRModel_WSN) { trmmodelWSN = TRModel_WSN; }
+    public static void set_TRModel_WSN(TRModel_WSN TRModel_WSN) {
+        trmmodelWSN = TRModel_WSN;
+        simulationContext.setTrustModel(TRModel_WSN);
+    }
 
     /**
      * Indicates if this sensor is active or not

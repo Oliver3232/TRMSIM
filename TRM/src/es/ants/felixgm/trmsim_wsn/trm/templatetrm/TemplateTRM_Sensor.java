@@ -196,7 +196,7 @@ public class TemplateTRM_Sensor extends Sensor {
 				PriorityQueue<ComparableFriend> MyQueue=checkedService.rank_friends("trust");
 				while (!MyQueue.isEmpty()){
 					ComparableFriend temp = MyQueue.poll();
-					if ( temp.value  < 0.5 && !( malicious && collusion )){
+					if ( temp.value  < 0.5 && !( malicious && isCollusionEnabled() )){
 
 						Followee_struct current = checkedService.get_followee(temp.id);
 						checkedService.followee_remove(temp.id);
@@ -223,7 +223,7 @@ public class TemplateTRM_Sensor extends Sensor {
 			{			
 				TemplateTRM_Sensor current = recommenders.get_followee(temp.id).Sensor;
 				if (current!=null)  struct1 = current.get_app(s);
-				if (struct1!=null)	my_new_sensor = struct1.request_Sensor(collusion,malicious);
+				if (struct1!=null)	my_new_sensor = struct1.request_Sensor(isCollusionEnabled(),malicious);
 				if (my_new_sensor!=null && my_new_sensor.isActive()){Followee_struct	next =new Followee_struct(my_new_sensor);
 				 recommendations.add(next);	recommender.add(current);}	
 			}else break;
@@ -329,7 +329,7 @@ public class TemplateTRM_Sensor extends Sensor {
 		if (f!=null)	{	
 				Followee_struct f1 = f.get_followee(string);
 			if (f1!=null){
-				if(malicious && collusion){
+				if(malicious && isCollusionEnabled()){
 					return 1-f1.return_trust();
 				}else return f1.return_trust();
 			
@@ -353,7 +353,7 @@ public class TemplateTRM_Sensor extends Sensor {
 			ComparableFriend temp = MyQueue.poll();			
 				if ( temp.value > 0.5)
 				{ 
-					if(collusion && (id!=this.id) && malicious){
+					if(isCollusionEnabled() && (id!=this.id) && malicious){
 						
 							Application_struct bad_struct = get_app(s);
 							if (bad_struct!=null){
@@ -398,7 +398,7 @@ public class TemplateTRM_Sensor extends Sensor {
 			if (s.equals("My service")) {
 				
 				Application_struct reportedService = friends.get(s);
-				platform.report(reportedService,this.serve(s),collusion);
+				platform.report(reportedService,this.serve(s),isCollusionEnabled());
 				
 				}
 			}
@@ -426,7 +426,7 @@ public class TemplateTRM_Sensor extends Sensor {
 		 numRequests++;
 	        if (numRequests == numRequestsThreshold) { // Edited by Hamed Khiabani
 	            numRequests = 0;
-	            if (dynamic && runningSimulation) {
+	            if (isDynamicNetwork() && isSimulationRunningFlag()) {
 	                activeState = false;
 	                numRequestsTimer = new Timer();
 	                numRequestsTimer.schedule(new TimerTask(){
@@ -455,7 +455,7 @@ public class TemplateTRM_Sensor extends Sensor {
 	 * @return true, if there is a collusion, false otherwise
 	 */
 	public static boolean collusion() {
-		return collusion;
+		return isCollusionConfigured();
 	}
 
 	/**

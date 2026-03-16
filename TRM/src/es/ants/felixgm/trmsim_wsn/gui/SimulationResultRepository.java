@@ -1,6 +1,7 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.*;
+import java.awt.Component;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -45,7 +46,7 @@ public class SimulationResultRepository {
         return simulationResults.size();
     }
 
-    public void exportToCSV(TRMSim_WSN parentFrame) {
+    public void exportToCSV(Component parentFrame) {
         try {
             JFileChooser fileChooser = new JFileChooser(baseExportPath);
             fileChooser.setDialogTitle("Export Simulation Data to CSV");
@@ -84,7 +85,7 @@ public class SimulationResultRepository {
         }
     }
 
-    public void exportDetailedToCSV(TRMSim_WSN parentFrame) {
+    public void exportDetailedToCSV(Component parentFrame) {
         try {
             JFileChooser fileChooser = new JFileChooser(baseExportPath);
             fileChooser.setDialogTitle("Export Detailed Simulation Data to CSV");
@@ -338,33 +339,33 @@ public class SimulationResultRepository {
         } catch (Exception e) {}
         return 0.0;
     }
-    public void exportToFormattedText(TRMSim_WSN parentFrame) {
+    public void exportToFormattedText(Component parentFrame) {
         FormattedTextExporter.exportToFormattedText(parentFrame, simulationResults);
     }
-    public void exportToFormattedTSV(TRMSim_WSN parentFrame) {
+    public void exportToFormattedTSV(Component parentFrame) {
         FormattedTSVExporter.exportToFormattedTSV(parentFrame, simulationResults);
     }
-    public void exportEnergyConsumption(TRMSim_WSN parentFrame) {
+    public void exportEnergyConsumption(Component parentFrame) {
         EnergyConsumptionExporter.exportEnergyConsumption(parentFrame, simulationResults);
     }
-    public void exportEnergyConsumptionText(TRMSim_WSN parentFrame) {
+    public void exportEnergyConsumptionText(Component parentFrame) {
         EnergyConsumptionTextExporter.exportEnergyConsumptionText(parentFrame, simulationResults);
     }
 
 
-    public void exportNodeLevelCSV(TRMSim_WSN parentFrame) {
+    public void exportNodeLevelCSV(Component parentFrame) {
         NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 1);
     }
 
-    public void exportNodeLevelEnergyCSV(TRMSim_WSN parentFrame) {
+    public void exportNodeLevelEnergyCSV(Component parentFrame) {
         NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 2);
     }
 
-    public void exportNodeLevelEnergyText(TRMSim_WSN parentFrame) {
+    public void exportNodeLevelEnergyText(Component parentFrame) {
         NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 3);
     }
 
-    public void exportNodeLevelText(TRMSim_WSN parentFrame) {
+    public void exportNodeLevelText(Component parentFrame) {
         NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 4);
     }
 }

@@ -21,19 +21,22 @@ public class Application_struct {
 		this.threshold = threshold;
 	}
 
+    private synchronized ArrayList<String> getFolloweeIdsSnapshot() {
+        return new ArrayList<String>(followees.keySet());
+    }
+
 	/* add VE to friends List */
-	public void followee_put(TemplateTRM_Sensor key, double trust) {
+	public synchronized void followee_put(TemplateTRM_Sensor key, double trust) {
 		followees.put(Integer.toString(key.id), new Followee_struct(key,trust));
 	}
 
 	/* remove VE from friend List */
-	public void followee_remove(String key) {
+	public synchronized void followee_remove(String key) {
 		followees.remove(key);
 	}
 
-	public TemplateTRM_Sensor get_random_entry() { // not tested
-		ArrayList<String> keysAsArray = new ArrayList<String>(
-				followees.keySet());
+	public synchronized TemplateTRM_Sensor get_random_entry() { // not tested
+		ArrayList<String> keysAsArray = getFolloweeIdsSnapshot();
 		Random r = new Random();
 		return get_followee(keysAsArray.get(r.nextInt(keysAsArray.size()))).Sensor;
 	}
@@ -73,8 +76,7 @@ synchronized ComparableFriend  rank_friends_reverse() {// compute trust for all 
 		// and return lowest trustee
 ComparableFriend selected = new ComparableFriend("no", 1.1);
 
-ArrayList<String> keysAsArray = new ArrayList<String>(
-followees.keySet());
+ArrayList<String> keysAsArray = getFolloweeIdsSnapshot();
 for (String id : keysAsArray) {
 	if (get_followee(id).Sensor.isActive()){
 double ttrust = get_followee(id).calculate_Trust();
@@ -98,8 +100,7 @@ return selected;
 		Comparator<ComparableFriend> comparator = new FriendComparator();
 		evaluationQeue = new PriorityQueue<ComparableFriend>(1,
 				comparator);
-		ArrayList<String> keysAsArray = new ArrayList<String>(
-				followees.keySet());
+		ArrayList<String> keysAsArray = getFolloweeIdsSnapshot();
 		if (list.equals("trust")){
 		for (String id : keysAsArray){
 			if (get_followee(id).Sensor.isActive()){
@@ -121,8 +122,7 @@ return selected;
 												// and return higher trustee
 		ComparableFriend selected = new ComparableFriend("no", -0.1);
 	
-		ArrayList<String> keysAsArray = new ArrayList<String>(
-				followees.keySet());
+		ArrayList<String> keysAsArray = getFolloweeIdsSnapshot();
 		for (String id : keysAsArray) {
 			if (get_followee(id).Sensor.isActive()){
 
@@ -164,7 +164,7 @@ return selected;
 		get_followee(id).assists.addFirst(new MyTransaction(outcome));
 	}
 
-	public void change_reputation(int id, String s, double d) {
+	public synchronized void change_reputation(int id, String s, double d) {
 		Followee_struct f = followees.get(Integer.toString(id));
 		if (f!=null)
 		f.reputation=d;

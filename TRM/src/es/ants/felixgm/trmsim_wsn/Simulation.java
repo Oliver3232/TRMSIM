@@ -47,8 +47,6 @@ import es.ants.felixgm.trmsim_wsn.network.Service;
 
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
 
-import java.util.Observable;
-import java.util.Observer;
 import java.util.Collection;
 import java.util.ArrayList;
 
@@ -64,7 +62,9 @@ import java.util.ArrayList;
  * @version 0.5
  * @since 0.1
  */
-public class Simulation extends Observable implements Runnable {
+public class Simulation implements Runnable {
+    private final SimulationContext simulationContext;
+    private final Collection<SimulationListener> listeners;
 
 	/** Wireless sensor network to test */
 	private Network network;
@@ -159,34 +159,27 @@ public class Simulation extends Observable implements Runnable {
 	 * @param numExecutions
 	 *            Number of service requests of every client composing each WSN
 	 */
-	public Simulation(Collection<Observer> observers, Service requiredService,
+	public Simulation(Collection<SimulationListener> listeners, Service requiredService,
 			int minNumSensors, int maxNumSensors, double probClients,
 			double probRelay, double probMalicious, double radioRange,
 			boolean dynamic, boolean oscillating, boolean collusion,
 			int numNetworks, int numExecutions) {
-		network = null;
+		this.network = null;
 		this.requiredService = requiredService;
-
 		this.minNumSensors = minNumSensors;
 		this.maxNumSensors = maxNumSensors;
-
 		this.probClients = probClients;
 		this.probRelay = probRelay;
 		this.probMalicious = probMalicious;
 		this.radioRange = radioRange;
-
 		this.dynamic = dynamic;
 		this.oscillating = oscillating;
 		this.collusion = collusion;
-
 		this.numNetworks = numNetworks;
 		this.numExecutions = numExecutions;
-
-		globalOutcomes = new ArrayList<Outcome>();
-		stop = false;
-		paused = false;
-		for (Observer observer : observers)
-			addObserver(observer);
+        simulationContext = Sensor.getSimulationContext();
+        this.listeners = new ArrayList<SimulationListener>(listeners);
+        initializeSimulationState();
 	}
 
 	/**
@@ -211,25 +204,50 @@ public class Simulation extends Observable implements Runnable {
 	 * @param network
 	 *            Wireless sensor network to test
 	 */
-	public Simulation(Collection<Observer> observers, Service requiredService,
+	public Simulation(Collection<SimulationListener> listeners, Service requiredService,
 			boolean dynamic, boolean oscillating, boolean collusion,
 			int numExecutions, Network network) {
 		this.network = network;
 		this.requiredService = requiredService;
-
 		this.dynamic = dynamic;
 		this.oscillating = oscillating;
 		this.collusion = collusion;
-
 		this.numNetworks = 1;
 		this.numExecutions = numExecutions;
+        simulationContext = Sensor.getSimulationContext();
+        this.listeners = new ArrayList<SimulationListener>(listeners);
+        initializeSimulationState();
+	}
 
+    private void initializeSimulationState() {
 		globalOutcomes = new ArrayList<Outcome>();
 		stop = false;
 		paused = false;
-		for (Observer observer : observers)
-			addObserver(observer);
-	}
+    }
+
+    private void notifyNetworkUpdated(Network network) {
+        for (SimulationListener listener : listeners) {
+            listener.onNetworkUpdated(network);
+        }
+    }
+
+    private void notifyOutcomesUpdated(Collection<Outcome> outcomes) {
+        for (SimulationListener listener : listeners) {
+            listener.onOutcomesUpdated(outcomes);
+        }
+    }
+
+    private void notifyMessage(String message) {
+        for (SimulationListener listener : listeners) {
+            listener.onMessage(message);
+        }
+    }
+
+    private void notifyError(Exception exception) {
+        for (SimulationListener listener : listeners) {
+            listener.onError(exception);
+        }
+    }
 
 	/**
 	 * Stops the simulations
@@ -272,42 +290,103 @@ public class Simulation extends Observable implements Runnable {
 		}
 	}
 
+    private void executeClients(Network network) throws InterruptedException {
+        Thread[] clients = new Thread[network.get_numClients()];
+        int index = 0;
+        for (Sensor client : network.get_clients()) {
+            clients[index++] = new Thread(client);
+        }
+        for (Thread clientThread : clients) {
+            clientThread.start();
+        }
+        for (Thread clientThread : clients) {
+            clientThread.join();
+        }
+    }
+
+    private Network resolveNetworkForExecution() throws Exception {
+        if ((network == null) || (numNetworks != 1)) {
+            network = Controller.C().createNewNetwork(minNumSensors,
+                    maxNumSensors, probClients, probRelay,
+                    probMalicious, radioRange, dynamic, oscillating,
+                    collusion);
+        }
+        return network;
+    }
+
+    private void prepareClients(Network network) {
+        for (Sensor client : network.get_clients()) {
+            client.set_requiredService(requiredService);
+        }
+    }
+
+    private void cancelAllSensorTimers(Network network) {
+        if (network == null) {
+            return;
+        }
+        for (Sensor sensor : network.get_sensors()) {
+            sensor.cancelAllTimers();
+        }
+    }
+
+    private void setRunningSimulation(boolean running) {
+        simulationContext.setRunningSimulation(running);
+        Sensor.setRunningSimulation(running);
+    }
+
+    private void refreshNetworkIfNeeded(Network network, int executionIndex) {
+        if ((dynamic) || ((oscillating) && (executionIndex % 20 == 0))) {
+            notifyNetworkUpdated(network);
+        }
+    }
+
+    private boolean processSingleNetworkOutcome(Collection<Outcome> outcomes, Network network, int executionIndex) {
+        Outcome outcome = Outcome.computeOutcomes(outcomes, network, requiredService, executionIndex);
+        if (outcome == null) {
+            notifyMessage("Any of the clients can reach any trustworthy server\n");
+            notifyMessage("Finishing simulations at "
+                    + (new java.util.Date()) + "...\n");
+            cancelAllSensorTimers(network);
+            return false;
+        }
+        globalOutcomes.add(outcome);
+        notifyOutcomesUpdated(globalOutcomes);
+        return true;
+    }
+
+    private boolean processBatchOutcome(Collection<Outcome> outcomes, Network network, int executionIndex, int networkIndex) {
+        Outcome outcome = Outcome.computeOutcomes(outcomes, network,
+                requiredService, executionIndex);
+        if (outcome == null) {
+            notifyMessage("Any of the clients can reach any trustworthy server\n");
+            return networkIndex > 0;
+        } else if (numNetworks > 1) {
+            globalOutcomes.add(outcome);
+            notifyOutcomesUpdated(globalOutcomes);
+        }
+        return false;
+    }
+
 	/**
 	 * Starts the simulations
 	 */
 	public void run() {
-		Sensor.setRunningSimulation(true);
+        setRunningSimulation(true);
 		try {
 			for (int net = 0; (net < numNetworks) && !stop; net++) {
 				waitIfPaused();
-				if ((network == null) || (numNetworks != 1))
-					network = Controller.C().createNewNetwork(minNumSensors,
-							maxNumSensors, probClients, probRelay,
-							probMalicious, radioRange, dynamic, oscillating,
-							collusion);
+				network = resolveNetworkForExecution();
+				prepareClients(network);
 
-				for (Sensor client : network.get_clients())
-					client.set_requiredService(requiredService);
+				notifyNetworkUpdated(network);
 
-				setChanged();
-				notifyObservers(network);
-
-				setChanged();
-				notifyObservers("Running selected TRM over WSN " + (net + 1)
+				notifyMessage("Running selected TRM over WSN " + (net + 1)
 						+ "...\n");
 				Collection<Outcome> outcomes = new ArrayList<Outcome>();
 				int Ne = 0;
 				for (; (Ne < numExecutions) && !stop; Ne++) {
 					waitIfPaused();
-					Thread[] clients = new Thread[network.get_numClients()];
-					int j = 0;
-					for (Sensor client : network.get_clients())
-						clients[j++] = new Thread(client);
-					for (int i = 0; i < clients.length; i++)
-						clients[i].start();
-
-					for (int i = 0; i < clients.length; i++)
-						clients[i].join();
+                    executeClients(network);
 
 					for (Sensor client : network.get_clients())
 						if (client.get_outcome() != null)
@@ -316,73 +395,39 @@ public class Simulation extends Observable implements Runnable {
 					if ((oscillating) && (Ne % 20 == 0))
 						network.oscillate(requiredService);
 
-					if ((dynamic) || ((oscillating) && (Ne % 20 == 0))) {
-						setChanged();
-						notifyObservers(network);
-					}
+                    refreshNetworkIfNeeded(network, Ne);
 
 					if (numNetworks == 1) {
-						Outcome outcome = Outcome.computeOutcomes(outcomes,
-								network, requiredService, Ne);
-						if (outcome == null) {
-							setChanged();
-							notifyObservers("Any of the clients can reach any trustworthy server\n");
-							setChanged();
-							notifyObservers("Finishing simulations at "
-									+ (new java.util.Date()) + "...\n");
-							// Cancel all timers - Added by Hamed Khiabani
-							for (Sensor sensor : network.get_sensors())
-								sensor.cancelAllTimers();
+                        if (!processSingleNetworkOutcome(outcomes, network, Ne)) {
 							return;
-						} else {
-							globalOutcomes.add(outcome);
-							setChanged();
-							notifyObservers(globalOutcomes);
 						}
 					}
 
 				}
 
 				if (stop) {
-					for (Sensor sensor : network.get_sensors())
-						sensor.cancelAllTimers();
-					setChanged();
-					notifyObservers(network);
+                    cancelAllSensorTimers(network);
+					notifyNetworkUpdated(network);
 				}
 
-				Outcome outcome = Outcome.computeOutcomes(outcomes, network,
-						requiredService, Ne);
-				if (outcome == null) {
-					setChanged();
-					notifyObservers("Any of the clients can reach any trustworthy server\n");
-					if (net > 0)
-						net--;
-				} else if (numNetworks > 1) {
-					globalOutcomes.add(outcome);
-					setChanged();
-					notifyObservers(globalOutcomes);
-				}
+                if (processBatchOutcome(outcomes, network, Ne, net)) {
+                    net--;
+                }
 			}
-			Sensor.setRunningSimulation(false);
-			setChanged();
-			notifyObservers("Finishing simulations at "
+            setRunningSimulation(false);
+			notifyMessage("Finishing simulations at "
 					+ (new java.util.Date()) + "...\n");
-			// Cancel all timers - Added by Hamed Khiabani
-			for (Sensor sensor : network.get_sensors())
-				sensor.cancelAllTimers();
+            cancelAllSensorTimers(network);
 			if (stop) {
-				setChanged();
-				notifyObservers(network);
+				notifyNetworkUpdated(network);
 			}
 
 			if ((globalOutcomes != null) && (globalOutcomes.size() > 0)) {
-				setChanged();
-				notifyObservers(globalOutcomes);
+				notifyOutcomesUpdated(globalOutcomes);
 			}
 		} catch (Exception ex) {
-			Sensor.setRunningSimulation(false);
-			setChanged();
-			notifyObservers(ex);
+            setRunningSimulation(false);
+			notifyError(ex);
 		}
 	}
 

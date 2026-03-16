@@ -113,7 +113,7 @@ public class EigenTrust_Sensor extends Sensor {
         double normalizedLocalTrustValue = 0.0;
 
         try {
-            if (collusion && offersService(requiredService) && (get_goodness(requiredService) < 0.5) &&
+            if (isCollusionEnabled() && offersService(requiredService) && (get_goodness(requiredService) < 0.5) &&
                     (server.get_numServices() > 0)) {
                 if (server.get_goodness(requiredService) < 0.5)
                     return 1.0;
@@ -159,7 +159,7 @@ public class EigenTrust_Sensor extends Sensor {
         globalTrustVector = new double[_numSensors];
         if (_preTrustedPeersVector == null)
             _preTrustedPeersVector = new double[_numSensors];
-        if (((EigenTrust_Parameters)(trmmodelWSN.get_TRMParameters())).get_preTrustedPeersPercentage() > 0) {
+        if (((EigenTrust_Parameters)(trustModel().get_TRMParameters())).get_preTrustedPeersPercentage() > 0) {
             for (int i = 0; i < globalTrustVector.length; i++)
                 globalTrustVector[i] = _preTrustedPeersVector[i];
         } else {

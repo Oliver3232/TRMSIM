@@ -1,6 +1,7 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.*;
+import java.awt.Component;
 import java.io.*;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -14,7 +15,7 @@ public class FormattedTSVExporter {
     private static final DecimalFormat percentageFormat = new DecimalFormat("0.00%");
     private static final DecimalFormat scientificFormat = new DecimalFormat("0.###E0");
 
-    public static void exportToFormattedTSV(TRMSim_WSN parentFrame, List<Outcome> outcomes) {
+    public static void exportToFormattedTSV(Component parentFrame, List<Outcome> outcomes) {
         try {
             JFileChooser fileChooser = new JFileChooser("simulation_results/");
             fileChooser.setDialogTitle("Export to Formatted TSV (Excel-friendly)");

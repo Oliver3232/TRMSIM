@@ -42,8 +42,10 @@
 package es.ants.felixgm.trmsim_wsn.trm;
 
 import java.util.Properties;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 
 /**
  * <p>This class represents the generic set of parameters' values of
@@ -86,7 +88,28 @@ public abstract class TRMParameters {
     public TRMParameters(String parametersFile) throws Exception {
         this.parametersFile = parametersFile;
         parameters = new Properties();
-        parameters.load(ClassLoader.getSystemClassLoader().getResourceAsStream(parametersFile));
+        try (InputStream inputStream = openParametersStream(parametersFile)) {
+            parameters.load(inputStream);
+        }
+    }
+
+    private InputStream openParametersStream(String parametersFile) throws Exception {
+        InputStream resourceStream = ClassLoader.getSystemClassLoader().getResourceAsStream(parametersFile);
+        if (resourceStream != null) {
+            return resourceStream;
+        }
+
+        File directFile = new File(parametersFile);
+        if (directFile.isFile()) {
+            return new FileInputStream(directFile);
+        }
+
+        File trmRelativeFile = new File("TRM", parametersFile);
+        if (trmRelativeFile.isFile()) {
+            return new FileInputStream(trmRelativeFile);
+        }
+
+        throw new java.io.FileNotFoundException(parametersFile);
     }
     
     /**

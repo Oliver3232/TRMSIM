@@ -104,7 +104,7 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
     public double getNormalizedLocalTrustScore(PowerTrust_Sensor server) {
         this.transmittedDistance += this.distance(server);
         try {
-            if (collusion) {
+            if (isCollusionEnabled()) {
                 if (server.get_goodness(requiredService) < 0.5)
                     return 1.0;
                 else
@@ -122,7 +122,7 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
      */
     public synchronized double computeGlobalReputation() {
         if (transactions.size() > 0) {
-            double epsilon = ((PowerTrust_Parameters)trmmodelWSN.get_TRMParameters()).get_epsilon();
+            double epsilon = ((PowerTrust_Parameters)trustModel().get_TRMParameters()).get_epsilon();
             double pre = globalReputationScore;
             do {
                 pre = globalReputationScore;
@@ -131,8 +131,8 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
                     PowerTrust_Sensor client = (PowerTrust_Sensor)transaction.getClient();
                     sum += client.get_globalReputationScore()*client.getNormalizedLocalTrustScore(this);
                 }
-                double alpha = ((PowerTrust_Parameters)trmmodelWSN.get_TRMParameters()).get_powerNodesWeight();
-                int m = (int)(_numSensors*((PowerTrust_Parameters)trmmodelWSN.get_TRMParameters()).get_powerNodesPercentage());
+                double alpha = ((PowerTrust_Parameters)trustModel().get_TRMParameters()).get_powerNodesWeight();
+                int m = (int)(_numSensors*((PowerTrust_Parameters)trustModel().get_TRMParameters()).get_powerNodesPercentage());
                 if (isPowerNode)
                     globalReputationScore = (1.0 - alpha)*sum + m/alpha;
                 else
@@ -167,8 +167,8 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
      */
     @Override
     public Outcome get_outcome() {
-        int numPowerNodes = (int)(_numSensors*((PowerTrust_Parameters)PowerTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_powerNodesPercentage());
-        if ((((PowerTrust_Parameters)PowerTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_powerNodesPercentage() > 0) && (numPowerNodes == 0))
+        int numPowerNodes = (int)(_numSensors*((PowerTrust_Parameters)trustModel().get_TRMParameters()).get_powerNodesPercentage());
+        if ((((PowerTrust_Parameters)trustModel().get_TRMParameters()).get_powerNodesPercentage() > 0) && (numPowerNodes == 0))
             numPowerNodes = 1;
         
         Collection<Vector<Sensor>> pathsToServers = this.findSensors(new IsServerSearchCondition(requiredService));

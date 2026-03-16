@@ -117,7 +117,7 @@ public class PeerTrust_Sensor extends Sensor {
      * Indicates if ther is a collusion or not
      * @return true, if there is a collusion, false otherwise
      */
-    public static boolean collusion() { return collusion; }
+    public static boolean collusion() { return isCollusionConfigured(); }
 
     /**
      * Returns the service requested by the client

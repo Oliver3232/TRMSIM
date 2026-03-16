@@ -1,6 +1,7 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.OutcomesPanel;
+import java.awt.Component;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -15,7 +16,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
 public class GraphImageExporter {
-    public static void exportCurrentGraph(TRMSim_WSN parentFrame, OutcomesPanel outcomesPanel, String graphTitle) {
+    public static void exportCurrentGraph(Component parentFrame, OutcomesPanel outcomesPanel, String graphTitle) {
         if (outcomesPanel == null) {
             JOptionPane.showMessageDialog(parentFrame,
                     "No graph is available to export.",

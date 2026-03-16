@@ -108,7 +108,7 @@ public class BTRM_Sensor extends Sensor {
                 if (link.get_destination().equals(sensor)) {
                     transmittedDistance += this.distance(sensor);
                     try {
-                        if (collusion && (get_goodness(requiredService) < 0.5) &&
+                        if (isCollusionEnabled() && (get_goodness(requiredService) < 0.5) &&
                                 (sensor.get_numServices() > 0)) {
                             if (sensor.get_goodness(requiredService) < 0.5)
                                 return BTRM_Link.MAX_PHEROMONE;

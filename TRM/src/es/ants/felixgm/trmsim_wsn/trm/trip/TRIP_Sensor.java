@@ -88,16 +88,16 @@ public class TRIP_Sensor extends Sensor {
 
     @Override
     public void reset() {
-        alpha = ((TRIP_Parameters)trmmodelWSN.get_TRMParameters()).get_initialAlpha();
-        beta = ((TRIP_Parameters)trmmodelWSN.get_TRMParameters()).get_initialBeta();
-        gamma = ((TRIP_Parameters)trmmodelWSN.get_TRMParameters()).get_initialGamma();
+        alpha = ((TRIP_Parameters)trustModel().get_TRMParameters()).get_initialAlpha();
+        beta = ((TRIP_Parameters)trustModel().get_TRMParameters()).get_initialBeta();
+        gamma = ((TRIP_Parameters)trustModel().get_TRMParameters()).get_initialGamma();
         weights = new Hashtable<TRIP_Sensor,Double>();
         trustValues = new Hashtable<TRIP_Sensor,Double>();
         recommenders = new Hashtable<TRIP_Sensor,Vector<Hashtable<TRIP_Sensor,Double>>>();
         trustLevels = new Vector<LinguisticTerm>();
-        trustLevels.add(((TRIP_Parameters)trmmodelWSN.get_TRMParameters()).get_notTrustFuzzySet());
-        trustLevels.add(((TRIP_Parameters)trmmodelWSN.get_TRMParameters()).get_moreOrLessTrustFuzzySet());
-        trustLevels.add(((TRIP_Parameters)trmmodelWSN.get_TRMParameters()).get_trustFuzzySet());
+        trustLevels.add(((TRIP_Parameters)trustModel().get_TRMParameters()).get_notTrustFuzzySet());
+        trustLevels.add(((TRIP_Parameters)trustModel().get_TRMParameters()).get_moreOrLessTrustFuzzySet());
+        trustLevels.add(((TRIP_Parameters)trustModel().get_TRMParameters()).get_trustFuzzySet());
     }
 
     public void addRecommender(TRIP_Sensor recommendee, TRIP_Sensor recommender, double recommendation) {
@@ -172,7 +172,7 @@ public class TRIP_Sensor extends Sensor {
             if (this.isRSU)
                 return tripSensor.get_goodness(requiredService);
             else {
-                if ((collusion) && (get_goodness(requiredService) < 0.5))
+                if (isCollusionEnabled() && (get_goodness(requiredService) < 0.5))
                     return (tripSensor.get_goodness(requiredService) >= 0.5) ? 0.0 : 1.0;
                 else 
                     return get_trustValue(tripSensor);

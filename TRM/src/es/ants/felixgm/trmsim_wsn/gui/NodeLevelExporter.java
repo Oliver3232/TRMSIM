@@ -2,6 +2,7 @@ package es.ants.felixgm.trmsim_wsn.gui;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.Outcome;
 import es.ants.felixgm.trmsim_wsn.outcomes.NodeMetric;
+import java.awt.Component;
 import javax.swing.*;
 import java.io.*;
 import java.util.Collection;
@@ -9,7 +10,7 @@ import java.util.List;
 
 public class NodeLevelExporter {
 
-    public static void exportNodeData(TRMSim_WSN parentFrame, Collection<Outcome> outcomes, int exportType) {
+    public static void exportNodeData(Component parentFrame, Collection<Outcome> outcomes, int exportType) {
         // exportType: 1=CSV All, 2=CSV Energy, 3=Text Energy, 4=Text All
         String title = "";
         String ext = "";

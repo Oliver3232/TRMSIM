@@ -1,6 +1,7 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
 import es.ants.felixgm.trmsim_wsn.outcomes.*;
+import java.awt.Component;
 import javax.swing.*;
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -9,7 +10,7 @@ import java.util.*;
 public class EnergyConsumptionTextExporter {
     private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    public static void exportEnergyConsumptionText(TRMSim_WSN parentFrame, Collection<Outcome> outcomes) {
+    public static void exportEnergyConsumptionText(Component parentFrame, Collection<Outcome> outcomes) {
         try {
             JFileChooser fileChooser = new JFileChooser("./simulation_results");
             fileChooser.setDialogTitle("Export Energy Consumption Text Report");
