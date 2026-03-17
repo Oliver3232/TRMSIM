@@ -42,12 +42,9 @@
 package es.ants.felixgm.trmsim_wsn.trm.lftm;
 
 import es.ants.felixgm.trmsim_wsn.trm.TRMParameters;
-import es.ants.felixgm.trmsim_wsn.trm.libs.fuzzylib.DefuzzifierCenterOfGravity;
 import es.ants.felixgm.trmsim_wsn.trm.libs.fuzzylib.FuzzyRule;
 import es.ants.felixgm.trmsim_wsn.trm.libs.fuzzylib.FuzzyRuleSet;
 import es.ants.felixgm.trmsim_wsn.trm.libs.fuzzylib.LinguisticTerm;
-import es.ants.felixgm.trmsim_wsn.trm.libs.fuzzylib.MembershipFunctionTrapezoidal;
-import es.ants.felixgm.trmsim_wsn.trm.libs.fuzzylib.MembershipFunctionTriangular;
 import es.ants.felixgm.trmsim_wsn.trm.libs.fuzzylib.Variable;
 import java.util.Collection;
 import java.util.Vector;
@@ -127,25 +124,8 @@ public class LFTM_Parameters extends TRMParameters {
      */
     public LFTM_Parameters() {
         super();
-        parametersFileHeader = "####################################\n";
-        parametersFileHeader += "# LFTM parameters file\n";
-        parametersFileHeader += "# "+(new java.util.Date())+"\n";
-        parametersFileHeader += "####################################\n";
-
-        phi = 0.1;
-        rho = 0.2;
-        q0 = 0.98;
-        alpha = 1.0;
-        beta = 1.0;
-        numAnts = 0.5;
-        numIterations = 0.5;
-        initialPheromone = 0.5;
-        pathLengthFactor = 0.5;
-        transitionThreshold = 0.5;
-        punishmentThreshold = 0.5;
-
-        U_MIN = 0.0;
-        U_MAX = 1.0;
+        parametersFileHeader = LFTMScalarParametersSupport.buildHeader();
+        LFTMScalarParametersSupport.applyDefaults(this);
         linguisticTerms = getDefaultLinguisticTerms();
     }
 
@@ -156,25 +136,8 @@ public class LFTM_Parameters extends TRMParameters {
      */
     public LFTM_Parameters(String fileName) throws Exception {
         super(fileName);
-        parametersFileHeader = "####################################\n";
-        parametersFileHeader += "# LFTM parameters file\n";
-        parametersFileHeader += "# "+(new java.util.Date())+"\n";
-        parametersFileHeader += "####################################\n";
-
-        phi = getDoubleParameter("phi");
-        rho = getDoubleParameter("rho");
-        q0 = getDoubleParameter("q0");
-        alpha = getDoubleParameter("alpha");
-        beta = getDoubleParameter("beta");
-        numAnts = getDoubleParameter("numAnts");
-        numIterations = getDoubleParameter("numIterations");
-        initialPheromone = getDoubleParameter("initialPheromone");
-        pathLengthFactor = getDoubleParameter("pathLengthFactor");
-        transitionThreshold = getDoubleParameter("transitionThreshold");
-        punishmentThreshold = getDoubleParameter("punishmentThreshold");
-
-        U_MIN = getDoubleParameter("U_MIN");
-        U_MAX = getDoubleParameter("U_MAX");
+        parametersFileHeader = LFTMScalarParametersSupport.buildHeader();
+        LFTMScalarParametersSupport.load(this, this::getDoubleParameter);
         linguisticTerms  = loadLinguisticTerms();
     }
 
@@ -386,50 +349,7 @@ public class LFTM_Parameters extends TRMParameters {
      */
     public void set_linguisticTerms(Collection<LinguisticTerm> _linguisticTerms) {
         linguisticTerms = _linguisticTerms;
-        String paramA = "";
-        String paramB = "";
-        String paramC = "";
-        String paramD = "";
-        for (LinguisticTerm linguisticTerm : linguisticTerms) {
-            String termName = linguisticTerm.getTermName();
-            if (termName.equals("Very High")) {
-                paramA = "VH_A";
-                paramB = "VH_B";
-                paramC = "VH_C";
-                paramD = "VH_C";
-            } else if (termName.equals("High")) {
-                paramA = "H_A";
-                paramB = "H_B";
-                paramC = "H_C";
-                paramD = "H_C";
-            } else if (termName.equals("Medium")) {
-                paramA = "M_A";
-                paramB = "M_B";
-                paramC = "M_C";
-                paramD = "M_C";
-            } else if (termName.equals("Low")) {
-                paramA = "L_A";
-                paramB = "L_B";
-                paramC = "L_C";
-                paramD = "L_C";
-            } else if (termName.equals("Very Low")) {
-                paramA = "VL_A";
-                paramB = "VL_B";
-                paramC = "VL_C";
-                paramD = "VL_C";
-            }
-
-            if (linguisticTerm.get_membershipFunction() instanceof MembershipFunctionTriangular) {
-                setDoubleParameter(paramA,((MembershipFunctionTriangular)linguisticTerm.get_membershipFunction()).get_min());
-                setDoubleParameter(paramB,((MembershipFunctionTriangular)linguisticTerm.get_membershipFunction()).get_med());
-                setDoubleParameter(paramC,((MembershipFunctionTriangular)linguisticTerm.get_membershipFunction()).get_max());
-            } else if (linguisticTerm.get_membershipFunction() instanceof MembershipFunctionTrapezoidal) {
-                setDoubleParameter(paramA,((MembershipFunctionTrapezoidal)linguisticTerm.get_membershipFunction()).get_min());
-                setDoubleParameter(paramB,((MembershipFunctionTrapezoidal)linguisticTerm.get_membershipFunction()).get_medLow());
-                setDoubleParameter(paramC,((MembershipFunctionTrapezoidal)linguisticTerm.get_membershipFunction()).get_medHigh());
-                setDoubleParameter(paramD,((MembershipFunctionTrapezoidal)linguisticTerm.get_membershipFunction()).get_max());
-            }
-        }
+        LFTMLinguisticTermsSupport.write(linguisticTerms, this::setDoubleParameter);
     }
 
     /**
@@ -437,89 +357,7 @@ public class LFTM_Parameters extends TRMParameters {
      * @return The linguisticTerm parameter loaded from the parameters file
      */
     private Collection<LinguisticTerm> loadLinguisticTerms() {
-        Vector<LinguisticTerm> _linguisticTerms = new Vector<LinguisticTerm>();
-        LinguisticTerm veryHigh = null;
-        LinguisticTerm high = null;
-        LinguisticTerm medium = null;
-        LinguisticTerm low = null;
-        LinguisticTerm veryLow = null;
-        
-        double veryHighAParameter = getDoubleParameter("VH_A");
-        double veryHighBParameter = getDoubleParameter("VH_B");
-        double veryHighCParameter = getDoubleParameter("VH_C");
-        try {
-            double veryHighDParameter = getDoubleParameter("VH_D");
-            veryHigh = new LinguisticTerm("Very High",
-                    new MembershipFunctionTrapezoidal(veryHighAParameter*U_MAX,veryHighBParameter*U_MAX,veryHighCParameter*U_MAX,veryHighDParameter*U_MAX));
-        } catch (Exception ex) {
-            veryHigh = new LinguisticTerm("Very High",
-                    new MembershipFunctionTriangular(veryHighAParameter*U_MAX,veryHighBParameter*U_MAX,veryHighCParameter*U_MAX));
-        } finally {
-            veryHigh.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-            _linguisticTerms.add(veryHigh);
-        }
-
-        double highAParameter = getDoubleParameter("H_A");
-        double highBParameter = getDoubleParameter("H_B");
-        double highCParameter = getDoubleParameter("H_C");
-        try {
-            double highDParameter = getDoubleParameter("H_D");
-            high = new LinguisticTerm("High",
-                    new MembershipFunctionTrapezoidal(highAParameter*U_MAX,highBParameter*U_MAX,highCParameter*U_MAX,highDParameter*U_MAX));
-        } catch (Exception ex) {
-            high = new LinguisticTerm("High",
-                    new MembershipFunctionTriangular(highAParameter*U_MAX,highBParameter*U_MAX,highCParameter*U_MAX));
-        } finally {
-            high.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-            _linguisticTerms.add(high);
-        }
-
-        double mediumAParameter = getDoubleParameter("M_A");
-        double mediumBParameter = getDoubleParameter("M_B");
-        double mediumCParameter = getDoubleParameter("M_C");
-        try {
-            double mediumDParameter = getDoubleParameter("M_D");
-            medium = new LinguisticTerm("Medium",
-                    new MembershipFunctionTrapezoidal(mediumAParameter*U_MAX,mediumBParameter*U_MAX,mediumCParameter*U_MAX,mediumDParameter*U_MAX));
-        } catch (Exception ex) {
-            medium = new LinguisticTerm("Medium",
-                    new MembershipFunctionTriangular(mediumAParameter*U_MAX,mediumBParameter*U_MAX,mediumCParameter*U_MAX));
-        } finally {
-            medium.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-            _linguisticTerms.add(medium);
-        }
-        
-        double lowAParameter = getDoubleParameter("L_A");
-        double lowBParameter = getDoubleParameter("L_B");
-        double lowCParameter = getDoubleParameter("L_C");
-        try {
-            double lowDParameter = getDoubleParameter("L_D");
-            low = new LinguisticTerm("Low",
-                    new MembershipFunctionTrapezoidal(lowAParameter*U_MAX,lowBParameter*U_MAX,lowCParameter*U_MAX,lowDParameter*U_MAX));
-        } catch (Exception ex) {
-            low = new LinguisticTerm("Low",
-                    new MembershipFunctionTriangular(lowAParameter*U_MAX,lowBParameter*U_MAX,lowCParameter*U_MAX));
-        } finally {
-            low.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-            _linguisticTerms.add(low);
-        }
-        
-        double veryLowAParameter = getDoubleParameter("VL_A");
-        double veryLowBParameter = getDoubleParameter("VL_B");
-        double veryLowCParameter = getDoubleParameter("VL_C");
-        try {
-            double veryLowDParameter = getDoubleParameter("VL_D");
-            veryLow = new LinguisticTerm("Very Low",
-                    new MembershipFunctionTrapezoidal(veryLowAParameter*U_MAX,veryLowBParameter*U_MAX,veryLowCParameter*U_MAX,veryLowDParameter*U_MAX));
-        } catch (Exception ex) {
-            veryLow = new LinguisticTerm("Very Low",
-                    new MembershipFunctionTriangular(veryLowAParameter*U_MAX,veryLowBParameter*U_MAX,veryLowCParameter*U_MAX));
-        } finally {
-            veryLow.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-            _linguisticTerms.add(veryLow);
-        }
-        
-        return _linguisticTerms;
+        return LFTMLinguisticTermsSupport.load(this::getDoubleParameter, U_MIN, U_MAX);
     }
 
     /**
@@ -528,30 +366,7 @@ public class LFTM_Parameters extends TRMParameters {
      */
     private static Collection<LinguisticTerm> getDefaultLinguisticTerms() {
         if (linguisticTerms == null) {
-            linguisticTerms = new Vector<LinguisticTerm>();
-            LinguisticTerm veryLow = new LinguisticTerm("Very Low",
-                    new MembershipFunctionTrapezoidal(U_MIN,U_MIN,0.15*U_MAX,0.2*U_MAX));
-            LinguisticTerm low = new LinguisticTerm("Low",
-                    new MembershipFunctionTrapezoidal(0.2*U_MAX,0.25*U_MAX,0.35*U_MAX,0.4*U_MAX));
-            LinguisticTerm medium = new LinguisticTerm("Medium",
-                    new MembershipFunctionTrapezoidal(0.4*U_MAX,0.45*U_MAX,0.55*U_MAX,0.6*U_MAX));
-            LinguisticTerm high = new LinguisticTerm("High",
-                    new MembershipFunctionTrapezoidal(0.6*U_MAX,0.65*U_MAX,0.75*U_MAX,0.8*U_MAX));
-            LinguisticTerm veryHigh = new LinguisticTerm("Very High",
-                    new MembershipFunctionTrapezoidal(0.8*U_MAX,0.85*U_MAX,U_MAX,U_MAX));
-            
-
-            veryLow.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-            low.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-            medium.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-            high.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-            veryHigh.setDefuzzifier(new DefuzzifierCenterOfGravity(U_MIN,U_MAX));
-
-            linguisticTerms.add(veryLow);
-            linguisticTerms.add(low);
-            linguisticTerms.add(medium);
-            linguisticTerms.add(high);
-            linguisticTerms.add(veryHigh);
+            linguisticTerms = LFTMLinguisticTermsSupport.createDefaults(U_MIN, U_MAX);
         }
         return linguisticTerms;
     }
@@ -568,31 +383,19 @@ public class LFTM_Parameters extends TRMParameters {
      */
     public static FuzzyRuleSet getFRSServicesAttributesPositive(Variable service1Property,
             Variable service2Property, Variable servicesPropertiesComparisson) {
-        FuzzyRuleSet frsServicesAttributesPositive = new FuzzyRuleSet();
-        FuzzyRule fr[][] = new FuzzyRule[5][5];
-
         Vector<LinguisticTerm> sortedLT = (Vector<LinguisticTerm>)linguisticTerms;
-        for (int i = 0; i < fr.length; i++) {
-            for (int j = 0; j < fr[i].length; j++) {
-                fr[i][j] = new FuzzyRule();
-                fr[i][j].addAntecedent(false,service1Property,sortedLT.get(i).getTermName());
-                fr[i][j].addAntecedent(false,service2Property,sortedLT.get(j).getTermName());
-                if (i == j)
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"Medium");
-                if ((j > i) && (j < i+2))
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"Low");
-                if ((j > i) && (j >= i+2))
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"Very Low");
-                if ((j < i) && (j > i-2))
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"High");
-                if ((j < i) && (j <= i-2))
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"Very High");
-
-                frsServicesAttributesPositive.add(fr[i][j]);
-            }
-        }
-
-        return frsServicesAttributesPositive;
+        return LFTMFuzzyRuleSupport.buildRuleSet(
+                service1Property,
+                service2Property,
+                servicesPropertiesComparisson,
+                sortedLT,
+                (i, j) -> {
+                    if (i == j) return "Medium";
+                    if ((j > i) && (j < i + 2)) return "Low";
+                    if ((j > i) && (j >= i + 2)) return "Very Low";
+                    if ((j < i) && (j > i - 2)) return "High";
+                    return "Very High";
+                });
     }
 
     /**
@@ -607,30 +410,19 @@ public class LFTM_Parameters extends TRMParameters {
      */
     public static FuzzyRuleSet getFRSServicesAttributesNegative(Variable service1Property,
             Variable service2Property, Variable servicesPropertiesComparisson) {
-
-        FuzzyRuleSet frsServicesAttributesNegative = new FuzzyRuleSet();
-        FuzzyRule fr[][] = new FuzzyRule[5][5];
-
         Vector<LinguisticTerm> sortedLT = (Vector<LinguisticTerm>)linguisticTerms;
-        for (int i = 0; i < fr.length; i++)
-            for (int j = 0; j < fr[i].length; j++) {
-                fr[i][j] = new FuzzyRule();
-                fr[i][j].addAntecedent(false,service1Property,sortedLT.get(i).getTermName());
-                fr[i][j].addAntecedent(false,service2Property,sortedLT.get(j).getTermName());
-                if (i == j)
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"Medium");
-                if ((j > i) && (j < i+2))
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"High");
-                if ((j > i) && (j >= i+2))
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"Very High");
-                if ((j < i) && (j > i-2))
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"Low");
-                if ((j < i) && (j <= i-2))
-                    fr[i][j].addConsequent(false,servicesPropertiesComparisson,"Very Low");
-
-                frsServicesAttributesNegative.add(fr[i][j]);
-            }
-        return frsServicesAttributesNegative;
+        return LFTMFuzzyRuleSupport.buildRuleSet(
+                service1Property,
+                service2Property,
+                servicesPropertiesComparisson,
+                sortedLT,
+                (i, j) -> {
+                    if (i == j) return "Medium";
+                    if ((j > i) && (j < i + 2)) return "High";
+                    if ((j > i) && (j >= i + 2)) return "Very High";
+                    if ((j < i) && (j > i - 2)) return "Low";
+                    return "Very Low";
+                });
     }
 
     /**
@@ -647,30 +439,19 @@ public class LFTM_Parameters extends TRMParameters {
      */
     public static FuzzyRuleSet getFRSServerGoodnessPositive(Variable serverGoodness,
             Variable offeredServiceProperty, Variable givenServiceProperty) {
-
-        FuzzyRuleSet frsServerGoodnessPositive = new FuzzyRuleSet();
-        FuzzyRule fr[][] = new FuzzyRule[5][5];
-
         Vector<LinguisticTerm> sortedLT = (Vector<LinguisticTerm>)linguisticTerms;
-        for (int i = 0; i < fr.length; i++)
-            for (int j = 0; j < fr[i].length; j++) {
-                fr[i][j] = new FuzzyRule();
-                fr[i][j].addAntecedent(false,serverGoodness,sortedLT.get(i).getTermName());
-                fr[i][j].addAntecedent(false,offeredServiceProperty,sortedLT.get(j).getTermName());
-                if (j < 3-i)
-                    fr[i][j].addConsequent(false,givenServiceProperty,"Very Low");
-                if ((j >= 3-i) && (j < 4-i))
-                    fr[i][j].addConsequent(false,givenServiceProperty,"Low");
-                if (j == 4-i)
-                    fr[i][j].addConsequent(false,givenServiceProperty,"Medium");
-                if ((j > 4-i) && (j < 4-i+2))
-                    fr[i][j].addConsequent(false,givenServiceProperty,"High");
-                if (j >= 4-i+2)
-                    fr[i][j].addConsequent(false,givenServiceProperty,"Very High");
-                frsServerGoodnessPositive.add(fr[i][j]);
-            }
-
-        return frsServerGoodnessPositive;
+        return LFTMFuzzyRuleSupport.buildRuleSet(
+                serverGoodness,
+                offeredServiceProperty,
+                givenServiceProperty,
+                sortedLT,
+                (i, j) -> {
+                    if (j < 3 - i) return "Very Low";
+                    if ((j >= 3 - i) && (j < 4 - i)) return "Low";
+                    if (j == 4 - i) return "Medium";
+                    if ((j > 4 - i) && (j < 4 - i + 2)) return "High";
+                    return "Very High";
+                });
     }
 
     /**
@@ -687,30 +468,19 @@ public class LFTM_Parameters extends TRMParameters {
      */
     public static FuzzyRuleSet getFRSServerGoodnessNegative(Variable serverGoodness,
             Variable offeredServiceProperty, Variable givenServiceProperty) {
-
-        FuzzyRuleSet frsServerGoodnessNegative = new FuzzyRuleSet();
-        FuzzyRule fr[][] = new FuzzyRule[5][5];
-
         Vector<LinguisticTerm> sortedLT = (Vector<LinguisticTerm>)linguisticTerms;
-        for (int i = 0; i < fr.length; i++)
-            for (int j = 0; j < fr[i].length; j++) {
-                fr[i][j] = new FuzzyRule();
-                fr[i][j].addAntecedent(false,serverGoodness,sortedLT.get(i).getTermName());
-                fr[i][j].addAntecedent(false,offeredServiceProperty,sortedLT.get(j).getTermName());
-                if (i == j)
-                    fr[i][j].addConsequent(false,givenServiceProperty,"Medium");
-                if ((j > i) && (j < i+2))
-                    fr[i][j].addConsequent(false,givenServiceProperty,"High");
-                if ((j > i) && (j >= i+2))
-                    fr[i][j].addConsequent(false,givenServiceProperty,"Very High");
-                if ((j < i) && (j > i-2))
-                    fr[i][j].addConsequent(false,givenServiceProperty,"Low");
-                if ((j < i) && (j <= i-2))
-                    fr[i][j].addConsequent(false,givenServiceProperty,"Very Low");
-                frsServerGoodnessNegative.add(fr[i][j]);
-            }
-
-        return frsServerGoodnessNegative;
+        return LFTMFuzzyRuleSupport.buildRuleSet(
+                serverGoodness,
+                offeredServiceProperty,
+                givenServiceProperty,
+                sortedLT,
+                (i, j) -> {
+                    if (i == j) return "Medium";
+                    if ((j > i) && (j < i + 2)) return "High";
+                    if ((j > i) && (j >= i + 2)) return "Very High";
+                    if ((j < i) && (j > i - 2)) return "Low";
+                    return "Very Low";
+                });
     }
 
     /**
@@ -726,32 +496,19 @@ public class LFTM_Parameters extends TRMParameters {
      */
     public static FuzzyRuleSet getFRSClientSatisfaction(Variable clientConformity, Variable servicesComparison,
             Variable clientSatisfaction) {
-
-        FuzzyRuleSet frsSatisfaction = new FuzzyRuleSet();
-        FuzzyRule fr[][] = new FuzzyRule[5][5];
-
         Vector<LinguisticTerm> sortedLT = (Vector<LinguisticTerm>)linguisticTerms;
-        for (int i = 0; i < fr.length; i++)
-            for (int j = 0; j < fr[i].length; j++) {
-                fr[i][j] = new FuzzyRule();
-                fr[i][j].addAntecedent(false, clientConformity, sortedLT.get(i).getTermName());
-                fr[i][j].addAntecedent(false, servicesComparison, sortedLT.get(j).getTermName());
-                if (j < 3-i)
-                    fr[i][j].addConsequent(false,clientSatisfaction,"Very Low");
-                if ((j >= 3-i) && (j < 4-i))
-                    fr[i][j].addConsequent(false,clientSatisfaction,"Low");
-                if (j == 4-i)
-                    fr[i][j].addConsequent(false,clientSatisfaction,"Medium");
-                if ((j > 4-i) && (j < 4-i+2))
-                    fr[i][j].addConsequent(false,clientSatisfaction,"High");
-                if (j >= 4-i+2)
-                    fr[i][j].addConsequent(false,clientSatisfaction,"Very High");
-
-
-                frsSatisfaction.add(fr[i][j]);
-            }
-
-        return frsSatisfaction;
+        return LFTMFuzzyRuleSupport.buildRuleSet(
+                clientConformity,
+                servicesComparison,
+                clientSatisfaction,
+                sortedLT,
+                (i, j) -> {
+                    if (j < 3 - i) return "Very Low";
+                    if ((j >= 3 - i) && (j < 4 - i)) return "Low";
+                    if (j == 4 - i) return "Medium";
+                    if ((j > 4 - i) && (j < 4 - i + 2)) return "High";
+                    return "Very High";
+                });
     }
 
     /**
@@ -766,75 +523,26 @@ public class LFTM_Parameters extends TRMParameters {
      */
     public static FuzzyRuleSet getFRSPunishmentReward(Variable clientGoodness, Variable clientSatisfaction,
             Variable punishmentReward) {
-        FuzzyRuleSet frsPunishment = new FuzzyRuleSet();
-        FuzzyRule fr[][] = new FuzzyRule[5][5];
-
         Vector<LinguisticTerm> sortedLT = (Vector<LinguisticTerm>)linguisticTerms;
-        for (int i = 0; i < fr.length; i++)
-            for (int j = 0; j < fr[i].length; j++) {
-                fr[i][j] = new FuzzyRule();
-                fr[i][j].addAntecedent(false, clientGoodness, sortedLT.get(i).getTermName());
-                fr[i][j].addAntecedent(false, clientSatisfaction, sortedLT.get(j).getTermName());
-                if (j < 3-i)
-                    fr[i][j].addConsequent(false,punishmentReward,"Very High");
-                if ((j >= 3-i) && (j < 4-i))
-                    fr[i][j].addConsequent(false,punishmentReward,"High");
-                if (j == 4-i)
-                    fr[i][j].addConsequent(false,punishmentReward,"Medium");
-                if ((j > 4-i) && (j < 4-i+2))
-                    fr[i][j].addConsequent(false,punishmentReward,"Low");
-                if (j >= 4-i+2)
-                    fr[i][j].addConsequent(false,punishmentReward,"Very Low");
-
-                frsPunishment.add(fr[i][j]);
-            }
-
-        return frsPunishment;
+        return LFTMFuzzyRuleSupport.buildRuleSet(
+                clientGoodness,
+                clientSatisfaction,
+                punishmentReward,
+                sortedLT,
+                (i, j) -> {
+                    if (j < 3 - i) return "Very High";
+                    if ((j >= 3 - i) && (j < 4 - i)) return "High";
+                    if (j == 4 - i) return "Medium";
+                    if ((j > 4 - i) && (j < 4 - i + 2)) return "Low";
+                    return "Very Low";
+                });
     }
 
     @Override
     public String toString() {
-        String s = parametersFileHeader;
-
-        s += "phi="+phi+"\n";
-        s += "rho="+rho+"\n";
-        s += "q0="+q0+"\n";
-        s += "numAnts="+numAnts+"\n";
-        s += "numIterations="+numIterations+"\n";
-        s += "alpha="+alpha+"\n";
-        s += "beta="+beta+"\n";
-        s += "initialPheromone="+initialPheromone+"\n";
-        s += "pathLengthFactor="+pathLengthFactor+"\n";
-        s += "transitionThreshold="+transitionThreshold+"\n";
-        s += "punishmentThreshold="+punishmentThreshold+"\n";
-        s += "U_MIN="+U_MIN+"\n";
-        s += "U_MAX="+U_MAX+"\n";
-
-        for (LinguisticTerm linguisticTerm : linguisticTerms) {
-            String label = "";
-
-            if (linguisticTerm.getTermName().equals("Very High"))
-                label = "VH_";
-            else if (linguisticTerm.getTermName().equals("High"))
-                label = "H_";
-            else if (linguisticTerm.getTermName().equals("Medium"))
-                label = "M_";
-            else if (linguisticTerm.getTermName().equals("Low"))
-                label = "L_";
-            else if (linguisticTerm.getTermName().equals("Very Low"))
-                label = "VL_";
-
-            if (linguisticTerm.get_membershipFunction() instanceof MembershipFunctionTriangular) {
-                s += label+"A="+((MembershipFunctionTriangular)linguisticTerm.get_membershipFunction()).get_min()+"\n";
-                s += label+"B="+((MembershipFunctionTriangular)linguisticTerm.get_membershipFunction()).get_med()+"\n";
-                s += label+"C="+((MembershipFunctionTriangular)linguisticTerm.get_membershipFunction()).get_max()+"\n";
-            } else if (linguisticTerm.get_membershipFunction() instanceof MembershipFunctionTrapezoidal) {
-                s += label+"A="+((MembershipFunctionTrapezoidal)linguisticTerm.get_membershipFunction()).get_min()+"\n";
-                s += label+"B="+((MembershipFunctionTrapezoidal)linguisticTerm.get_membershipFunction()).get_medLow()+"\n";
-                s += label+"C="+((MembershipFunctionTrapezoidal)linguisticTerm.get_membershipFunction()).get_medHigh()+"\n";
-                s += label+"D="+((MembershipFunctionTrapezoidal)linguisticTerm.get_membershipFunction()).get_max()+"\n";
-            }
-        }
-        return s;
+        StringBuilder builder = new StringBuilder(parametersFileHeader);
+        LFTMScalarParametersSupport.appendTo(builder, this);
+        LFTMLinguisticTermsSupport.appendTo(builder, linguisticTerms);
+        return builder.toString();
     }
 }

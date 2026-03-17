@@ -44,6 +44,8 @@ package es.ants.felixgm.trmsim_wsn;
 import es.ants.felixgm.trmsim_wsn.app.BatchSimulationConfig;
 import es.ants.felixgm.trmsim_wsn.app.NetworkGenerationConfig;
 import es.ants.felixgm.trmsim_wsn.app.SimulationConfig;
+import es.ants.felixgm.trmsim_wsn.app.support.ControllerNetworkGenerationSupport;
+import es.ants.felixgm.trmsim_wsn.app.support.ControllerParametersIO;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.network.Service;
 
@@ -56,15 +58,7 @@ import es.ants.felixgm.trmsim_wsn.trm.TrustModelBundle;
 import es.ants.felixgm.trmsim_wsn.trm.TrustModelFactory;
 import es.ants.felixgm.trmsim_wsn.trm.TrustModelRegistry;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Collection;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -138,36 +132,6 @@ public class Controller {
         Sensor.set_TRModel_WSN(trmodel_wsn);
     }
 
-    private String readContent(BufferedReader bufferedReader) throws Exception {
-        StringBuilder content = new StringBuilder();
-        String line;
-        while ((line = bufferedReader.readLine()) != null) {
-            content.append(line).append('\n');
-        }
-        return content.toString();
-    }
-
-    private ArrayList<Service> buildNetworkServices() {
-        ArrayList<Service> services = new ArrayList<Service>();
-        services.add(new Service("Relay"));
-        services.add(requiredService);
-        return services;
-    }
-
-    private ArrayList<Double> buildServiceProbabilities(double probRelay) {
-        ArrayList<Double> probabilities = new ArrayList<Double>();
-        probabilities.add(1.0);
-        probabilities.add(1.0 - probRelay);
-        return probabilities;
-    }
-
-    private ArrayList<Double> buildGoodnessProbabilities(double probMalicious) {
-        ArrayList<Double> probabilities = new ArrayList<Double>();
-        probabilities.add(1.0);
-        probabilities.add(1.0 - probMalicious);
-        return probabilities;
-    }
-
     private boolean hasCurrentNetwork() {
         return currentNetwork != null;
     }
@@ -190,15 +154,17 @@ public class Controller {
                                 double probClients, double probRelay, double probMalicious,
                                 double radioRange, boolean dynamic, boolean oscillating, 
                                 boolean collusion) {
-        int numSensors = (int)(minNumSensors + Math.random()*Math.abs(maxNumSensors-minNumSensors));
-        ArrayList<Service> services = buildNetworkServices();
-        ArrayList<Double> probServices = buildServiceProbabilities(probRelay);
-        ArrayList<Double> probGoodness = buildGoodnessProbabilities(probMalicious);
-
-        currentNetwork = trmodel_wsn.generateRandomNetwork(numSensors, probClients, radioRange, probServices, probGoodness, services);
-
-        currentNetwork.set_collusion(collusion);
-        currentNetwork.set_dynamic(dynamic);
+        currentNetwork = ControllerNetworkGenerationSupport.createRandomNetwork(
+                trmodel_wsn,
+                requiredService,
+                minNumSensors,
+                maxNumSensors,
+                probClients,
+                probRelay,
+                probMalicious,
+                radioRange,
+                dynamic,
+                collusion);
         return currentNetwork;
     }
 
@@ -494,10 +460,7 @@ public class Controller {
      * @throws Exception If an error occurs while saving the new content into the selected parameters file
      */
     public void saveParametersFileContent(String filePath, String newContent) throws Exception {
-        try (FileWriter fileWriter = new FileWriter(filePath)) {
-            fileWriter.write(newContent);
-            fileWriter.flush();
-        }
+        ControllerParametersIO.saveParametersFileContent(filePath, newContent);
     }
 
     /**
@@ -506,28 +469,7 @@ public class Controller {
      * @throws Exception If an error occurs while retrieving the content of the current parameters file
      */
     public String get_ParametersFileContent() throws Exception {
-        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(openParametersStream(parametersFile)))) {
-            return readContent(bufferedReader);
-        }
-    }
-
-    private InputStream openParametersStream(String configuredPath) throws Exception {
-        InputStream resourceStream = ClassLoader.getSystemClassLoader().getResourceAsStream(configuredPath);
-        if (resourceStream != null) {
-            return resourceStream;
-        }
-
-        File directFile = new File(configuredPath);
-        if (directFile.isFile()) {
-            return new FileInputStream(directFile);
-        }
-
-        File trmRelativeFile = new File("TRM", configuredPath);
-        if (trmRelativeFile.isFile()) {
-            return new FileInputStream(trmRelativeFile);
-        }
-
-        throw new java.io.FileNotFoundException(configuredPath);
+        return ControllerParametersIO.getParametersFileContent(parametersFile);
     }
 
     /**
@@ -537,17 +479,7 @@ public class Controller {
      * @throws Exception If an error occurs while retrieving the content of the default parameters file of the given trust model
      */
     public String get_DefaultParametersFileContent(String trmodel_wsn) throws Exception {
-        TrustModelRegistry.Descriptor descriptor = TrustModelRegistry.get(trmodel_wsn);
-
-        try {
-            String defaultParametersFilePath = descriptor.getDefaultParametersFile();
-
-            try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(ClassLoader.getSystemClassLoader().getResourceAsStream(defaultParametersFilePath)))) {
-                return readContent(bufferedReader);
-            }
-        } catch (Exception ex) {
-            return descriptor.createDefaultParameters().toString();
-        }
+        return ControllerParametersIO.getDefaultParametersFileContent(trmodel_wsn);
     }
 
     /**

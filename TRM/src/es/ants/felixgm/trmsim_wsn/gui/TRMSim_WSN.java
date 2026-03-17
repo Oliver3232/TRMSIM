@@ -41,6 +41,7 @@
 
 package es.ants.felixgm.trmsim_wsn.gui;
 
+
 import es.ants.felixgm.trmsim_wsn.Controller;
 import es.ants.felixgm.trmsim_wsn.app.BatchSimulationConfig;
 import es.ants.felixgm.trmsim_wsn.app.NetworkGenerationConfig;
@@ -49,7 +50,20 @@ import es.ants.felixgm.trmsim_wsn.app.SimulationConfig;
 import es.ants.felixgm.trmsim_wsn.SimulationListener;
 import es.ants.felixgm.trmsim_wsn.VerboseSimulationRunner;
 
+import es.ants.felixgm.trmsim_wsn.gui.layout.CompactLegendPanel;
+import es.ants.felixgm.trmsim_wsn.gui.layout.MiniLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.LegendPanel;
+import es.ants.felixgm.trmsim_wsn.gui.events.SimulationEventHelper;
+import es.ants.felixgm.trmsim_wsn.gui.graph.SimulationGraphWorkspace;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowActionController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowConfigurationController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowInitializationController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowRenderController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowSimulationController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowTrustModelController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowParametersController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowSimulationControlsController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowUiStateController;
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.NetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.OutcomesPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.TRMParametersPanel;
@@ -147,7 +161,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
         }
     }
     
-    void initializeTRModels() { MainWindowTrustModelController.initialize(this); }
+    void initializeTRModels() { MainWindowTrustModelController.initialize(new MainWindowContext(this)); }
 
     /** This method is called from within the constructor to
      * initialize the form.
@@ -160,7 +174,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
     }// </editor-fold>//GEN-END:initComponents
 
     void TRModelComboBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_TRModelComboBoxItemStateChanged
-        MainWindowTrustModelController.handleSelection(this, evt, LOGGER); }//GEN-LAST:event_TRModelComboBoxItemStateChanged
+        MainWindowTrustModelController.handleSelection(new MainWindowContext(this), evt, LOGGER); }//GEN-LAST:event_TRModelComboBoxItemStateChanged
 
     void set_TRMParametersPanel(TRMParametersPanel trmParametersPanel) {
         TRM_ParametersPanel = trmParametersPanel;
@@ -263,21 +277,21 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
         MainWindowConfigurationController.alignMaxSensors(MainWindowHosts.configuration(this)); }//GEN-LAST:event_maxNumSensorsSpinnerStateChanged
 
     void prepareEditableParametersForExecution() throws Exception {
-        MainWindowSimulationController.prepareEditableParametersForExecution(this);
+        MainWindowSimulationController.prepareEditableParametersForExecution(new MainWindowContext(this));
     }
 
     void finishSimulationUi() {
-        MainWindowSimulationController.finishSimulationUi(this);
+        MainWindowSimulationController.finishSimulationUi(new MainWindowContext(this));
     }
 
     void handleSimulationFailure(Exception exception) {
-        MainWindowSimulationController.handleSimulationFailure(this, exception);
+        MainWindowSimulationController.handleSimulationFailure(new MainWindowContext(this), exception);
     }
 
     private void networkPanelContainerMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_networkPanelContainerMouseClicked
         MainWindowActionController.selectNodeFromNetworkPanel(this, evt); }//GEN-LAST:event_networkPanelContainerMouseClicked
 
-    void applyChangesButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_applyChangesButtonActionPerformed
+    public void applyChangesButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_applyChangesButtonActionPerformed
     }//GEN-LAST:event_applyChangesButtonActionPerformed
 
     private void showGridCheckBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_showGridCheckBoxItemStateChanged
@@ -291,7 +305,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
      * @throws Exception If any error occurs while plotting a WSN
      */
     protected void paintNetwork(Network network, Service requiredService) throws Exception {
-        MainWindowRenderController.paintNetwork(this, network, requiredService);
+        MainWindowRenderController.paintNetwork(new MainWindowContext(this), network, requiredService);
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -364,6 +378,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
     void syncEmbeddedAndFullscreenDisplayControls() { MainWindowSimulationControlsController.syncEmbeddedAndFullscreenDisplayControls(MainWindowHosts.simulationControls(this)); }
     void handlePauseResumeRequest() { MainWindowSimulationControlsController.handlePauseResumeRequest(MainWindowHosts.simulationControls(this)); }
     void handleStopRequest() { MainWindowSimulationControlsController.handleStopRequest(MainWindowHosts.simulationControls(this)); }
+    public void syncTabbedPanePreferredSize() { tabbedPane.setPreferredSize(getSize()); }
 
     void setGraphInspectorExpanded(boolean expanded) { MainWindowEmbeddedInspectorController.setGraphInspectorExpanded(this, expanded); }
 }

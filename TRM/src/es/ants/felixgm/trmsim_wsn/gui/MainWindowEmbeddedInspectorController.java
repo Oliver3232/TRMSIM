@@ -1,5 +1,9 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
+
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowNetworkOverlayController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowNodeInspectorController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowSimulationControlsController;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -19,7 +23,7 @@ import javax.swing.JTextArea;
 import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 
-final class MainWindowEmbeddedInspectorController {
+public final class MainWindowEmbeddedInspectorController {
     private MainWindowEmbeddedInspectorController() {
     }
 

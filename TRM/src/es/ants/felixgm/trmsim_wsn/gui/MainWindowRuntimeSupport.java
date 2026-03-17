@@ -1,10 +1,16 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
+
+import es.ants.felixgm.trmsim_wsn.gui.graph.SimulationGraphWorkspace;
+import es.ants.felixgm.trmsim_wsn.gui.layout.ModernLayoutInstaller;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowNodeInspectorController;
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.NetworkPanel;
+import es.ants.felixgm.trmsim_wsn.gui.support.NetworkRenderSupport;
+import es.ants.felixgm.trmsim_wsn.gui.support.UiStateHelper;
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
 import es.ants.felixgm.trmsim_wsn.trm.powertrust.PowerTrust;
 
-final class MainWindowRuntimeSupport {
+public final class MainWindowRuntimeSupport {
     private MainWindowRuntimeSupport() {
     }
 

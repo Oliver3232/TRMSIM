@@ -2,7 +2,7 @@ package es.ants.felixgm.trmsim_wsn.trm;
 
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.BTRM_WSN_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.EigenTrust_ParametersPanel;
-import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.LFTM_ParametersPanel;
+import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.lftm.LFTM_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.PeerTrust_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.PowerTrust_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.TRMParametersPanel;

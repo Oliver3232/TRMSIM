@@ -1,10 +1,17 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
-final class MainWindowAssemblyController {
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.bootstrap.MainWindowFrameSetup;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowMenuSetupController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.sections.MainWindowCenterSection;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.sections.MainWindowControlsSection;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.sections.MainWindowParametersTabSection;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.sections.MainWindowSimulationTabSection;
+
+public final class MainWindowAssemblyController {
     private MainWindowAssemblyController() {
     }
 
-    static void configure(TRMSim_WSN window) {
+    public static void configure(TRMSim_WSN window) {
         MainWindowComponentInitializer.initialize(window);
 
         MainWindowFrameSetup.configure(window);

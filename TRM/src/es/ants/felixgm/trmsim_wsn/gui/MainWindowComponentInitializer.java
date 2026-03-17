@@ -1,10 +1,10 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
-final class MainWindowComponentInitializer {
+public final class MainWindowComponentInitializer {
     private MainWindowComponentInitializer() {
     }
 
-    static void initialize(TRMSim_WSN window) {
+    public static void initialize(TRMSim_WSN window) {
         window.parametersSourceButtonGroup = new javax.swing.ButtonGroup();
         window.tabbedPane = new javax.swing.JTabbedPane();
         window.simulationsPanel = new javax.swing.JPanel();
