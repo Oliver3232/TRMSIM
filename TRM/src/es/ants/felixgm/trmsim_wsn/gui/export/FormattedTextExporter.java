@@ -6,7 +6,6 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
 public class FormattedTextExporter {
@@ -14,35 +13,17 @@ public class FormattedTextExporter {
     private static final DecimalFormat numberFormat = new DecimalFormat("0.######");
     private static final DecimalFormat percentageFormat = new DecimalFormat("0.00%");
 
-    public static void exportToFormattedText(Component parentFrame, List<Outcome> outcomes) {
+    public static String exportToFormattedText(Component parentFrame, List<Outcome> outcomes, ExportRequest request) {
         try {
-            JFileChooser fileChooser = new JFileChooser("simulation_results/");
-            fileChooser.setDialogTitle("Export Simulation Data to Formatted Text");
-            fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter(){
-                public boolean accept(java.io.File f) {
-                    return (f.isDirectory() || f.getName().toLowerCase().endsWith(".txt"));
-                }
-                public String getDescription() { return "Text Files (*.txt)"; }
-            });
-
-            if (fileChooser.showSaveDialog(parentFrame) == JFileChooser.APPROVE_OPTION) {
-                String filename = fileChooser.getSelectedFile().getAbsolutePath();
-                if (!filename.toLowerCase().endsWith(".txt")) {
-                    filename += ".txt";
-                }
-
-                if (!outcomes.isEmpty()) {
-                    exportFormattedText(outcomes, filename);
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "Formatted data successfully exported to: " + filename,
-                            "Export Successful",
-                            JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "No simulation data available for export",
-                            "Export Failed",
-                            JOptionPane.WARNING_MESSAGE);
-                }
+            if (!outcomes.isEmpty()) {
+                String filename = request.resolveFilePath("formatted_report", ".txt");
+                exportFormattedText(outcomes, filename);
+                return filename;
+            } else {
+                JOptionPane.showMessageDialog(parentFrame,
+                        "No simulation data available for export",
+                        "Export Failed",
+                        JOptionPane.WARNING_MESSAGE);
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(parentFrame,
@@ -51,6 +32,7 @@ public class FormattedTextExporter {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
+        return null;
     }
 
     private static void exportFormattedText(List<Outcome> outcomes, String filename) throws IOException {

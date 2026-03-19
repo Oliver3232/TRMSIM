@@ -35,8 +35,8 @@ public final class MainWindowRenderController {
                             return MainWindowRenderController.ensureSimulationDataAvailable(context, repository);
                         }
 
-                        public void exportEnergyGraph() throws Exception {
-                            MainWindowRenderController.exportEnergyGraph(context);
+                        public String exportEnergyGraph(java.awt.Component owner, es.ants.felixgm.trmsim_wsn.gui.export.ExportRequest request) throws Exception {
+                            return MainWindowRenderController.exportEnergyGraph(context, owner, request);
                         }
                     });
         } catch (Exception ex) {
@@ -83,16 +83,19 @@ public final class MainWindowRenderController {
         context.sleepAfterUiUpdate();
     }
 
-    private static void exportEnergyGraph(MainWindowContext context) throws Exception {
+    private static String exportEnergyGraph(
+            MainWindowContext context,
+            java.awt.Component owner,
+            es.ants.felixgm.trmsim_wsn.gui.export.ExportRequest request) throws Exception {
         OutcomesPanel energyOutcomesPanel = getEnergyOutcomesPanel(context.getOutcomesPanels());
         if (energyOutcomesPanel == null) {
-            javax.swing.JOptionPane.showMessageDialog(context.window(),
+            javax.swing.JOptionPane.showMessageDialog(owner,
                     "Energy Consumption graph is not available for the selected model.",
                     "Export Failed",
                     javax.swing.JOptionPane.WARNING_MESSAGE);
-            return;
+            return null;
         }
-        es.ants.felixgm.trmsim_wsn.gui.export.GraphImageExporter.exportCurrentGraph(context.window(), energyOutcomesPanel, energyOutcomesPanel.getLabel());
+        return es.ants.felixgm.trmsim_wsn.gui.export.GraphImageExporter.exportCurrentGraph(owner, energyOutcomesPanel, energyOutcomesPanel.getLabel(), request);
     }
 
     private static OutcomesPanel getEnergyOutcomesPanel(Collection<OutcomesPanel> outcomesPanels) {

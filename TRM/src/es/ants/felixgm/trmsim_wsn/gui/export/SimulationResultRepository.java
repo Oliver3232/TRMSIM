@@ -5,18 +5,16 @@ import java.awt.Component;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
 public class SimulationResultRepository {
     private static SimulationResultRepository instance;
     private List<Outcome> simulationResults;
-    private String baseExportPath = "simulation_results/";
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     private SimulationResultRepository() {
         simulationResults = new Vector<>();
-        new File(baseExportPath).mkdirs();
+        new File("simulation_results/").mkdirs();
     }
 
     public static SimulationResultRepository getInstance() {
@@ -46,35 +44,17 @@ public class SimulationResultRepository {
         return simulationResults.size();
     }
 
-    public void exportToCSV(Component parentFrame) {
+    public String exportToCSV(Component parentFrame, ExportRequest request) {
         try {
-            JFileChooser fileChooser = new JFileChooser(baseExportPath);
-            fileChooser.setDialogTitle("Export Simulation Data to CSV");
-            fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter(){
-                public boolean accept(java.io.File f) {
-                    return (f.isDirectory() || f.getName().toLowerCase().endsWith(".csv"));
-                }
-                public String getDescription() { return "CSV Files (*.csv)"; }
-            });
-
-            if (fileChooser.showSaveDialog(parentFrame) == JFileChooser.APPROVE_OPTION) {
-                String filename = fileChooser.getSelectedFile().getAbsolutePath();
-                if (!filename.toLowerCase().endsWith(".csv")) {
-                    filename += ".csv";
-                }
-
-                if (!simulationResults.isEmpty()) {
-                    Outcome.writeToFile(simulationResults, filename);
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "Data successfully exported to: " + filename,
-                            "Export Successful",
-                            JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "No simulation data available for export",
-                            "Export Failed",
-                            JOptionPane.WARNING_MESSAGE);
-                }
+            if (!simulationResults.isEmpty()) {
+                String filename = request.resolveFilePath("simulation_results", ".csv");
+                Outcome.writeToFile(simulationResults, filename);
+                return filename;
+            } else {
+                JOptionPane.showMessageDialog(parentFrame,
+                        "No simulation data available for export",
+                        "Export Failed",
+                        JOptionPane.WARNING_MESSAGE);
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(parentFrame,
@@ -83,37 +63,20 @@ public class SimulationResultRepository {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
+        return null;
     }
 
-    public void exportDetailedToCSV(Component parentFrame) {
+    public String exportDetailedToCSV(Component parentFrame, ExportRequest request) {
         try {
-            JFileChooser fileChooser = new JFileChooser(baseExportPath);
-            fileChooser.setDialogTitle("Export Detailed Simulation Data to CSV");
-            fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter(){
-                public boolean accept(java.io.File f) {
-                    return (f.isDirectory() || f.getName().toLowerCase().endsWith(".csv"));
-                }
-                public String getDescription() { return "CSV Files (*.csv)"; }
-            });
-
-            if (fileChooser.showSaveDialog(parentFrame) == JFileChooser.APPROVE_OPTION) {
-                String filename = fileChooser.getSelectedFile().getAbsolutePath();
-                if (!filename.toLowerCase().endsWith(".csv")) {
-                    filename += ".csv";
-                }
-
-                if (!simulationResults.isEmpty()) {
-                    exportDetailedCSV(filename);
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "Detailed data successfully exported to: " + filename,
-                            "Export Successful",
-                            JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "No simulation data available for export",
-                            "Export Failed",
-                            JOptionPane.WARNING_MESSAGE);
-                }
+            if (!simulationResults.isEmpty()) {
+                String filename = request.resolveFilePath("simulation_results_detailed", ".csv");
+                exportDetailedCSV(filename);
+                return filename;
+            } else {
+                JOptionPane.showMessageDialog(parentFrame,
+                        "No simulation data available for export",
+                        "Export Failed",
+                        JOptionPane.WARNING_MESSAGE);
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(parentFrame,
@@ -122,6 +85,7 @@ public class SimulationResultRepository {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
+        return null;
     }
 
     private void exportDetailedCSV(String filename) throws IOException {
@@ -339,33 +303,33 @@ public class SimulationResultRepository {
         } catch (Exception e) {}
         return 0.0;
     }
-    public void exportToFormattedText(Component parentFrame) {
-        FormattedTextExporter.exportToFormattedText(parentFrame, simulationResults);
+    public String exportToFormattedText(Component parentFrame, ExportRequest request) {
+        return FormattedTextExporter.exportToFormattedText(parentFrame, simulationResults, request);
     }
-    public void exportToFormattedTSV(Component parentFrame) {
-        FormattedTSVExporter.exportToFormattedTSV(parentFrame, simulationResults);
+    public String exportToFormattedTSV(Component parentFrame, ExportRequest request) {
+        return FormattedTSVExporter.exportToFormattedTSV(parentFrame, simulationResults, request);
     }
-    public void exportEnergyConsumption(Component parentFrame) {
-        EnergyConsumptionExporter.exportEnergyConsumption(parentFrame, simulationResults);
+    public String exportEnergyConsumption(Component parentFrame, ExportRequest request) {
+        return EnergyConsumptionExporter.exportEnergyConsumption(parentFrame, simulationResults, request);
     }
-    public void exportEnergyConsumptionText(Component parentFrame) {
-        EnergyConsumptionTextExporter.exportEnergyConsumptionText(parentFrame, simulationResults);
-    }
-
-
-    public void exportNodeLevelCSV(Component parentFrame) {
-        NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 1);
+    public String exportEnergyConsumptionText(Component parentFrame, ExportRequest request) {
+        return EnergyConsumptionTextExporter.exportEnergyConsumptionText(parentFrame, simulationResults, request);
     }
 
-    public void exportNodeLevelEnergyCSV(Component parentFrame) {
-        NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 2);
+
+    public String exportNodeLevelCSV(Component parentFrame, ExportRequest request) {
+        return NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 1, request);
     }
 
-    public void exportNodeLevelEnergyText(Component parentFrame) {
-        NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 3);
+    public String exportNodeLevelEnergyCSV(Component parentFrame, ExportRequest request) {
+        return NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 2, request);
     }
 
-    public void exportNodeLevelText(Component parentFrame) {
-        NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 4);
+    public String exportNodeLevelEnergyText(Component parentFrame, ExportRequest request) {
+        return NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 3, request);
+    }
+
+    public String exportNodeLevelText(Component parentFrame, ExportRequest request) {
+        return NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 4, request);
     }
 }

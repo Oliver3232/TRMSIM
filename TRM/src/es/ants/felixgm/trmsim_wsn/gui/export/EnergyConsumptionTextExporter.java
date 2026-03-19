@@ -10,35 +10,17 @@ import java.util.*;
 public class EnergyConsumptionTextExporter {
     private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    public static void exportEnergyConsumptionText(Component parentFrame, Collection<Outcome> outcomes) {
+    public static String exportEnergyConsumptionText(Component parentFrame, Collection<Outcome> outcomes, ExportRequest request) {
         try {
-            JFileChooser fileChooser = new JFileChooser("./simulation_results");
-            fileChooser.setDialogTitle("Export Energy Consumption Text Report");
-            fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter(){
-                public boolean accept(java.io.File f) {
-                    return (f.isDirectory() || f.getName().toLowerCase().endsWith(".txt"));
-                }
-                public String getDescription() { return "Text Files (*.txt)"; }
-            });
-
-            if (fileChooser.showSaveDialog(parentFrame) == JFileChooser.APPROVE_OPTION) {
-                String filename = fileChooser.getSelectedFile().getAbsolutePath();
-                if (!filename.toLowerCase().endsWith(".txt")) {
-                    filename += ".txt";
-                }
-
-                if (!outcomes.isEmpty()) {
-                    exportPureEnergyText(outcomes, filename);
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "Energy consumption report successfully exported to: " + filename,
-                            "Export Successful",
-                            JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "No simulation data available for export",
-                            "Export Failed",
-                            JOptionPane.WARNING_MESSAGE);
-                }
+            if (!outcomes.isEmpty()) {
+                String filename = request.resolveFilePath("energy_summary", ".txt");
+                exportPureEnergyText(outcomes, filename);
+                return filename;
+            } else {
+                JOptionPane.showMessageDialog(parentFrame,
+                        "No simulation data available for export",
+                        "Export Failed",
+                        JOptionPane.WARNING_MESSAGE);
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(parentFrame,
@@ -47,6 +29,7 @@ public class EnergyConsumptionTextExporter {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
+        return null;
     }
 
     private static void exportPureEnergyText(Collection<Outcome> outcomes, String filename) throws IOException {

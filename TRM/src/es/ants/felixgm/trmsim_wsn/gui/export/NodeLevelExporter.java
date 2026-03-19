@@ -10,35 +10,28 @@ import java.util.List;
 
 public class NodeLevelExporter {
 
-    public static void exportNodeData(Component parentFrame, Collection<Outcome> outcomes, int exportType) {
+    public static String exportNodeData(Component parentFrame, Collection<Outcome> outcomes, int exportType, ExportRequest request) {
         // exportType: 1=CSV All, 2=CSV Energy, 3=Text Energy, 4=Text All
-        String title = "";
         String ext = "";
+        String fileName = "";
 
         switch(exportType) {
-            case 1: title = "Export Detailed Node CSV (All Data)"; ext = ".csv"; break;
-            case 2: title = "Export Detailed Node CSV (Energy Only)"; ext = ".csv"; break;
-            case 3: title = "Export Detailed Node Text (Energy Only)"; ext = ".txt"; break;
-            case 4: title = "Export Detailed Node Text (All Data)"; ext = ".txt"; break;
+            case 1: ext = ".csv"; fileName = "nodes_all"; break;
+            case 2: ext = ".csv"; fileName = "nodes_energy"; break;
+            case 3: ext = ".txt"; fileName = "nodes_energy"; break;
+            case 4: ext = ".txt"; fileName = "nodes_all"; break;
         }
 
-        // ... (Zvyšok metódy ostáva rovnaký, len volá writeCSV/writeText) ...
         try {
-            JFileChooser fileChooser = new JFileChooser("simulation_results/");
-            fileChooser.setDialogTitle(title);
-
-            if (fileChooser.showSaveDialog(parentFrame) == JFileChooser.APPROVE_OPTION) {
-                String filename = fileChooser.getSelectedFile().getAbsolutePath();
-                if (!filename.toLowerCase().endsWith(ext)) filename += ext;
-
-                if (!outcomes.isEmpty()) {
-                    if (exportType == 1 || exportType == 2) writeCSV(outcomes, filename, exportType == 2);
-                    else writeText(outcomes, filename, exportType == 3);
-
-                    JOptionPane.showMessageDialog(parentFrame, "Data exported to: " + filename);
-                }
+            if (!outcomes.isEmpty()) {
+                String filename = request.resolveFilePath(fileName, ext);
+                if (exportType == 1 || exportType == 2) writeCSV(outcomes, filename, exportType == 2);
+                else writeText(outcomes, filename, exportType == 3);
+                return filename;
             }
+            JOptionPane.showMessageDialog(parentFrame, "No simulation data available for export");
         } catch (Exception ex) { ex.printStackTrace(); }
+        return null;
     }
 
     private static void writeCSV(Collection<Outcome> outcomes, String filename, boolean energyOnly) throws IOException {

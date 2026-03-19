@@ -6,7 +6,6 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
 public class FormattedTSVExporter {
@@ -15,36 +14,17 @@ public class FormattedTSVExporter {
     private static final DecimalFormat percentageFormat = new DecimalFormat("0.00%");
     private static final DecimalFormat scientificFormat = new DecimalFormat("0.###E0");
 
-    public static void exportToFormattedTSV(Component parentFrame, List<Outcome> outcomes) {
+    public static String exportToFormattedTSV(Component parentFrame, List<Outcome> outcomes, ExportRequest request) {
         try {
-            JFileChooser fileChooser = new JFileChooser("simulation_results/");
-            fileChooser.setDialogTitle("Export to Formatted TSV (Excel-friendly)");
-            fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter(){
-                public boolean accept(java.io.File f) {
-                    return (f.isDirectory() || f.getName().toLowerCase().endsWith(".tsv") ||
-                            f.getName().toLowerCase().endsWith(".txt"));
-                }
-                public String getDescription() { return "TSV/TXT Files (*.tsv, *.txt)"; }
-            });
-
-            if (fileChooser.showSaveDialog(parentFrame) == JFileChooser.APPROVE_OPTION) {
-                String filename = fileChooser.getSelectedFile().getAbsolutePath();
-                if (!filename.toLowerCase().endsWith(".tsv") && !filename.toLowerCase().endsWith(".txt")) {
-                    filename += ".tsv";
-                }
-
-                if (!outcomes.isEmpty()) {
-                    exportFormattedTSV(outcomes, filename);
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "Formatted TSV data successfully exported to: " + filename,
-                            "Export Successful",
-                            JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "No simulation data available for export",
-                            "Export Failed",
-                            JOptionPane.WARNING_MESSAGE);
-                }
+            if (!outcomes.isEmpty()) {
+                String filename = request.resolveFilePath("formatted_report", ".tsv");
+                exportFormattedTSV(outcomes, filename);
+                return filename;
+            } else {
+                JOptionPane.showMessageDialog(parentFrame,
+                        "No simulation data available for export",
+                        "Export Failed",
+                        JOptionPane.WARNING_MESSAGE);
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(parentFrame,
@@ -53,6 +33,7 @@ public class FormattedTSVExporter {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
+        return null;
     }
 
     private static void exportFormattedTSV(List<Outcome> outcomes, String filename) throws IOException {

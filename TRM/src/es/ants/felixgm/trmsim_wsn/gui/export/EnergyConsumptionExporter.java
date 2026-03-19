@@ -4,41 +4,20 @@ import es.ants.felixgm.trmsim_wsn.outcomes.*;
 import java.awt.Component;
 import javax.swing.*;
 import java.io.*;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class EnergyConsumptionExporter {
-    private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-    public static void exportEnergyConsumption(Component parentFrame, Collection<Outcome> outcomes) {
+    public static String exportEnergyConsumption(Component parentFrame, Collection<Outcome> outcomes, ExportRequest request) {
         try {
-            JFileChooser fileChooser = new JFileChooser("./simulation_results");
-            fileChooser.setDialogTitle("Export Energy Consumption Data");
-            fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter(){
-                public boolean accept(java.io.File f) {
-                    return (f.isDirectory() || f.getName().toLowerCase().endsWith(".csv"));
-                }
-                public String getDescription() { return "CSV Files (*.csv)"; }
-            });
-
-            if (fileChooser.showSaveDialog(parentFrame) == JFileChooser.APPROVE_OPTION) {
-                String filename = fileChooser.getSelectedFile().getAbsolutePath();
-                if (!filename.toLowerCase().endsWith(".csv")) {
-                    filename += ".csv";
-                }
-
-                if (!outcomes.isEmpty()) {
-                    exportPureEnergyData(outcomes, filename);
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "Energy consumption data successfully exported to: " + filename,
-                            "Export Successful",
-                            JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(parentFrame,
-                            "No simulation data available for export",
-                            "Export Failed",
-                            JOptionPane.WARNING_MESSAGE);
-                }
+            if (!outcomes.isEmpty()) {
+                String filename = request.resolveFilePath("energy_summary", ".csv");
+                exportPureEnergyData(outcomes, filename);
+                return filename;
+            } else {
+                JOptionPane.showMessageDialog(parentFrame,
+                        "No simulation data available for export",
+                        "Export Failed",
+                        JOptionPane.WARNING_MESSAGE);
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(parentFrame,
@@ -47,6 +26,7 @@ public class EnergyConsumptionExporter {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
+        return null;
     }
 
     private static void exportPureEnergyData(Collection<Outcome> outcomes, String filename) throws IOException {
