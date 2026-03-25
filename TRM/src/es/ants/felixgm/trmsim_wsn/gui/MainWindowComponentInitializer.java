@@ -24,6 +24,7 @@ public final class MainWindowComponentInitializer {
         window.saveWSNButton = new javax.swing.JButton();
         window.stopSimulationsButton = new javax.swing.JButton();
         window.runSimulationsButton = new javax.swing.JButton();
+        window.modeSwitchButton = new javax.swing.JButton();
         window.spinnersControlPanel = new javax.swing.JPanel();
         window.numExecutionsLabel = new javax.swing.JLabel();
         window.numExecutionsSpinner = new javax.swing.JSpinner();

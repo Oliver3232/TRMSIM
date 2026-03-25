@@ -11,9 +11,25 @@ import java.util.Collection;
 public interface SimulationListener {
     void onNetworkUpdated(Network network);
 
+    default void onNetworkUpdated(SimulationSlot slot, Network network) {
+        onNetworkUpdated(network);
+    }
+
     void onOutcomesUpdated(Collection<Outcome> outcomes);
+
+    default void onOutcomesUpdated(SimulationSlot slot, Collection<Outcome> outcomes) {
+        onOutcomesUpdated(outcomes);
+    }
 
     void onMessage(String message);
 
+    default void onMessage(SimulationSlot slot, String message) {
+        onMessage(message);
+    }
+
     void onError(Exception exception);
+
+    default void onError(SimulationSlot slot, Exception exception) {
+        onError(exception);
+    }
 }

@@ -52,6 +52,7 @@ public final class MainWindowRuntimeSupport {
                 window,
                 window.newWSNButton, window.loadWSNButton, window.saveWSNButton, window.resetWSNButton,
                 window.runTRMButton, window.stopTRMButton, window.runSimulationsButton, window.stopSimulationsButton, window.exportDataButton,
+                window.modeSwitchButton,
                 window.TRModelLabel, window.TRModelComboBox,
                 window.minNumSensorsLabel, window.minNumSensorsSpinner, window.maxNumSensorsLabel, window.maxNumSensorsSpinner,
                 window.radioRangeLabel, window.radioRangeSlider, window.radioRangeTextField,

@@ -43,6 +43,7 @@ public final class MainWindowControlsSection {
             JButton saveWSNButton,
             JButton stopSimulationsButton,
             JButton runSimulationsButton,
+            JButton modeSwitchButton,
             JButton exportDataButton,
             JPanel spinnersControlPanel,
             JLabel numExecutionsLabel,
@@ -85,7 +86,7 @@ public final class MainWindowControlsSection {
         controlsScrollPane.setMinimumSize(new Dimension(300, 400));
         controlsScrollPane.setPreferredSize(new Dimension(360, (int) (java.awt.Toolkit.getDefaultToolkit().getScreenSize().getHeight() * 0.7)));
 
-        controlsPanel.setPreferredSize(new java.awt.Dimension(400, 460));
+        controlsPanel.setPreferredSize(new java.awt.Dimension(400, 560));
 
         legendPanelContainer.add(legendPanel, null);
         legendPanel.setBackground(Color.white);
@@ -101,8 +102,8 @@ public final class MainWindowControlsSection {
         legendLabel.setText("Legend");
         legendLabel.setPreferredSize(new java.awt.Dimension(100, 15));
 
-        buttonsControlPanel.setMinimumSize(new java.awt.Dimension(250, 115));
-        buttonsControlPanel.setLayout(new GridLayout(4, 2, 5, 5));
+        buttonsControlPanel.setMinimumSize(new java.awt.Dimension(250, 140));
+        buttonsControlPanel.setLayout(new GridLayout(5, 2, 5, 5));
         configureButton(newWSNButton, "New WSN", evt -> MainWindowActionController.createNewNetwork(window), false);
         buttonsControlPanel.add(newWSNButton);
         configureButton(resetWSNButton, "Reset WSN", evt -> MainWindowActionController.resetCurrentNetwork(window), true);
@@ -121,6 +122,7 @@ public final class MainWindowControlsSection {
         buttonsControlPanel.add(runSimulationsButton);
         configureButton(exportDataButton, "Export Data", evt -> MainWindowRenderController.showExportDialog(new es.ants.felixgm.trmsim_wsn.gui.MainWindowContext(window)), false);
         buttonsControlPanel.add(exportDataButton);
+        configureButton(modeSwitchButton, "Dual Mode", evt -> window.switchAppMode(es.ants.felixgm.trmsim_wsn.gui.AppMode.DUAL), false);
 
         spinnersControlPanel.setPreferredSize(new java.awt.Dimension(100, 205));
         spinnersControlPanel.setLayout(new javax.swing.BoxLayout(spinnersControlPanel, javax.swing.BoxLayout.Y_AXIS));
@@ -208,8 +210,14 @@ public final class MainWindowControlsSection {
                                                 .addGap(18, 18, 18)
                                                 .addGroup(controlsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
                                                         .addComponent(slidersControlsPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                                                        .addComponent(threatsControlsPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))))
-                                .addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                                        .addComponent(threatsControlsPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
+                                        .addGroup(controlsPanelLayout.createSequentialGroup()
+                                                .addComponent(modeSwitchButton, GroupLayout.PREFERRED_SIZE, 150, GroupLayout.PREFERRED_SIZE)
+                                                .addGap(18, 18, 18)
+                                                .addGroup(controlsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                                        .addComponent(trModelLabel)
+                                                        .addComponent(trModelComboBox, GroupLayout.PREFERRED_SIZE, 170, GroupLayout.PREFERRED_SIZE))))
+                                .addContainerGap(16, 16))
         );
         controlsPanelLayout.setVerticalGroup(
                 controlsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
@@ -229,10 +237,13 @@ public final class MainWindowControlsSection {
                                         .addComponent(threatsControlsPanel, GroupLayout.PREFERRED_SIZE, 57, GroupLayout.PREFERRED_SIZE)
                                         .addComponent(displayControlsPanel, GroupLayout.DEFAULT_SIZE, 64, Short.MAX_VALUE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(trModelLabel)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(trModelComboBox, GroupLayout.PREFERRED_SIZE, 25, GroupLayout.PREFERRED_SIZE)
-                                .addGap(0, 11, Short.MAX_VALUE))
+                                .addGroup(controlsPanelLayout.createParallelGroup(GroupLayout.Alignment.TRAILING)
+                                        .addComponent(modeSwitchButton, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                                        .addGroup(controlsPanelLayout.createSequentialGroup()
+                                                .addComponent(trModelLabel)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(trModelComboBox, GroupLayout.PREFERRED_SIZE, 25, GroupLayout.PREFERRED_SIZE)))
+                                .addGap(18, 18, 18))
         );
 
         controlsScrollPane.setViewportView(controlsPanel);

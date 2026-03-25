@@ -76,6 +76,17 @@ public class JavaFXNetworkPanel extends NetworkPanel {
         removeAll();
         setLayout(new BorderLayout());
         add(fxPanel, BorderLayout.CENTER);
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                ensureActiveRendering();
+            }
+
+            @Override
+            public void componentResized(ComponentEvent e) {
+                ensureActiveRendering();
+            }
+        });
         installSwingDebugHooks();
         LOGGER.info("FX panel #" + panelId + " [" + getClass().getSimpleName() + "] created on thread " + Thread.currentThread().getName());
         initFxScene();
@@ -176,6 +187,14 @@ public class JavaFXNetworkPanel extends NetworkPanel {
             animatorRunning.set(true);
             LOGGER.info("FX panel #" + panelId + " animator started");
         });
+    }
+
+    public void ensureActiveRendering() {
+        if (!sceneAttached.get()) {
+            initFxScene();
+        }
+        startAnimator();
+        requestFxRender();
     }
 
     private void stopAnimator() {
@@ -313,7 +332,7 @@ public class JavaFXNetworkPanel extends NetworkPanel {
         this.showLinks = showLinks;
         this.showIds = showIds;
         this.showGrid = showGrid;
-        requestFxRender();
+        ensureActiveRendering();
     }
 
     public void setVisualTheme(String themeName) {

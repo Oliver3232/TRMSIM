@@ -1,8 +1,10 @@
 package es.ants.felixgm.trmsim_wsn.gui.mainwindow.hosts;
 
 
+import es.ants.felixgm.trmsim_wsn.SimulationSlot;
 import es.ants.felixgm.trmsim_wsn.gui.MainWindowContext;
 import es.ants.felixgm.trmsim_wsn.gui.events.SimulationEventHelper;
+import es.ants.felixgm.trmsim_wsn.gui.export.SimulationResultRepository;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 
 public final class MainWindowSimulationEventHostFactory {
@@ -10,6 +12,10 @@ public final class MainWindowSimulationEventHostFactory {
     }
 
     public static SimulationEventHelper.EventHost create(MainWindowContext context) {
+        return create(context, SimulationSlot.PRIMARY);
+    }
+
+    public static SimulationEventHelper.EventHost create(MainWindowContext context, SimulationSlot slot) {
         return new SimulationEventHelper.EventHost() {
             public void paintUpdatedNetwork(Network network) throws Exception {
                 context.paintNetwork(network, context.getController().get_requiredService());
@@ -41,6 +47,14 @@ public final class MainWindowSimulationEventHostFactory {
 
             public javax.swing.JTextArea getMessagesTextArea() {
                 return context.getMessagesTextArea();
+            }
+
+            public SimulationSlot getSimulationSlot() {
+                return slot;
+            }
+
+            public SimulationResultRepository getSimulationResultsRepository() {
+                return SimulationResultRepository.getInstance(slot);
             }
         };
     }

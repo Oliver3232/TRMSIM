@@ -63,6 +63,16 @@ import java.util.ArrayList;
  * @since 0.1
  */
 public class Simulation implements Runnable {
+    private static Controller resolveDefaultController() {
+        try {
+            return Controller.C();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Unable to resolve default controller", ex);
+        }
+    }
+
+    private final Controller controller;
+    private final SimulationSlot slot;
     private final SimulationContext simulationContext;
     private final Collection<SimulationListener> listeners;
 
@@ -164,6 +174,26 @@ public class Simulation implements Runnable {
 			double probRelay, double probMalicious, double radioRange,
 			boolean dynamic, boolean oscillating, boolean collusion,
 			int numNetworks, int numExecutions) {
+		this(resolveDefaultController(), SimulationSlot.PRIMARY, Sensor.getDefaultSimulationContext(), listeners, requiredService, minNumSensors, maxNumSensors, probClients,
+				probRelay, probMalicious, radioRange, dynamic, oscillating, collusion, numNetworks, numExecutions);
+	}
+
+	public Simulation(SimulationSlot slot, Collection<SimulationListener> listeners, Service requiredService,
+			int minNumSensors, int maxNumSensors, double probClients,
+			double probRelay, double probMalicious, double radioRange,
+			boolean dynamic, boolean oscillating, boolean collusion,
+			int numNetworks, int numExecutions) {
+		this(resolveDefaultController(), slot, Sensor.getDefaultSimulationContext(), listeners, requiredService, minNumSensors, maxNumSensors, probClients,
+				probRelay, probMalicious, radioRange, dynamic, oscillating, collusion, numNetworks, numExecutions);
+	}
+
+	public Simulation(Controller controller, SimulationSlot slot, SimulationContext simulationContext, Collection<SimulationListener> listeners, Service requiredService,
+			int minNumSensors, int maxNumSensors, double probClients,
+			double probRelay, double probMalicious, double radioRange,
+			boolean dynamic, boolean oscillating, boolean collusion,
+			int numNetworks, int numExecutions) {
+		this.controller = controller;
+		this.slot = slot;
 		this.network = null;
 		this.requiredService = requiredService;
 		this.minNumSensors = minNumSensors;
@@ -177,7 +207,7 @@ public class Simulation implements Runnable {
 		this.collusion = collusion;
 		this.numNetworks = numNetworks;
 		this.numExecutions = numExecutions;
-        simulationContext = Sensor.getSimulationContext();
+        this.simulationContext = simulationContext;
         this.listeners = new ArrayList<SimulationListener>(listeners);
         initializeSimulationState();
 	}
@@ -207,6 +237,20 @@ public class Simulation implements Runnable {
 	public Simulation(Collection<SimulationListener> listeners, Service requiredService,
 			boolean dynamic, boolean oscillating, boolean collusion,
 			int numExecutions, Network network) {
+		this(resolveDefaultController(), SimulationSlot.PRIMARY, Sensor.getDefaultSimulationContext(), listeners, requiredService, dynamic, oscillating, collusion, numExecutions, network);
+	}
+
+	public Simulation(SimulationSlot slot, Collection<SimulationListener> listeners, Service requiredService,
+			boolean dynamic, boolean oscillating, boolean collusion,
+			int numExecutions, Network network) {
+		this(resolveDefaultController(), slot, Sensor.getDefaultSimulationContext(), listeners, requiredService, dynamic, oscillating, collusion, numExecutions, network);
+	}
+
+	public Simulation(Controller controller, SimulationSlot slot, SimulationContext simulationContext, Collection<SimulationListener> listeners, Service requiredService,
+			boolean dynamic, boolean oscillating, boolean collusion,
+			int numExecutions, Network network) {
+		this.controller = controller;
+		this.slot = slot;
 		this.network = network;
 		this.requiredService = requiredService;
 		this.dynamic = dynamic;
@@ -214,7 +258,7 @@ public class Simulation implements Runnable {
 		this.collusion = collusion;
 		this.numNetworks = 1;
 		this.numExecutions = numExecutions;
-        simulationContext = Sensor.getSimulationContext();
+        this.simulationContext = simulationContext;
         this.listeners = new ArrayList<SimulationListener>(listeners);
         initializeSimulationState();
 	}
@@ -227,25 +271,25 @@ public class Simulation implements Runnable {
 
     private void notifyNetworkUpdated(Network network) {
         for (SimulationListener listener : listeners) {
-            listener.onNetworkUpdated(network);
+            listener.onNetworkUpdated(slot, network);
         }
     }
 
     private void notifyOutcomesUpdated(Collection<Outcome> outcomes) {
         for (SimulationListener listener : listeners) {
-            listener.onOutcomesUpdated(outcomes);
+            listener.onOutcomesUpdated(slot, outcomes);
         }
     }
 
     private void notifyMessage(String message) {
         for (SimulationListener listener : listeners) {
-            listener.onMessage(message);
+            listener.onMessage(slot, message);
         }
     }
 
     private void notifyError(Exception exception) {
         for (SimulationListener listener : listeners) {
-            listener.onError(exception);
+            listener.onError(slot, exception);
         }
     }
 
@@ -306,7 +350,7 @@ public class Simulation implements Runnable {
 
     private Network resolveNetworkForExecution() throws Exception {
         if ((network == null) || (numNetworks != 1)) {
-            network = Controller.C().createNewNetwork(minNumSensors,
+            network = controller.createNewNetwork(slot, minNumSensors,
                     maxNumSensors, probClients, probRelay,
                     probMalicious, radioRange, dynamic, oscillating,
                     collusion);
@@ -335,7 +379,7 @@ public class Simulation implements Runnable {
     }
 
     private void refreshNetworkIfNeeded(Network network, int executionIndex) {
-        if ((dynamic) || ((oscillating) && (executionIndex % 20 == 0))) {
+        if ((numNetworks == 1) || dynamic || (oscillating && (executionIndex % 20 == 0))) {
             notifyNetworkUpdated(network);
         }
     }
@@ -371,6 +415,7 @@ public class Simulation implements Runnable {
 	 * Starts the simulations
 	 */
 	public void run() {
+        Sensor.activateSimulationContext(simulationContext);
         setRunningSimulation(true);
 		try {
 			for (int net = 0; (net < numNetworks) && !stop; net++) {
@@ -428,6 +473,8 @@ public class Simulation implements Runnable {
 		} catch (Exception ex) {
             setRunningSimulation(false);
 			notifyError(ex);
+		} finally {
+            Sensor.clearActiveSimulationContext();
 		}
 	}
 
