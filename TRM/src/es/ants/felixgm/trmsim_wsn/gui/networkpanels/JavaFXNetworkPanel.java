@@ -40,20 +40,20 @@ import javafx.geometry.VPos;
  * Keeps the same behavior as NetworkPanel but uses a modern FX canvas pipeline.
  */
 public class JavaFXNetworkPanel extends NetworkPanel {
-    private static final Logger LOGGER = Logger.getLogger(JavaFXNetworkPanel.class.getName());
+    static final Logger LOGGER = Logger.getLogger(JavaFXNetworkPanel.class.getName());
     private static final AtomicLong PANEL_SEQ = new AtomicLong(0);
-    private static final AtomicBoolean FX_RUNTIME_CONFIGURED = new AtomicBoolean(false);
+    static final AtomicBoolean FX_RUNTIME_CONFIGURED = new AtomicBoolean(false);
 
     private enum VisualTheme {
         FUTURISTIC, CLASSIC, WIREFRAME
     }
 
-    private final JFXPanel fxPanel;
-    private Canvas canvas;
+    final JFXPanel fxPanel;
+    Canvas canvas;
     private final AtomicBoolean renderQueued = new AtomicBoolean(false);
-    private volatile long frameNanos = 0L;
-    private AnimationTimer animator;
-    private final AtomicBoolean animatorRunning = new AtomicBoolean(false);
+    volatile long frameNanos = 0L;
+    AnimationTimer animator;
+    final AtomicBoolean animatorRunning = new AtomicBoolean(false);
     private volatile double viewScale = 1.0;
     private volatile double viewOffsetX = 0.0;
     private volatile double viewOffsetY = 0.0;
@@ -64,15 +64,17 @@ public class JavaFXNetworkPanel extends NetworkPanel {
     private volatile double cameraYaw = 0.35;
     private volatile double cameraPitch = 0.25;
     private volatile double cameraDistance = 3.3;
-    private final long panelId = PANEL_SEQ.incrementAndGet();
+    final long panelId = PANEL_SEQ.incrementAndGet();
     private final AtomicBoolean firstFxRenderLogged = new AtomicBoolean(false);
-    private final AtomicBoolean sceneAttached = new AtomicBoolean(false);
+    final AtomicBoolean sceneAttached = new AtomicBoolean(false);
+    private final JavaFXNetworkPanelSupport support;
 
     public JavaFXNetworkPanel() {
         super();
         Logger.getLogger("com.sun.javafx.application.PlatformImpl").setLevel(Level.SEVERE);
         fxPanel = new JFXPanel();
-        configureFxRuntimeLifecycle();
+        support = new JavaFXNetworkPanelSupport(this);
+        support.configureFxRuntimeLifecycle();
         removeAll();
         setLayout(new BorderLayout());
         add(fxPanel, BorderLayout.CENTER);
@@ -87,134 +89,27 @@ public class JavaFXNetworkPanel extends NetworkPanel {
                 ensureActiveRendering();
             }
         });
-        installSwingDebugHooks();
+        support.installSwingDebugHooks();
         LOGGER.info("FX panel #" + panelId + " [" + getClass().getSimpleName() + "] created on thread " + Thread.currentThread().getName());
-        initFxScene();
-        scheduleInitHealthCheck();
-    }
-
-    private void configureFxRuntimeLifecycle() {
-        if (FX_RUNTIME_CONFIGURED.compareAndSet(false, true)) {
-            try {
-                Platform.setImplicitExit(false);
-                LOGGER.info("JavaFX runtime configured: implicitExit=false");
-            } catch (Exception ex) {
-                LOGGER.log(Level.WARNING, "Unable to configure JavaFX implicitExit", ex);
-            }
-        }
-    }
-
-    private void scheduleInitHealthCheck() {
-        Timer initCheck = new Timer(900, e -> {
-            if (fxPanel.isShowing() && !sceneAttached.get()) {
-                LOGGER.warning("FX panel #" + panelId + " scene not attached after 900ms; retrying init");
-                initFxScene();
-            }
-        });
-        initCheck.setRepeats(false);
-        initCheck.start();
-    }
-
-    private void installSwingDebugHooks() {
-        fxPanel.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentShown(ComponentEvent e) {
-                LOGGER.info("FX panel #" + panelId + " componentShown size=" + fxPanel.getWidth() + "x" + fxPanel.getHeight());
-            }
-
-            @Override
-            public void componentResized(ComponentEvent e) {
-                LOGGER.info("FX panel #" + panelId + " componentResized size=" + fxPanel.getWidth() + "x" + fxPanel.getHeight());
-                requestFxRender();
-            }
-        });
-        fxPanel.addHierarchyListener(new HierarchyListener() {
-            @Override
-            public void hierarchyChanged(HierarchyEvent e) {
-                if ((e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) != 0) {
-                    String parentName = (fxPanel.getParent() == null) ? "null" : fxPanel.getParent().getClass().getSimpleName();
-                    LOGGER.info("FX panel #" + panelId + " parentChanged parent=" + parentName);
-                }
-                if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0) {
-                    boolean showing = fxPanel.isShowing();
-                    LOGGER.info("FX panel #" + panelId + " showingChanged showing=" + showing);
-                    if (showing) {
-                        startAnimator();
-                        requestFxRender();
-                    } else {
-                        stopAnimator();
-                    }
-                }
-            }
-        });
-    }
-
-    private void initFxScene() {
-        Platform.runLater(() -> {
-            try {
-                canvas = new Canvas(640, 420);
-                StackPane root = new StackPane(canvas);
-                root.setStyle("-fx-background-color: #f3f7ff;");
-                Scene scene = new Scene(root);
-                fxPanel.setScene(scene);
-                sceneAttached.set(true);
-                LOGGER.info("FX panel #" + panelId + " scene attached on FX thread. size=" + fxPanel.getWidth() + "x" + fxPanel.getHeight() + ", showing=" + fxPanel.isShowing());
-                installInteractions();
-                animator = new AnimationTimer() {
-                    @Override
-                    public void handle(long now) {
-                        frameNanos = now;
-                        requestFxRender();
-                    }
-                };
-                if (fxPanel.isShowing()) {
-                    startAnimator();
-                }
-                requestFxRender();
-            } catch (Throwable t) {
-                sceneAttached.set(false);
-                LOGGER.log(Level.SEVERE, "FX panel #" + panelId + " initFxScene failed", t);
-            }
-        });
-    }
-
-    private void startAnimator() {
-        Platform.runLater(() -> {
-            if ((animator == null) || animatorRunning.get()) {
-                return;
-            }
-            animator.start();
-            animatorRunning.set(true);
-            LOGGER.info("FX panel #" + panelId + " animator started");
-        });
+        support.initFxScene();
+        support.scheduleInitHealthCheck();
     }
 
     public void ensureActiveRendering() {
         if (!sceneAttached.get()) {
-            initFxScene();
+            support.initFxScene();
         }
-        startAnimator();
+        support.startAnimator();
         requestFxRender();
-    }
-
-    private void stopAnimator() {
-        Platform.runLater(() -> {
-            if ((animator == null) || !animatorRunning.get()) {
-                return;
-            }
-            animator.stop();
-            animatorRunning.set(false);
-            LOGGER.info("FX panel #" + panelId + " animator stopped");
-        });
     }
 
     @Override
     public void removeNotify() {
-        stopAnimator();
+        support.stopAnimator();
         super.removeNotify();
     }
 
-    private void installInteractions() {
+    void installInteractions() {
         canvas.setOnScroll(event -> {
             if (enable3DNavigation && event.isAltDown()) {
                 double delta = event.getDeltaY() > 0 ? -0.14 : 0.14;
@@ -374,7 +269,7 @@ public class JavaFXNetworkPanel extends NetworkPanel {
         requestFxRender();
     }
 
-    private void requestFxRender() {
+    void requestFxRender() {
         if (canvas == null) {
             return;
         }

@@ -1,17 +1,17 @@
 package es.ants.felixgm.trmsim_wsn.gui.dual;
 
 import es.ants.felixgm.trmsim_wsn.SimulationSlot;
+import es.ants.felixgm.trmsim_wsn.gui.layout.WrapLayout;
 
 import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Insets;
 
 /**
@@ -30,7 +30,7 @@ public final class DualSimulationShellPanel extends JPanel {
         private SlotToolbarPanel(boolean alignRight) {
             this.alignRight = alignRight;
             setOpaque(false);
-            setLayout(new FlowLayout(alignRight ? FlowLayout.RIGHT : FlowLayout.LEFT, 4, 0));
+            setLayout(new WrapLayout(alignRight ? WrapLayout.RIGHT : WrapLayout.LEFT, 4, 4));
             configureButton(newNetworkButton);
             configureButton(loadNetworkButton);
             configureButton(saveNetworkButton);
@@ -112,20 +112,48 @@ public final class DualSimulationShellPanel extends JPanel {
         configureCenterButton(exportButton);
         configureCenterButton(modeSwitchButton);
 
-        JPanel topBar = new JPanel(new BorderLayout(12, 0));
+        JPanel topBar = new JPanel(new GridBagLayout());
         topBar.setOpaque(false);
         topBar.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
 
-        JPanel centerToolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
+        JPanel centerToolbar = new JPanel(new WrapLayout(WrapLayout.CENTER, 4, 4));
         centerToolbar.setOpaque(false);
         centerToolbar.add(sessionRunButton);
         centerToolbar.add(sessionStopButton);
         centerToolbar.add(exportButton);
         centerToolbar.add(modeSwitchButton);
 
-        topBar.add(primaryToolbarPanel, BorderLayout.WEST);
-        topBar.add(centerToolbar, BorderLayout.CENTER);
-        topBar.add(secondaryToolbarPanel, BorderLayout.EAST);
+        JPanel primaryContainer = new JPanel(new BorderLayout());
+        primaryContainer.setOpaque(false);
+        primaryContainer.add(primaryToolbarPanel, BorderLayout.WEST);
+
+        JPanel centerContainer = new JPanel(new BorderLayout());
+        centerContainer.setOpaque(false);
+        centerContainer.add(centerToolbar, BorderLayout.CENTER);
+
+        JPanel secondaryContainer = new JPanel(new BorderLayout());
+        secondaryContainer.setOpaque(false);
+        secondaryContainer.add(secondaryToolbarPanel, BorderLayout.EAST);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(0, 0, 0, 0);
+
+        gbc.gridx = 0;
+        gbc.weightx = 1.0;
+        gbc.anchor = GridBagConstraints.WEST;
+        topBar.add(primaryContainer, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 0.0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        topBar.add(centerContainer, gbc);
+
+        gbc.gridx = 2;
+        gbc.weightx = 1.0;
+        gbc.anchor = GridBagConstraints.EAST;
+        topBar.add(secondaryContainer, gbc);
 
         primaryWorkspacePanel = new DualSimulationWorkspacePanel(SimulationSlot.PRIMARY);
         secondaryWorkspacePanel = new DualSimulationWorkspacePanel(SimulationSlot.SECONDARY);

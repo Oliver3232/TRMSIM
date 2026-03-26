@@ -1,6 +1,7 @@
 package es.ants.felixgm.trmsim_wsn.gui.dual;
 
 import es.ants.felixgm.trmsim_wsn.SimulationSlot;
+import es.ants.felixgm.trmsim_wsn.gui.layout.MiniLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.NetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.OutcomesPanel;
 
@@ -15,6 +16,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
 import javax.swing.JPopupMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JLayeredPane;
@@ -25,6 +27,8 @@ import java.awt.FlowLayout;
 import java.awt.Window;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -34,6 +38,18 @@ import java.util.Collection;
  * secondary controls into collapsible-ready side/bottom containers.
  */
 public final class DualSimulationWorkspacePanel extends JPanel {
+    public interface LiveControlsListener {
+        void onShowIdsChanged(boolean selected);
+        void onShowLinksChanged(boolean selected);
+        void onShowRangesChanged(boolean selected);
+        void onShowGridChanged(boolean selected);
+        void onDelayChanged(int value);
+        void onVisualThemeChanged(String themeName);
+        void onEnable3DChanged(boolean enabled);
+        void onCameraPresetChanged(String presetName);
+        void onOpenFullscreenRequested();
+    }
+
     private final SimulationSlot slot;
     private final JLabel titleLabel;
     private final JLabel modelLabel;
@@ -42,11 +58,12 @@ public final class DualSimulationWorkspacePanel extends JPanel {
     private final JButton setupToggleButton;
     private final JButton bottomToggleButton;
     private final JButton bottomOverflowButton;
-    private final JButton fullscreenButton;
     private final JPanel networkViewportPanel;
     private final JLayeredPane networkOverlayPane;
+    private final DualWorkspaceLiveDrawer liveDrawerPanel;
     private final JPanel drawerPanel;
     private final JPanel bottomPanel;
+    private final JSplitPane setupContentSplitPane;
     private final JSplitPane contentSplitPane;
     private final JComboBox<String> trustModelComboBox;
     private final JButton newNetworkButton;
@@ -58,8 +75,13 @@ public final class DualSimulationWorkspacePanel extends JPanel {
     private final JPanel parametersContentPanel;
     private final JTabbedPane bottomTabbedPane;
     private final JTextArea messagesTextArea;
+    private javax.swing.JDialog detachedResultsDialog;
+    private boolean restoreBottomExpandedAfterDetach;
+    private LiveControlsListener liveControlsListener;
     private boolean setupExpanded = false;
     private boolean bottomExpanded = true;
+    private int rememberedSetupDividerLocation = -1;
+    private int rememberedContentDividerLocation = -1;
     private NetworkPanel networkPanel;
     private Collection<OutcomesPanel> outcomesPanels = new ArrayList<OutcomesPanel>();
 
@@ -77,7 +99,6 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         setupToggleButton = new JButton("Hide Setup");
         bottomToggleButton = new JButton("Hide Results");
         bottomOverflowButton = new JButton("...");
-        fullscreenButton = new JButton("Open Fullscreen");
         setupToggleButton.addActionListener(evt -> setSetupExpanded(!setupExpanded));
         bottomToggleButton.addActionListener(evt -> setBottomExpanded(!bottomExpanded));
         bottomOverflowButton.addActionListener(evt -> showBottomOverflowMenu());
@@ -89,7 +110,6 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         headerActions.setOpaque(false);
         headerActions.add(setupToggleButton);
         headerActions.add(bottomToggleButton);
-        headerActions.add(fullscreenButton);
         headerActions.add(bottomOverflowButton);
         headerTopRow.add(headerActions, BorderLayout.EAST);
 
@@ -121,6 +141,8 @@ public final class DualSimulationWorkspacePanel extends JPanel {
             }
         });
         networkViewportPanel.add(networkOverlayPane, BorderLayout.CENTER);
+        liveDrawerPanel = new DualWorkspaceLiveDrawer(networkViewportPanel);
+        networkViewportPanel.add(liveDrawerPanel, BorderLayout.EAST);
 
         trustModelComboBox = new JComboBox<String>();
         newNetworkButton = new JButton("New WSN");
@@ -162,8 +184,14 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         parametersPlaceholder.setOpaque(false);
         parametersContentPanel.add(parametersPlaceholder, BorderLayout.CENTER);
 
-        setupTabbedPane.addTab("Simulation Settings", new JScrollPane(settingsContentPanel));
-        setupTabbedPane.addTab("Simulation Parameters", new JScrollPane(parametersContentPanel));
+        JScrollPane settingsScrollPane = new JScrollPane(settingsContentPanel);
+        settingsScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        settingsScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        JScrollPane parametersScrollPane = new JScrollPane(parametersContentPanel);
+        parametersScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        parametersScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        setupTabbedPane.addTab("Simulation Settings", settingsScrollPane);
+        setupTabbedPane.addTab("Simulation Parameters", parametersScrollPane);
         drawerPanel.add(setupTabbedPane, BorderLayout.CENTER);
 
         bottomPanel = new JPanel(new BorderLayout());
@@ -181,14 +209,48 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         add(headerPanel, BorderLayout.NORTH);
         JPanel centerPanel = new JPanel(new BorderLayout(0, 8));
         centerPanel.setOpaque(false);
-        centerPanel.add(drawerPanel, BorderLayout.NORTH);
         contentSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         contentSplitPane.setBorder(BorderFactory.createEmptyBorder());
         contentSplitPane.setResizeWeight(0.82);
+        contentSplitPane.setContinuousLayout(true);
         contentSplitPane.setTopComponent(networkViewportPanel);
         contentSplitPane.setBottomComponent(bottomPanel);
-        centerPanel.add(contentSplitPane, BorderLayout.CENTER);
+        contentSplitPane.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                if (bottomExpanded && bottomPanel.isVisible()) {
+                    int dividerLocation = contentSplitPane.getDividerLocation();
+                    if (dividerLocation > 0) {
+                        rememberedContentDividerLocation = dividerLocation;
+                    }
+                }
+            }
+        });
+        setupContentSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        setupContentSplitPane.setBorder(BorderFactory.createEmptyBorder());
+        setupContentSplitPane.setResizeWeight(0.0);
+        setupContentSplitPane.setContinuousLayout(true);
+        setupContentSplitPane.setTopComponent(drawerPanel);
+        setupContentSplitPane.setBottomComponent(contentSplitPane);
+        setupContentSplitPane.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                if (setupExpanded && drawerPanel.isVisible()) {
+                    int dividerLocation = setupContentSplitPane.getDividerLocation();
+                    if (dividerLocation > 0) {
+                        rememberedSetupDividerLocation = dividerLocation;
+                    }
+                }
+            }
+        });
+        centerPanel.add(setupContentSplitPane, BorderLayout.CENTER);
         add(centerPanel, BorderLayout.CENTER);
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateSetupPanelPreferredSize();
+            }
+        });
         setSetupExpanded(false);
     }
 
@@ -216,10 +278,6 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         return bottomToggleButton;
     }
 
-    public JButton getFullscreenButton() {
-        return fullscreenButton;
-    }
-
     public JComboBox<String> getTrustModelComboBox() {
         return trustModelComboBox;
     }
@@ -242,6 +300,32 @@ public final class DualSimulationWorkspacePanel extends JPanel {
 
     public JTextArea getMessagesTextArea() {
         return messagesTextArea;
+    }
+
+    public void setLiveControlsListener(LiveControlsListener liveControlsListener) {
+        this.liveControlsListener = liveControlsListener;
+        liveDrawerPanel.setLiveControlsListener(liveControlsListener);
+    }
+
+    public void updateSimulationControlsState(String stateLabel) {
+        liveDrawerPanel.updateSimulationControlsState(stateLabel);
+    }
+
+    public void updateDisplayControlsState(boolean showIds, boolean showLinks, boolean showRanges, boolean showGrid,
+                                           int delayValue, int delayMin, int delayMax) {
+        liveDrawerPanel.updateDisplayControlsState(showIds, showLinks, showRanges, showGrid, delayValue, delayMin, delayMax);
+    }
+
+    public void updateSelectedNodeSummary(String title, String body) {
+        liveDrawerPanel.updateSelectedNodeSummary(title, body);
+    }
+
+    public void setLegendItems(java.util.List<MiniLegendPanel.Item> items) {
+        liveDrawerPanel.setLegendItems(items);
+    }
+
+    public void updateVisualizationControlsState(String themeName, boolean enable3D, String cameraPreset) {
+        liveDrawerPanel.updateVisualizationControlsState(themeName, enable3D, cameraPreset);
     }
 
     public Collection<OutcomesPanel> getOutcomesPanels() {
@@ -314,19 +398,40 @@ public final class DualSimulationWorkspacePanel extends JPanel {
     }
 
     public void setSetupExpanded(boolean expanded) {
+        if (!expanded && setupExpanded) {
+            rememberCurrentSetupDividerLocation();
+        }
         setupExpanded = expanded;
         drawerPanel.setVisible(expanded);
+        setupContentSplitPane.setDividerSize(expanded ? 8 : 0);
         setupToggleButton.setText(expanded ? "Hide Setup" : "Show Setup");
+        if (expanded) {
+            updateSetupPanelPreferredSize();
+            restoreSetupDividerLocation();
+        } else {
+            setupContentSplitPane.setDividerLocation(0);
+        }
         revalidate();
         repaint();
     }
 
+    private void updateSetupPanelPreferredSize() {
+        int panelHeight = getHeight() > 0 ? getHeight() : 760;
+        int preferredHeight = Math.max(180, Math.min(300, (int) Math.round(panelHeight * 0.24)));
+        drawerPanel.setPreferredSize(new Dimension(420, preferredHeight));
+        drawerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferredHeight));
+        drawerPanel.revalidate();
+    }
+
     public void setBottomExpanded(boolean expanded) {
+        if (!expanded && bottomExpanded) {
+            rememberCurrentContentDividerLocation();
+        }
         bottomExpanded = expanded;
         contentSplitPane.getBottomComponent().setVisible(expanded);
         contentSplitPane.setDividerSize(expanded ? 8 : 0);
         if (expanded) {
-            contentSplitPane.setDividerLocation(Math.max(220, getHeight() - 200));
+            restoreContentDividerLocation();
         }
         bottomToggleButton.setText(expanded ? "Hide Results" : "Show Results");
         revalidate();
@@ -339,6 +444,24 @@ public final class DualSimulationWorkspacePanel extends JPanel {
 
     public boolean isBottomExpanded() {
         return bottomExpanded;
+    }
+
+    public void applyBalancedDefaultLayout() {
+        setSetupExpanded(true);
+        setBottomExpanded(true);
+        SwingUtilities.invokeLater(() -> {
+            int panelHeight = getHeight() > 0 ? getHeight() : 760;
+            int setupHeight = Math.max(180, Math.min(290, (int) Math.round(panelHeight * 0.23)));
+            int resultsHeight = Math.max(150, Math.min(210, (int) Math.round(panelHeight * 0.20)));
+            drawerPanel.setPreferredSize(new Dimension(420, setupHeight));
+            drawerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, setupHeight));
+            rememberedSetupDividerLocation = setupHeight;
+            rememberedContentDividerLocation = Math.max(220, panelHeight - resultsHeight);
+            setupContentSplitPane.setDividerLocation(setupHeight);
+            contentSplitPane.setDividerLocation(rememberedContentDividerLocation);
+            revalidate();
+            repaint();
+        });
     }
 
     public void setSettingsContent(java.awt.Component component) {
@@ -368,29 +491,83 @@ public final class DualSimulationWorkspacePanel extends JPanel {
     }
 
     private void openBottomPanelInWindow() {
-        Window owner = javax.swing.SwingUtilities.getWindowAncestor(this);
-        javax.swing.JDialog dialog = new javax.swing.JDialog(owner, titleLabel.getText() + " Results", java.awt.Dialog.ModalityType.MODELESS);
-        JTabbedPane detachedTabs = new JTabbedPane();
-        if (outcomesPanels != null) {
-            for (OutcomesPanel outcomesPanel : outcomesPanels) {
-                JTextArea summaryArea = new JTextArea(
-                        outcomesPanel.getLabel()
-                                + "\n\nThis detached window is a larger companion view for dual mode.\n"
-                                + "The live chart remains in the main workspace tab to keep the network visible.");
-                summaryArea.setEditable(false);
-                summaryArea.setLineWrap(true);
-                summaryArea.setWrapStyleWord(true);
-                detachedTabs.addTab(outcomesPanel.getLabel(), new JScrollPane(summaryArea));
-            }
+        if (detachedResultsDialog != null && detachedResultsDialog.isShowing()) {
+            detachedResultsDialog.toFront();
+            detachedResultsDialog.requestFocus();
+            return;
         }
-        JTextArea detachedMessagesArea = new JTextArea(messagesTextArea.getText());
-        detachedMessagesArea.setEditable(false);
-        detachedMessagesArea.setLineWrap(true);
-        detachedMessagesArea.setWrapStyleWord(true);
-        detachedTabs.addTab("Messages", new JScrollPane(detachedMessagesArea));
-        dialog.setContentPane(detachedTabs);
-        dialog.setSize(720, 420);
-        dialog.setLocationRelativeTo(this);
-        dialog.setVisible(true);
+        Window owner = javax.swing.SwingUtilities.getWindowAncestor(this);
+        detachedResultsDialog = new javax.swing.JDialog(owner, titleLabel.getText() + " Results", java.awt.Dialog.ModalityType.MODELESS);
+        restoreBottomExpandedAfterDetach = bottomExpanded;
+        rememberCurrentContentDividerLocation();
+        bottomPanel.remove(bottomTabbedPane);
+        bottomExpanded = false;
+        bottomToggleButton.setText("Show Results");
+        contentSplitPane.getBottomComponent().setVisible(false);
+        contentSplitPane.setDividerSize(0);
+        detachedResultsDialog.setContentPane(bottomTabbedPane);
+        detachedResultsDialog.setSize(720, 420);
+        detachedResultsDialog.setLocationRelativeTo(this);
+        detachedResultsDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                restoreDetachedResultsPanel();
+            }
+
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent e) {
+                restoreDetachedResultsPanel();
+            }
+        });
+        detachedResultsDialog.setVisible(true);
+    }
+
+    private void restoreDetachedResultsPanel() {
+        if (detachedResultsDialog == null) {
+            return;
+        }
+        if (bottomTabbedPane.getParent() != bottomPanel) {
+            bottomPanel.add(bottomTabbedPane, BorderLayout.CENTER);
+        }
+        bottomPanel.revalidate();
+        bottomPanel.repaint();
+        revalidate();
+        repaint();
+        if (restoreBottomExpandedAfterDetach) {
+            SwingUtilities.invokeLater(() -> setBottomExpanded(true));
+        }
+        detachedResultsDialog = null;
+    }
+
+    private void rememberCurrentSetupDividerLocation() {
+        int dividerLocation = setupContentSplitPane.getDividerLocation();
+        if (dividerLocation > 0) {
+            rememberedSetupDividerLocation = dividerLocation;
+        }
+    }
+
+    private void rememberCurrentContentDividerLocation() {
+        int dividerLocation = contentSplitPane.getDividerLocation();
+        if (dividerLocation > 0) {
+            rememberedContentDividerLocation = dividerLocation;
+        }
+    }
+
+    private void restoreSetupDividerLocation() {
+        SwingUtilities.invokeLater(() -> {
+            int panelHeight = getHeight() > 0 ? getHeight() : 760;
+            int fallbackHeight = Math.max(180, Math.min(300, (int) Math.round(panelHeight * 0.24)));
+            int dividerLocation = rememberedSetupDividerLocation > 0 ? rememberedSetupDividerLocation : fallbackHeight;
+            setupContentSplitPane.setDividerLocation(dividerLocation);
+        });
+    }
+
+    private void restoreContentDividerLocation() {
+        SwingUtilities.invokeLater(() -> {
+            int panelHeight = getHeight() > 0 ? getHeight() : 760;
+            int fallbackLocation = Math.max(220, panelHeight - Math.max(150, Math.min(210, (int) Math.round(panelHeight * 0.20))));
+            int dividerLocation = rememberedContentDividerLocation > 0 ? rememberedContentDividerLocation : fallbackLocation;
+            contentSplitPane.setDividerLocation(dividerLocation);
+        });
     }
 }

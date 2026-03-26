@@ -403,7 +403,8 @@ public class Simulation implements Runnable {
                 requiredService, executionIndex);
         if (outcome == null) {
             notifyMessage("Any of the clients can reach any trustworthy server\n");
-            return networkIndex > 0;
+            notifyMessage("Skipping WSN " + (networkIndex + 1) + " because no valid outcome was produced\n");
+            return false;
         } else if (numNetworks > 1) {
             globalOutcomes.add(outcome);
             notifyOutcomesUpdated(globalOutcomes);

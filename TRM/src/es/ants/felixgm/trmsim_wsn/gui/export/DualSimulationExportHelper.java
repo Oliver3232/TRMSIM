@@ -3,18 +3,23 @@ package es.ants.felixgm.trmsim_wsn.gui.export;
 
 import es.ants.felixgm.trmsim_wsn.SimulationSlot;
 
-import javax.swing.JComboBox;
+import javax.swing.BorderFactory;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import java.awt.Component;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 public final class DualSimulationExportHelper {
     public interface ExportHost {
@@ -47,55 +52,29 @@ public final class DualSimulationExportHelper {
             SimulationResultRepository secondaryRepository,
             ExportHost host) throws Exception {
         ExportOption[] exportOptions = buildExportOptions(owner, host);
-        JPanel panel = new JPanel(new GridBagLayout());
-        JComboBox<String> targetSelector = new JComboBox<String>(new String[] {
-                "Simulation A",
-                "Simulation B",
-                "Both"
-        });
-        javax.swing.JTextField reportNameField = new javax.swing.JTextField(createDefaultReportName(), 24);
-        javax.swing.JTextField directoryField = new javax.swing.JTextField(new File("simulation_results").getAbsolutePath(), 24);
-        javax.swing.JCheckBox[] checkBoxes = new javax.swing.JCheckBox[exportOptions.length];
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        JTextField reportNameField = new JTextField(createDefaultReportName(), 24);
+        JTextField directoryField = new JTextField(new File("simulation_results").getAbsolutePath(), 24);
+        Map<SimulationSlot, JCheckBox[]> slotSelections = new EnumMap<SimulationSlot, JCheckBox[]>(SimulationSlot.class);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.insets = new Insets(4, 4, 4, 4);
-        panel.add(new javax.swing.JLabel("Export target:"), gbc);
+        JPanel documentsPanel = new JPanel(new GridLayout(1, 2, 10, 0));
+        documentsPanel.setBorder(BorderFactory.createTitledBorder("Documents By Simulation"));
+        JCheckBox[] primaryChecks = createExportOptionChecks(exportOptions, true);
+        JCheckBox[] secondaryChecks = createExportOptionChecks(exportOptions, true);
+        slotSelections.put(SimulationSlot.PRIMARY, primaryChecks);
+        slotSelections.put(SimulationSlot.SECONDARY, secondaryChecks);
+        documentsPanel.add(createSlotOptionsPanel("Sim A", primaryChecks));
+        documentsPanel.add(createSlotOptionsPanel("Sim B", secondaryChecks));
 
-        gbc.gridy++;
-        panel.add(targetSelector, gbc);
+        JPanel metadataPanel = new JPanel(new GridLayout(2, 2, 8, 6));
+        metadataPanel.setBorder(BorderFactory.createTitledBorder("Export Metadata"));
+        metadataPanel.add(new JLabel("Report name:"));
+        metadataPanel.add(reportNameField);
+        metadataPanel.add(new JLabel("Target folder:"));
+        metadataPanel.add(directoryField);
 
-        gbc.gridy++;
-        panel.add(new javax.swing.JLabel("Choose one or more export formats:"), gbc);
-
-        for (int i = 0; i < exportOptions.length; i++) {
-            gbc.gridy++;
-            checkBoxes[i] = new javax.swing.JCheckBox(exportOptions[i].label, i == 1);
-            panel.add(checkBoxes[i], gbc);
-        }
-
-        gbc.gridy++;
-        gbc.gridwidth = 1;
-        panel.add(new javax.swing.JLabel("Report name:"), gbc);
-
-        gbc.gridx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        panel.add(reportNameField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy++;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.weightx = 0.0;
-        panel.add(new javax.swing.JLabel("Target folder:"), gbc);
-
-        gbc.gridx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        panel.add(directoryField, gbc);
+        panel.add(documentsPanel, BorderLayout.CENTER);
+        panel.add(metadataPanel, BorderLayout.SOUTH);
 
         int choice = JOptionPane.showConfirmDialog(
                 owner,
@@ -107,14 +86,9 @@ public final class DualSimulationExportHelper {
             return;
         }
 
-        List<ExportOption> selectedOptions = new ArrayList<ExportOption>();
-        for (int i = 0; i < exportOptions.length; i++) {
-            if (checkBoxes[i].isSelected()) {
-                selectedOptions.add(exportOptions[i]);
-            }
-        }
-        if (selectedOptions.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Select at least one export format.", "Export Validation", JOptionPane.WARNING_MESSAGE);
+        List<Selection> selectedSelections = collectSelectedSelections(slotSelections, exportOptions);
+        if (selectedSelections.isEmpty()) {
+            JOptionPane.showMessageDialog(owner, "Select at least one document to export.", "Export Validation", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -131,12 +105,11 @@ public final class DualSimulationExportHelper {
         }
 
         List<String> exportedFiles = new ArrayList<String>();
-        String target = (String) targetSelector.getSelectedItem();
-        if ("Simulation A".equals(target) || "Both".equals(target)) {
-            exportForSlot(owner, SimulationSlot.PRIMARY, primaryRepository, host, selectedOptions, targetDirectory, reportName, exportedFiles);
-        }
-        if ("Simulation B".equals(target) || "Both".equals(target)) {
-            exportForSlot(owner, SimulationSlot.SECONDARY, secondaryRepository, host, selectedOptions, targetDirectory, reportName, exportedFiles);
+        for (Selection selectedSelection : selectedSelections) {
+            SimulationResultRepository repository = (selectedSelection.slot == SimulationSlot.PRIMARY)
+                    ? primaryRepository
+                    : secondaryRepository;
+            exportSelection(owner, selectedSelection, repository, host, targetDirectory, reportName, exportedFiles);
         }
 
         if (exportedFiles.isEmpty()) {
@@ -151,24 +124,31 @@ public final class DualSimulationExportHelper {
         JOptionPane.showMessageDialog(owner, message.toString().trim(), "Export Successful", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private static void exportForSlot(
+    private static final class Selection {
+        private final SimulationSlot slot;
+        private final ExportOption exportOption;
+
+        private Selection(SimulationSlot slot, ExportOption exportOption) {
+            this.slot = slot;
+            this.exportOption = exportOption;
+        }
+    }
+
+    private static void exportSelection(
             Component owner,
-            SimulationSlot slot,
+            Selection planItem,
             SimulationResultRepository repository,
             ExportHost host,
-            List<ExportOption> selectedOptions,
             File targetDirectory,
             String reportName,
             List<String> exportedFiles) throws Exception {
-        if (requiresSimulationData(selectedOptions) && !host.ensureSimulationDataAvailable(slot, repository)) {
+        if (planItem.exportOption.requiresSimulationData && !host.ensureSimulationDataAvailable(planItem.slot, repository)) {
             return;
         }
-        ExportRequest request = new ExportRequest(targetDirectory, reportName + "_" + slotSuffix(slot));
-        for (ExportOption exportOption : selectedOptions) {
-            String exportedFile = exportOption.action.execute(slot, repository, request);
-            if ((exportedFile != null) && !exportedFile.trim().isEmpty()) {
-                exportedFiles.add(exportedFile);
-            }
+        ExportRequest request = new ExportRequest(targetDirectory, reportName + "_" + slotSuffix(planItem.slot));
+        String exportedFile = planItem.exportOption.action.execute(planItem.slot, repository, request);
+        if ((exportedFile != null) && !exportedFile.trim().isEmpty()) {
+            exportedFiles.add(exportedFile);
         }
     }
 
@@ -199,13 +179,57 @@ public final class DualSimulationExportHelper {
         return exportOptions.toArray(new ExportOption[0]);
     }
 
-    private static boolean requiresSimulationData(List<ExportOption> selectedOptions) {
-        for (ExportOption selectedOption : selectedOptions) {
-            if (selectedOption.requiresSimulationData) {
-                return true;
+    private static JCheckBox[] createExportOptionChecks(ExportOption[] exportOptions, boolean defaultSelection) {
+        JCheckBox[] checkBoxes = new JCheckBox[exportOptions.length];
+        for (int i = 0; i < exportOptions.length; i++) {
+            checkBoxes[i] = new JCheckBox(exportOptions[i].label, defaultSelection);
+            checkBoxes[i].setOpaque(false);
+            checkBoxes[i].setMargin(new Insets(2, 2, 2, 2));
+        }
+        return checkBoxes;
+    }
+
+    private static JPanel createSlotOptionsPanel(String title, JCheckBox[] checkBoxes) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new javax.swing.BoxLayout(panel, javax.swing.BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createTitledBorder(title));
+        JPanel actionsPanel = new JPanel(new GridLayout(1, 2, 6, 0));
+        actionsPanel.setOpaque(false);
+        javax.swing.JButton selectAllButton = new javax.swing.JButton("Select all");
+        javax.swing.JButton clearAllButton = new javax.swing.JButton("Clear all");
+        selectAllButton.addActionListener(evt -> setAll(checkBoxes, true));
+        clearAllButton.addActionListener(evt -> setAll(checkBoxes, false));
+        actionsPanel.add(selectAllButton);
+        actionsPanel.add(clearAllButton);
+        panel.add(actionsPanel);
+        for (JCheckBox checkBox : checkBoxes) {
+            panel.add(checkBox);
+        }
+        return panel;
+    }
+
+    private static void setAll(JCheckBox[] checkBoxes, boolean selected) {
+        for (JCheckBox checkBox : checkBoxes) {
+            checkBox.setSelected(selected);
+        }
+    }
+
+    private static List<Selection> collectSelectedSelections(
+            Map<SimulationSlot, JCheckBox[]> slotSelections,
+            ExportOption[] exportOptions) {
+        List<Selection> selections = new ArrayList<Selection>();
+        for (SimulationSlot slot : SimulationSlot.values()) {
+            JCheckBox[] checkBoxes = slotSelections.get(slot);
+            if (checkBoxes == null) {
+                continue;
+            }
+            for (int i = 0; i < exportOptions.length; i++) {
+                if (checkBoxes[i].isSelected()) {
+                    selections.add(new Selection(slot, exportOptions[i]));
+                }
             }
         }
-        return false;
+        return selections;
     }
 
     private static String sanitizeFileName(String value) {
