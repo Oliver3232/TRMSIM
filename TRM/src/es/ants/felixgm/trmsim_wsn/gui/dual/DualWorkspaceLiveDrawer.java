@@ -147,9 +147,11 @@ final class DualWorkspaceLiveDrawer extends JPanel {
         addDisplayControls(settingsPanel);
         addInspectorControls(inspectorPanel);
 
+        JScrollPane settingsScrollPane = createDrawerScrollPane(settingsPanel);
+        JScrollPane inspectorScrollPane = createDrawerScrollPane(inspectorPanel);
         JTabbedPane drawerTabbedPane = new JTabbedPane();
-        drawerTabbedPane.addTab("Sim Settings", settingsPanel);
-        drawerTabbedPane.addTab("Inspector", inspectorPanel);
+        drawerTabbedPane.addTab("Sim Settings", settingsScrollPane);
+        drawerTabbedPane.addTab("Inspector", inspectorScrollPane);
         content.add(drawerTabbedPane, BorderLayout.CENTER);
         content.setVisible(false);
         putClientProperty("drawerContent", content);
@@ -382,6 +384,16 @@ final class DualWorkspaceLiveDrawer extends JPanel {
         checkBox.setAlignmentX(0.0f);
         checkBox.addActionListener(evt -> listener.accept(Boolean.valueOf(checkBox.isSelected())));
         return checkBox;
+    }
+
+    private JScrollPane createDrawerScrollPane(JComponent content) {
+        JScrollPane scrollPane = new JScrollPane(content);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
+        return scrollPane;
     }
 
     private void setLiveDrawerExpanded(boolean expanded) {

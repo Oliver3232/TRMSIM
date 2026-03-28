@@ -77,7 +77,6 @@ public final class MainWindowMenuSetupController {
         stopTRMmenuItem.setText("Stop T&R Model");
         stopTRMmenuItem.setEnabled(false);
         stopTRMmenuItem.addActionListener(evt -> MainWindowActionController.stopTrm(window));
-        simulationsMenu.add(stopTRMmenuItem);
 
         runSimulationsMenuItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, java.awt.event.InputEvent.CTRL_MASK));
         runSimulationsMenuItem.setIcon(new ImageIcon(ClassLoader.getSystemResource("resources/images/run.gif")));

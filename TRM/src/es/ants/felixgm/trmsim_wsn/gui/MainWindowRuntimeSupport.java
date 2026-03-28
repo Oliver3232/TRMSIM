@@ -8,7 +8,6 @@ import es.ants.felixgm.trmsim_wsn.gui.networkpanels.NetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.support.NetworkRenderSupport;
 import es.ants.felixgm.trmsim_wsn.gui.support.UiStateHelper;
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
-import es.ants.felixgm.trmsim_wsn.trm.powertrust.PowerTrust;
 
 public final class MainWindowRuntimeSupport {
     private MainWindowRuntimeSupport() {
@@ -103,7 +102,7 @@ public final class MainWindowRuntimeSupport {
     }
 
     static boolean isTRModelDisabled(String modelName) {
-        return PowerTrust.get_name().equals(modelName);
+        return false;
     }
 
     static void triggerInitialTrustModelSelection(TRMSim_WSN window) throws Exception {

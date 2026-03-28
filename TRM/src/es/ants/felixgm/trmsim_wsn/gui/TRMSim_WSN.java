@@ -55,6 +55,7 @@ import es.ants.felixgm.trmsim_wsn.gui.dual.DualSimulationShellPanel;
 import es.ants.felixgm.trmsim_wsn.gui.layout.CompactLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.layout.MiniLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.LegendPanel;
+import es.ants.felixgm.trmsim_wsn.gui.support.MessageConsoleHelper;
 import es.ants.felixgm.trmsim_wsn.gui.events.SimulationEventHelper;
 import es.ants.felixgm.trmsim_wsn.gui.graph.SimulationGraphWorkspace;
 import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowActionController;
@@ -133,7 +134,14 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
     Component singleModeWestComponent;
     Component singleModeCenterComponent;
     javax.swing.Timer dualNetworkRefreshTimer;
+    boolean singleSimulationStartPending = false;
     boolean dualSessionStartPending = false;
+    final Map<SimulationSlot, Boolean> dualSlotTrmActive =
+            new EnumMap<SimulationSlot, Boolean>(SimulationSlot.class);
+    final Map<SimulationSlot, Boolean> dualSlotBatchActive =
+            new EnumMap<SimulationSlot, Boolean>(SimulationSlot.class);
+    final Map<SimulationSlot, Boolean> dualSlotStartPending =
+            new EnumMap<SimulationSlot, Boolean>(SimulationSlot.class);
     final Map<SimulationSlot, Collection<OutcomesPanel>> dualOutcomesPanels =
             new EnumMap<SimulationSlot, Collection<OutcomesPanel>>(SimulationSlot.class);
     final Map<SimulationSlot, LegendPanel> dualLegendPanels =
@@ -300,12 +308,70 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
 
     boolean isAnyDualSimulationRunning() {
         for (SimulationSlot slot : SimulationSlot.values()) {
-            Controller controller = dualController(slot);
-            if (controller != null && controller.isSimulationRunning(slot)) {
+            if (isDualSlotSimulationActive(slot)) {
                 return true;
             }
         }
         return false;
+    }
+
+    boolean isSingleSimulationActive() {
+        return singleSimulationStartPending || ((C != null) && C.isSimulationRunning());
+    }
+
+    boolean isDualSlotSimulationActive(SimulationSlot slot) {
+        return isDualSlotTrmActive(slot) || isDualBatchActive(slot) || Boolean.TRUE.equals(dualSlotStartPending.get(slot));
+    }
+
+    boolean isDualSlotTrmActive(SimulationSlot slot) {
+        return Boolean.TRUE.equals(dualSlotTrmActive.get(slot));
+    }
+
+    boolean isDualBatchActive(SimulationSlot slot) {
+        return Boolean.TRUE.equals(dualSlotBatchActive.get(slot));
+    }
+
+    boolean isAnyDualSlotTrmActive() {
+        for (SimulationSlot slot : SimulationSlot.values()) {
+            if (isDualSlotTrmActive(slot)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    boolean isAnyDualBatchSimulationActive() {
+        if (dualSessionStartPending) {
+            return true;
+        }
+        for (SimulationSlot slot : SimulationSlot.values()) {
+            if (isDualBatchActive(slot)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void setSingleSimulationStartPending(boolean pending) {
+        singleSimulationStartPending = pending;
+    }
+
+    void setDualSlotStartPending(SimulationSlot slot, boolean pending) {
+        dualSlotStartPending.put(slot, Boolean.valueOf(pending));
+    }
+
+    void setDualSlotTrmActive(SimulationSlot slot, boolean active) {
+        dualSlotTrmActive.put(slot, Boolean.valueOf(active));
+        if (active) {
+            dualSlotBatchActive.put(slot, Boolean.FALSE);
+        }
+    }
+
+    void setDualSlotBatchActive(SimulationSlot slot, boolean active) {
+        dualSlotBatchActive.put(slot, Boolean.valueOf(active));
+        if (active) {
+            dualSlotTrmActive.put(slot, Boolean.FALSE);
+        }
     }
 
     boolean areAllDualRunningSimulationsPaused() {
@@ -344,7 +410,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
     long getEffectiveDualVisualizationDelayMillis(SimulationSlot slot) { long selectedDelay = getDualSelectedDelayMillis(slot); return (selectedDelay > 0L) ? selectedDelay : 50L; }
     void prependDualMessage(SimulationSlot slot, String message) {
         es.ants.felixgm.trmsim_wsn.gui.dual.DualSimulationWorkspacePanel workspacePanel = dualWorkspacePanel(slot);
-        workspacePanel.getMessagesTextArea().setText(message + workspacePanel.getMessagesTextArea().getText());
+        MessageConsoleHelper.appendMessage(workspacePanel.getMessagesTextArea(), message);
     }
 
     /** This method is called from within the constructor to

@@ -6,6 +6,7 @@ import es.ants.felixgm.trmsim_wsn.gui.export.SimulationResultRepository;
 import es.ants.felixgm.trmsim_wsn.outcomes.Outcome;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.OutcomesPanel;
+import es.ants.felixgm.trmsim_wsn.gui.support.MessageConsoleHelper;
 
 import javax.swing.SwingUtilities;
 import javax.swing.JTextArea;
@@ -82,7 +83,7 @@ public final class SimulationEventHelper {
         runSimulationUpdate(host, () -> {
             String normalizedMessage = message.replaceFirst("selected TRM", host.getSelectedTrustModelName());
             JTextArea messagesTextArea = host.getMessagesTextArea();
-            messagesTextArea.setText(normalizedMessage + messagesTextArea.getText());
+            MessageConsoleHelper.appendMessage(messagesTextArea, normalizedMessage);
             if (normalizedMessage.startsWith("Finishing")) {
                 host.finishSimulationUi();
             }

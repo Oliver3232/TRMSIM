@@ -25,9 +25,46 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.io.File;
+import java.util.EnumMap;
+import java.util.Map;
 
 final class DualModeParametersSupport {
+    static final class DualParameterUiState {
+        private final JRadioButton fileRadioButton;
+        private final JRadioButton customizedRadioButton;
+        private final JTextField parametersFileTextField;
+        private final JButton browseButton;
+        private final JButton saveFileContentButton;
+        private final JTextArea parametersFileContentTextArea;
+        private final TRMParametersPanel parametersPanel;
+        private final JComponent customizedContainer;
+        private final JButton applyButton;
+
+        DualParameterUiState(
+                JRadioButton fileRadioButton,
+                JRadioButton customizedRadioButton,
+                JTextField parametersFileTextField,
+                JButton browseButton,
+                JButton saveFileContentButton,
+                JTextArea parametersFileContentTextArea,
+                TRMParametersPanel parametersPanel,
+                JComponent customizedContainer,
+                JButton applyButton) {
+            this.fileRadioButton = fileRadioButton;
+            this.customizedRadioButton = customizedRadioButton;
+            this.parametersFileTextField = parametersFileTextField;
+            this.browseButton = browseButton;
+            this.saveFileContentButton = saveFileContentButton;
+            this.parametersFileContentTextArea = parametersFileContentTextArea;
+            this.parametersPanel = parametersPanel;
+            this.customizedContainer = customizedContainer;
+            this.applyButton = applyButton;
+        }
+    }
+
     private final TRMSim_WSN owner;
+    private final Map<SimulationSlot, DualParameterUiState> dualParameterUiStates =
+            new EnumMap<SimulationSlot, DualParameterUiState>(SimulationSlot.class);
 
     DualModeParametersSupport(TRMSim_WSN owner) {
         this.owner = owner;
@@ -64,7 +101,6 @@ final class DualModeParametersSupport {
             Controller controller = owner.dualController(slot);
             TRMParametersPanel parametersPanel = TRMParametersPanelFactory.create(trustModelName);
             parametersPanel.set_TRMParameters(controller.get_TRMParameters(slot));
-            parametersPanel.setEnabled(!controller.isSimulationRunning(slot));
             owner.dualParametersPanels.put(slot, parametersPanel);
 
             JPanel container = new JPanel(new BorderLayout(0, 8));
@@ -95,15 +131,14 @@ final class DualModeParametersSupport {
             JButton saveFileContentButton = new JButton("Save file content");
             JButton applyButton = new JButton("Apply");
             applyButton.setMargin(new java.awt.Insets(2, 6, 2, 6));
-            applyButton.setEnabled(!controller.isSimulationRunning(slot));
 
             browseButton.addActionListener(evt -> loadDualParametersFromFile(slot, parametersFileTextField, parametersFileContentTextArea, parametersPanel));
             saveFileContentButton.addActionListener(evt -> saveDualParametersFileContent(slot, parametersFileContentTextArea));
             applyButton.addActionListener(evt -> applyDualParameters(slot, parametersPanel, parametersFileContentTextArea));
             owner.dualParameterApplyButtons.put(slot, applyButton);
 
-            fileRadioButton.addActionListener(evt -> updateDualParameterSourceState(true, parametersFileTextField, browseButton, saveFileContentButton, parametersFileContentTextArea, parametersPanel, customizedPanel, applyButton));
-            customizedRadioButton.addActionListener(evt -> updateDualParameterSourceState(false, parametersFileTextField, browseButton, saveFileContentButton, parametersFileContentTextArea, parametersPanel, customizedPanel, applyButton));
+            fileRadioButton.addActionListener(evt -> applyDualParameterUiState(slot));
+            customizedRadioButton.addActionListener(evt -> applyDualParameterUiState(slot));
 
             JPanel sourceActionsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
             sourceActionsRow.setOpaque(false);
@@ -129,6 +164,17 @@ final class DualModeParametersSupport {
             customizedPanel.add(customizedHeaderPanel, BorderLayout.NORTH);
             customizedPanel.add(parametersScrollPane, BorderLayout.CENTER);
 
+            dualParameterUiStates.put(slot, new DualParameterUiState(
+                    fileRadioButton,
+                    customizedRadioButton,
+                    parametersFileTextField,
+                    browseButton,
+                    saveFileContentButton,
+                    parametersFileContentTextArea,
+                    parametersPanel,
+                    customizedPanel,
+                    applyButton));
+
             JSplitPane contentSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, customizedPanel, fileContentScrollPane);
             contentSplitPane.setResizeWeight(0.62);
             contentSplitPane.setContinuousLayout(true);
@@ -137,16 +183,8 @@ final class DualModeParametersSupport {
             container.add(parameterSourcePanel, BorderLayout.NORTH);
             container.add(contentSplitPane, BorderLayout.CENTER);
 
-            updateDualParameterSourceState(true, parametersFileTextField, browseButton, saveFileContentButton, parametersFileContentTextArea, parametersPanel, customizedPanel, applyButton);
-            javax.swing.SwingUtilities.invokeLater(() -> updateDualParameterSourceState(
-                    fileRadioButton.isSelected(),
-                    parametersFileTextField,
-                    browseButton,
-                    saveFileContentButton,
-                    parametersFileContentTextArea,
-                    parametersPanel,
-                    customizedPanel,
-                    applyButton));
+            applyDualParameterUiState(slot);
+            javax.swing.SwingUtilities.invokeLater(() -> applyDualParameterUiState(slot));
             return container;
         } catch (Exception ex) {
             JTextArea fallback = new JTextArea("Unable to initialize slot-specific parameters panel.\n\n" + ex.getMessage());
@@ -219,15 +257,42 @@ final class DualModeParametersSupport {
             TRMParametersPanel parametersPanel,
             JComponent customizedContainer,
             JButton applyButton) {
+        boolean customizationEnabled = !parametersFromFile;
         parametersFileTextField.setEnabled(parametersFromFile);
         browseButton.setEnabled(parametersFromFile);
         saveFileContentButton.setEnabled(parametersFromFile);
         parametersFileContentTextArea.setEnabled(parametersFromFile);
-        setComponentTreeEnabled(parametersPanel, !parametersFromFile);
-        setComponentTreeEnabled(customizedContainer, !parametersFromFile);
-        parametersPanel.setFocusable(!parametersFromFile);
-        customizedContainer.setFocusable(!parametersFromFile);
-        applyButton.setEnabled(!parametersFromFile);
+        setComponentTreeEnabled(parametersPanel, customizationEnabled);
+        setComponentTreeEnabled(customizedContainer, customizationEnabled);
+        parametersPanel.setFocusable(customizationEnabled);
+        customizedContainer.setFocusable(customizationEnabled);
+        applyButton.setEnabled(customizationEnabled);
+    }
+
+    void setSlotSimulationSettingsEnabled(SimulationSlot slot, boolean enabled) {
+        DualSettingsPanel settingsPanel = owner.dualSettingsPanels.get(slot);
+        if (settingsPanel != null) {
+            settingsPanel.setEnabled(enabled);
+        }
+    }
+
+    private void applyDualParameterUiState(SimulationSlot slot) {
+        DualParameterUiState uiState = dualParameterUiStates.get(slot);
+        if (uiState == null) {
+            return;
+        }
+        boolean parametersFromFile = uiState.fileRadioButton.isSelected();
+        uiState.fileRadioButton.setEnabled(true);
+        uiState.customizedRadioButton.setEnabled(true);
+        updateDualParameterSourceState(
+                parametersFromFile,
+                uiState.parametersFileTextField,
+                uiState.browseButton,
+                uiState.saveFileContentButton,
+                uiState.parametersFileContentTextArea,
+                uiState.parametersPanel,
+                uiState.customizedContainer,
+                uiState.applyButton);
     }
 
     void setComponentTreeEnabled(Component component, boolean enabled) {

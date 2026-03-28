@@ -9,6 +9,8 @@ import es.ants.felixgm.trmsim_wsn.gui.dual.DualSimulationWorkspacePanel;
 import es.ants.felixgm.trmsim_wsn.gui.events.SimulationEventHelper;
 import es.ants.felixgm.trmsim_wsn.gui.export.SimulationResultRepository;
 import es.ants.felixgm.trmsim_wsn.gui.graph.SimulationGraphWorkspace;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowRenderController;
+import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowTrustModelController;
 import es.ants.felixgm.trmsim_wsn.gui.network.NetworkFileHelper;
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.NetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.OutcomesPanel;
@@ -58,8 +60,17 @@ final class DualModeCoordinator {
         if (mode == owner.appMode) {
             return;
         }
+        if (hasActiveSimulation()) {
+            JOptionPane.showMessageDialog(owner,
+                    "Stop the active simulation before switching between Single and Dual mode.",
+                    "Mode Switch Blocked",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         if (mode == AppMode.DUAL) {
             resetDualModeState();
+        } else {
+            resetSingleModeState();
         }
         owner.appMode = mode;
         workspaceSupport.applyAppModeLayout(mode);
@@ -89,6 +100,9 @@ final class DualModeCoordinator {
                 startDualSession();
                 return;
             }
+            if (!owner.isAnyDualBatchSimulationActive()) {
+                return;
+            }
             if (owner.areAllDualRunningSimulationsPaused()) {
                 for (SimulationSlot slot : SimulationSlot.values()) {
                     Controller controller = owner.dualController(slot);
@@ -112,7 +126,12 @@ final class DualModeCoordinator {
 
     void handleDualSessionStop() {
         try {
+            if (!owner.isAnyDualBatchSimulationActive()) {
+                return;
+            }
             for (SimulationSlot slot : SimulationSlot.values()) {
+                owner.setDualSlotStartPending(slot, false);
+                owner.setDualSlotBatchActive(slot, false);
                 Controller controller = owner.dualController(slot);
                 if (controller != null) {
                     controller.stopSimulations(slot);
@@ -129,27 +148,32 @@ final class DualModeCoordinator {
         if (owner.dualSimulationShellPanel == null) {
             return;
         }
-        boolean anyRunning = owner.isAnyDualSimulationRunning();
-        if (owner.dualSessionStartPending && anyRunning) {
+        boolean anySlotActive = owner.isAnyDualSimulationRunning();
+        if (owner.dualSessionStartPending && anySlotActive) {
             owner.dualSessionStartPending = false;
         }
-        boolean allPaused = anyRunning && owner.areAllDualRunningSimulationsPaused();
-        boolean treatAsRunning = anyRunning || owner.dualSessionStartPending;
-        boolean canExport = !treatAsRunning
+        boolean batchActive = owner.isAnyDualBatchSimulationActive();
+        boolean anyTrmActive = owner.isAnyDualSlotTrmActive();
+        boolean allPaused = batchActive && owner.areAllDualRunningSimulationsPaused();
+        boolean sessionActive = batchActive;
+        boolean canExport = !anySlotActive
                 && (SimulationResultRepository.getInstance(SimulationSlot.PRIMARY).getResultCount() > 0)
                 && (SimulationResultRepository.getInstance(SimulationSlot.SECONDARY).getResultCount() > 0);
 
-        owner.dualSimulationShellPanel.getSessionRunButton().setText(treatAsRunning ? (allPaused ? "Resume" : "Pause") : "Run");
-        owner.dualSimulationShellPanel.getSessionStopButton().setEnabled(treatAsRunning);
+        owner.dualSimulationShellPanel.getSessionRunButton().setText(sessionActive ? (allPaused ? "Resume" : "Pause") : "Run");
+        owner.dualSimulationShellPanel.getSessionRunButton().setEnabled(!anyTrmActive && (!anySlotActive || batchActive));
+        owner.dualSimulationShellPanel.getSessionStopButton().setEnabled(batchActive);
+        owner.dualSimulationShellPanel.getModeSwitchButton().setEnabled(!anySlotActive);
         owner.dualSimulationShellPanel.getExportButton().setEnabled(canExport);
         owner.dualSimulationShellPanel.getPrimaryToolbarPanel().getRunStopButton().setText(
-                ((owner.dualController(SimulationSlot.PRIMARY) != null) && owner.dualController(SimulationSlot.PRIMARY).isSimulationRunning(SimulationSlot.PRIMARY)) ? "Stop T&R" : "Run T&R");
+                owner.isDualSlotTrmActive(SimulationSlot.PRIMARY) ? "Stop T&R" : "Run T&R");
         owner.dualSimulationShellPanel.getSecondaryToolbarPanel().getRunStopButton().setText(
-                ((owner.dualController(SimulationSlot.SECONDARY) != null) && owner.dualController(SimulationSlot.SECONDARY).isSimulationRunning(SimulationSlot.SECONDARY)) ? "Stop T&R" : "Run T&R");
+                owner.isDualSlotTrmActive(SimulationSlot.SECONDARY) ? "Stop T&R" : "Run T&R");
 
         updateDualGraphWorkspaceControls(SimulationSlot.PRIMARY);
         updateDualGraphWorkspaceControls(SimulationSlot.SECONDARY);
-        setDualWorkspaceSetupEnabled(!anyRunning);
+        updateDualSlotControlsEnabled(SimulationSlot.PRIMARY);
+        updateDualSlotControlsEnabled(SimulationSlot.SECONDARY);
         updateDualRefreshTimer();
     }
 
@@ -277,6 +301,9 @@ final class DualModeCoordinator {
             }
 
             public void finishSimulationUi() {
+                owner.setDualSlotStartPending(slot, false);
+                owner.setDualSlotTrmActive(slot, false);
+                owner.setDualSlotBatchActive(slot, false);
                 owner.prependDualMessage(slot, "Simulation completed. " + SimulationResultRepository.getInstance(slot).getResultCount() + " results saved.\n");
                 updateDualSessionControls();
             }
@@ -285,6 +312,9 @@ final class DualModeCoordinator {
                 JOptionPane.showMessageDialog(owner, exception.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 try {
                     for (SimulationSlot simulationSlot : SimulationSlot.values()) {
+                        owner.setDualSlotStartPending(simulationSlot, false);
+                        owner.setDualSlotTrmActive(simulationSlot, false);
+                        owner.setDualSlotBatchActive(simulationSlot, false);
                         Controller controller = owner.dualController(simulationSlot);
                         if (controller != null) {
                             controller.stopSimulations(simulationSlot);
@@ -460,6 +490,9 @@ final class DualModeCoordinator {
     private void resetDualModeState() {
         owner.dualSessionStartPending = false;
         for (SimulationSlot slot : SimulationSlot.values()) {
+            owner.setDualSlotStartPending(slot, false);
+            owner.setDualSlotTrmActive(slot, false);
+            owner.setDualSlotBatchActive(slot, false);
             Controller controller = owner.dualController(slot);
             if (controller != null) {
                 controller.stopAllSimulations();
@@ -487,6 +520,43 @@ final class DualModeCoordinator {
             }
             workspaceSupport.rebuildDualWorkspaceUi(slot);
         }
+    }
+
+    private void resetSingleModeState() {
+        MainWindowContext context = new MainWindowContext(owner);
+        try {
+            if (context.getController() != null) {
+                context.getController().stopAllSimulations();
+                context.getController().clearCurrentNetwork();
+            }
+        } catch (Exception ex) {
+            showError(ex);
+        }
+
+        context.resetBatchSimulationState();
+        context.setSimulationComponentsEnabled(false);
+        context.getStopTrmButton().setEnabled(false);
+        context.getStopTrmMenuItem().setEnabled(false);
+        context.getStopSimulationsButton().setEnabled(false);
+        context.getStopSimulationsMenuItem().setEnabled(false);
+        context.setMessagesText("");
+        context.clearNodeInspector();
+        SimulationResultRepository.getInstance().clearRepository();
+        SimulationUiHelper.resetOutcomePanels(context.getOutcomesPanels());
+        MainWindowRenderController.clearNetworkPanel(context, context.getCurrentNetworkPanel());
+
+        if (context.getTrustModelComboBox().getItemCount() > 0) {
+            if (context.getTrustModelComboBox().getSelectedIndex() != 0) {
+                context.getTrustModelComboBox().setSelectedIndex(0);
+            } else {
+                MainWindowTrustModelController.handleSelection(context, null, TRMSim_WSN.LOGGER);
+            }
+        }
+        context.setMessagesText("");
+    }
+
+    private boolean hasActiveSimulation() {
+        return owner.isSingleSimulationActive() || owner.isAnyDualSimulationRunning();
     }
 
     private void syncDualWorkspaceFromControllerState(SimulationSlot slot) {
@@ -540,44 +610,28 @@ final class DualModeCoordinator {
         if (workspace == null || controller == null) {
             return;
         }
-        boolean running = controller.isSimulationRunning(slot);
+        boolean running = owner.isDualSlotSimulationActive(slot);
         boolean paused = running && controller.isSimulationPaused(slot);
         workspace.updateSimulationControlsState(running ? (paused ? "Paused" : "Running") : "Idle", "Run T&R", paused ? "Resume" : "Pause", !running, running, running);
         owner.dualWorkspacePanel(slot).updateSimulationControlsState(running ? (paused ? "Paused" : "Running") : "Idle");
     }
 
-    private void setDualWorkspaceSetupEnabled(boolean enabled) {
-        setDualWorkspaceSetupEnabled(owner.dualSimulationShellPanel.getPrimaryWorkspacePanel(), enabled);
-        setDualWorkspaceSetupEnabled(owner.dualSimulationShellPanel.getSecondaryWorkspacePanel(), enabled);
-        setDualToolbarEnabled(owner.dualToolbarPanel(SimulationSlot.PRIMARY), enabled);
-        setDualToolbarEnabled(owner.dualToolbarPanel(SimulationSlot.SECONDARY), enabled);
-    }
-
-    private void setDualWorkspaceSetupEnabled(DualSimulationWorkspacePanel workspacePanel, boolean enabled) {
-        workspacePanel.getSetupToggleButton().setEnabled(true);
-        workspacePanel.getBottomToggleButton().setEnabled(true);
-    }
-
-    private void setDualToolbarEnabled(DualSimulationShellPanel.SlotToolbarPanel toolbarPanel, boolean enabled) {
-        toolbarPanel.getTrustModelComboBox().setEnabled(enabled);
-        toolbarPanel.getNewNetworkButton().setEnabled(enabled);
-        toolbarPanel.getLoadNetworkButton().setEnabled(enabled);
-        toolbarPanel.getSaveNetworkButton().setEnabled(enabled);
-        toolbarPanel.getResetNetworkButton().setEnabled(enabled);
-        for (SimulationSlot slot : SimulationSlot.values()) {
-            DualSettingsPanel settingsPanel = owner.dualSettingsPanels.get(slot);
-            if (settingsPanel != null) {
-                settingsPanel.setEnabled(enabled);
-            }
-            TRMParametersPanel parametersPanel = owner.dualParametersPanels.get(slot);
-            if (parametersPanel != null) {
-                parametersPanel.setEnabled(enabled);
-            }
-            javax.swing.JButton applyButton = owner.dualParameterApplyButtons.get(slot);
-            if (applyButton != null) {
-                applyButton.setEnabled(enabled);
-            }
-        }
+    private void updateDualSlotControlsEnabled(SimulationSlot slot) {
+        boolean batchActive = owner.isAnyDualBatchSimulationActive();
+        boolean anyTrmActive = owner.isAnyDualSlotTrmActive();
+        boolean nonSimulationControlsEnabled = !batchActive && !anyTrmActive;
+        boolean runStopEnabled = !batchActive;
+        DualSimulationWorkspacePanel workspacePanel = owner.dualWorkspacePanel(slot);
+        DualSimulationShellPanel.SlotToolbarPanel toolbarPanel = owner.dualToolbarPanel(slot);
+        workspacePanel.setWorkspaceChromeEnabled(nonSimulationControlsEnabled);
+        workspacePanel.setSetupControlsEnabled(nonSimulationControlsEnabled);
+        parametersSupport.setSlotSimulationSettingsEnabled(slot, nonSimulationControlsEnabled);
+        toolbarPanel.getTrustModelComboBox().setEnabled(nonSimulationControlsEnabled);
+        toolbarPanel.getNewNetworkButton().setEnabled(nonSimulationControlsEnabled);
+        toolbarPanel.getLoadNetworkButton().setEnabled(nonSimulationControlsEnabled);
+        toolbarPanel.getSaveNetworkButton().setEnabled(nonSimulationControlsEnabled);
+        toolbarPanel.getResetNetworkButton().setEnabled(nonSimulationControlsEnabled);
+        toolbarPanel.getRunStopButton().setEnabled(runStopEnabled);
     }
 
     private void applyDualTrustModelSelection(SimulationSlot slot) {
@@ -591,6 +645,22 @@ final class DualModeCoordinator {
             return;
         }
         String trustModelName = (String) selectedItem;
+        if (owner.isDualSlotSimulationActive(slot)) {
+            String currentTrustModel = controller.getTrustModelName(slot);
+            if (currentTrustModel != null && !currentTrustModel.equals(trustModelName)) {
+                owner.dualTrustModelSelectionSync.put(slot, Boolean.TRUE);
+                try {
+                    owner.dualToolbarPanel(slot).getTrustModelComboBox().setSelectedItem(currentTrustModel);
+                } finally {
+                    owner.dualTrustModelSelectionSync.put(slot, Boolean.FALSE);
+                }
+            }
+            JOptionPane.showMessageDialog(owner,
+                    owner.slotLabel(slot) + " simulation is active. Stop it before changing the trust model.",
+                    "Model Switch Blocked",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         try {
             controller.set_TRModel_WSN(slot, trustModelName);
             controller.clearCurrentNetwork(slot);
@@ -683,6 +753,9 @@ final class DualModeCoordinator {
     }
 
     private void startDualSession() throws Exception {
+        if (owner.isDualSlotTrmActive(SimulationSlot.PRIMARY) || owner.isDualSlotTrmActive(SimulationSlot.SECONDARY)) {
+            return;
+        }
         ensureDualNetworkInitializedForRun(SimulationSlot.PRIMARY);
         ensureDualNetworkInitializedForRun(SimulationSlot.SECONDARY);
         ensureDualBatchSlotReady(SimulationSlot.PRIMARY);
@@ -700,6 +773,8 @@ final class DualModeCoordinator {
         owner.prependDualMessage(SimulationSlot.PRIMARY, startMessage);
         owner.prependDualMessage(SimulationSlot.SECONDARY, startMessage);
         owner.dualSessionStartPending = true;
+        owner.setDualSlotBatchActive(SimulationSlot.PRIMARY, true);
+        owner.setDualSlotBatchActive(SimulationSlot.SECONDARY, true);
         owner.dualSimulationService(SimulationSlot.PRIMARY).runBatchSimulation(SimulationSlot.PRIMARY, owner, parametersSupport.buildDualBatchSimulationConfig(SimulationSlot.PRIMARY));
         owner.dualSimulationService(SimulationSlot.SECONDARY).runBatchSimulation(SimulationSlot.SECONDARY, owner, parametersSupport.buildDualBatchSimulationConfig(SimulationSlot.SECONDARY));
         updateDualSessionControls();
@@ -712,10 +787,15 @@ final class DualModeCoordinator {
             return;
         }
         try {
-            if (controller.isSimulationRunning(slot)) {
+            if (owner.isDualSlotTrmActive(slot)) {
+                owner.setDualSlotStartPending(slot, false);
+                owner.setDualSlotTrmActive(slot, false);
                 controller.stopSimulations(slot);
                 owner.prependDualMessage(slot, "Stopped slot simulation.\n");
                 updateDualSessionControls();
+                return;
+            }
+            if (owner.isAnyDualBatchSimulationActive()) {
                 return;
             }
             ensureDualNetworkInitializedForRun(slot);
@@ -725,9 +805,13 @@ final class DualModeCoordinator {
             owner.dualWorkspacePanel(slot).getMessagesTextArea().setText("");
             service.setVisualizationDelay(owner.getEffectiveDualVisualizationDelayMillis(slot));
             owner.prependDualMessage(slot, "Starting slot simulation...\n");
+            owner.setDualSlotStartPending(slot, true);
+            owner.setDualSlotTrmActive(slot, true);
             service.runSimulation(slot, owner, parametersSupport.buildDualSimulationConfig(slot));
             updateDualSessionControls();
         } catch (Exception ex) {
+            owner.setDualSlotStartPending(slot, false);
+            owner.setDualSlotTrmActive(slot, false);
             showError(ex);
         }
     }

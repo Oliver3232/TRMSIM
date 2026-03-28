@@ -7,12 +7,8 @@ import es.ants.felixgm.trmsim_wsn.gui.layout.MiniLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.support.NodeInspectorHelper;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
-import es.ants.felixgm.trmsim_wsn.gui.legendpanels.EigenTrustLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.LegendPanel;
-import es.ants.felixgm.trmsim_wsn.gui.legendpanels.PowerTrustLegendPanel;
-import es.ants.felixgm.trmsim_wsn.gui.legendpanels.TRIPLegendPanel;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,39 +50,33 @@ public final class MainWindowNodeInspectorController {
 
     public static List<MiniLegendPanel.Item> createLegendItems(LegendPanel legendPanel) {
         List<MiniLegendPanel.Item> items = new ArrayList<MiniLegendPanel.Item>();
-        items.add(new MiniLegendPanel.Item("Client", Color.ORANGE));
-        items.add(new MiniLegendPanel.Item("Benevolent", Color.GREEN));
-        items.add(new MiniLegendPanel.Item("Malicious", Color.RED));
-        items.add(new MiniLegendPanel.Item("Relay", Color.BLUE));
-        items.add(new MiniLegendPanel.Item("Idle", Color.DARK_GRAY));
-        if (legendPanel instanceof TRIPLegendPanel) {
-            items.add(new MiniLegendPanel.Item("RSU", Color.MAGENTA));
-        } else if (legendPanel instanceof EigenTrustLegendPanel) {
-            items.add(new MiniLegendPanel.Item("Pre-Trusted", Color.MAGENTA));
-        } else if (legendPanel instanceof PowerTrustLegendPanel) {
-            items.add(new MiniLegendPanel.Item("Power Node", Color.MAGENTA));
+        if (legendPanel == null) {
+            return items;
+        }
+        for (LegendPanel.LegendItem legendItem : legendPanel.getLegendItems()) {
+            items.add(new MiniLegendPanel.Item(legendItem.getLabel(), legendItem.getColor()));
         }
         return items;
     }
 
     public static void refreshInspectorLegendPanel(Host host) {
         JPanel wrapper = host.getGraphInspectorLegendWrapper();
-        if (wrapper == null) {
-            return;
+        if (wrapper != null) {
+            wrapper.removeAll();
+            MiniLegendPanel legendPanel = new MiniLegendPanel();
+            legendPanel.setItems(createLegendItems(host.getLegendPanel()));
+            legendPanel.setPreferredSize(new Dimension(250, 52));
+            legendPanel.setOpaque(false);
+            host.setGraphInspectorLegendPanel(legendPanel);
+            wrapper.add(legendPanel, BorderLayout.CENTER);
+            wrapper.revalidate();
+            wrapper.repaint();
         }
-        wrapper.removeAll();
-        MiniLegendPanel legendPanel = new MiniLegendPanel();
-        legendPanel.setItems(createLegendItems(host.getLegendPanel()));
-        legendPanel.setPreferredSize(new Dimension(250, 52));
-        legendPanel.setOpaque(false);
-        host.setGraphInspectorLegendPanel(legendPanel);
-        wrapper.add(legendPanel, BorderLayout.CENTER);
-        wrapper.revalidate();
-        wrapper.repaint();
 
         CompactLegendPanel dashboardLegendPanel = host.getDashboardLegendPanel();
         if (dashboardLegendPanel != null) {
             dashboardLegendPanel.setItems(createLegendItems(host.getLegendPanel()));
+            dashboardLegendPanel.revalidate();
             dashboardLegendPanel.repaint();
         }
     }

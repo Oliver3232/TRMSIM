@@ -35,8 +35,13 @@ public final class MainWindowActionController {
     }
 
     public static void runTrmMenu(TRMSim_WSN window, java.awt.event.ActionEvent evt) {
+        MainWindowContext context = new MainWindowContext(window);
+        if (context.isSingleSimulationActive()) {
+            stopTrm(window);
+            return;
+        }
         try {
-            new MainWindowContext(window).prepareEditableParametersForExecution();
+            context.prepareEditableParametersForExecution();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(window, ex, "Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
@@ -108,10 +113,15 @@ public final class MainWindowActionController {
     }
 
     public static void runSingle(TRMSim_WSN window, java.awt.event.ActionEvent evt) {
+        MainWindowContext context = new MainWindowContext(window);
+        if (context.isSingleSimulationActive()) {
+            stopTrm(window);
+            return;
+        }
         try {
-            MainWindowSimulationController.runSingle(new MainWindowContext(window));
+            MainWindowSimulationController.runSingle(context);
         } catch (Exception ex) {
-            MainWindowSimulationController.showError(new MainWindowContext(window), ex);
+            MainWindowSimulationController.showError(context, ex);
             stopTrm(window);
         }
     }

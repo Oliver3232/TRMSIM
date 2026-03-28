@@ -3,6 +3,7 @@ package es.ants.felixgm.trmsim_wsn.gui;
 import es.ants.felixgm.trmsim_wsn.app.BatchSimulationConfig;
 import es.ants.felixgm.trmsim_wsn.app.NetworkGenerationConfig;
 import es.ants.felixgm.trmsim_wsn.app.SimulationConfig;
+import es.ants.felixgm.trmsim_wsn.gui.support.NumericInputBindingHelper;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -63,13 +64,17 @@ final class DualSettingsPanel extends JPanel {
         configureCheckBox(dynamicCheckBox);
         configureCheckBox(oscillatingCheckBox);
         configureCheckBox(collusionCheckBox);
+        NumericInputBindingHelper.configureIntegerSpinner(minSensorsSpinner);
+        NumericInputBindingHelper.configureIntegerSpinner(maxSensorsSpinner);
+        NumericInputBindingHelper.configureIntegerSpinner(networksSpinner);
+        NumericInputBindingHelper.configureIntegerSpinner(executionsSpinner);
 
         minSensorsSpinner.addChangeListener(evt -> alignMinMax(true));
         maxSensorsSpinner.addChangeListener(evt -> alignMinMax(false));
-        clientsSlider.addChangeListener(evt -> clientsValue.setText(String.valueOf(clientsSlider.getValue())));
-        relaySlider.addChangeListener(evt -> relayValue.setText(String.valueOf(relaySlider.getValue())));
-        maliciousSlider.addChangeListener(evt -> maliciousValue.setText(String.valueOf(maliciousSlider.getValue())));
-        radioRangeSliderLocal.addChangeListener(evt -> radioRangeValue.setText(String.valueOf(radioRangeSliderLocal.getValue())));
+        NumericInputBindingHelper.bindSliderAndField(clientsSlider, clientsValue);
+        NumericInputBindingHelper.bindSliderAndField(relaySlider, relayValue);
+        NumericInputBindingHelper.bindSliderAndField(maliciousSlider, maliciousValue);
+        NumericInputBindingHelper.bindSliderAndField(radioRangeSliderLocal, radioRangeValue);
 
         JPanel networkSection = createSettingsSection(
                 "Network",
@@ -122,17 +127,7 @@ final class DualSettingsPanel extends JPanel {
     @Override
     public void setEnabled(boolean enabled) {
         super.setEnabled(enabled);
-        minSensorsSpinner.setEnabled(enabled);
-        maxSensorsSpinner.setEnabled(enabled);
-        networksSpinner.setEnabled(enabled);
-        executionsSpinner.setEnabled(enabled);
-        clientsSlider.setEnabled(enabled);
-        relaySlider.setEnabled(enabled);
-        maliciousSlider.setEnabled(enabled);
-        radioRangeSliderLocal.setEnabled(enabled);
-        dynamicCheckBox.setEnabled(enabled);
-        oscillatingCheckBox.setEnabled(enabled);
-        collusionCheckBox.setEnabled(enabled);
+        updateChildrenEnabled(enabled);
     }
 
     private void configureCheckBox(JCheckBox checkBox) {
@@ -193,7 +188,7 @@ final class DualSettingsPanel extends JPanel {
 
     private JTextField createValueField(int value) {
         JTextField field = new JTextField(String.valueOf(value));
-        field.setEditable(false);
+        field.setEditable(true);
         field.setPreferredSize(VALUE_SIZE);
         return field;
     }
@@ -207,4 +202,20 @@ final class DualSettingsPanel extends JPanel {
             minSensorsSpinner.setValue(Integer.valueOf(maxValue));
         }
     }
+
+    private void updateChildrenEnabled(boolean enabled) {
+        for (Component child : getComponents()) {
+            setComponentTreeEnabled(child, enabled);
+        }
+    }
+
+    private void setComponentTreeEnabled(Component component, boolean enabled) {
+        component.setEnabled(enabled);
+        if (component instanceof java.awt.Container) {
+            for (Component child : ((java.awt.Container) component).getComponents()) {
+                setComponentTreeEnabled(child, enabled);
+            }
+        }
+    }
+
 }

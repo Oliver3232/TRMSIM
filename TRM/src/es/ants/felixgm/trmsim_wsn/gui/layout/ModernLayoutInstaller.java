@@ -108,7 +108,6 @@ public final class ModernLayoutInstaller {
         actions.add(saveWSNButton);
         actions.add(resetWSNButton);
         actions.add(runTRMButton);
-        actions.add(stopTRMButton);
         actions.add(runSimulationsButton);
         actions.add(stopSimulationsButton);
         actions.add(exportDataButton);
@@ -420,7 +419,7 @@ public final class ModernLayoutInstaller {
         center.setOpaque(false);
         center.add(slider, BorderLayout.CENTER);
 
-        valueField.setEditable(false);
+        valueField.setEditable(true);
         valueField.setHorizontalAlignment(SwingConstants.CENTER);
         valueField.setPreferredSize(new Dimension(48, 24));
         center.add(valueField, BorderLayout.EAST);
@@ -435,7 +434,7 @@ public final class ModernLayoutInstaller {
         panel.add(label);
         slider.setPreferredSize(new Dimension(132, 24));
         panel.add(slider);
-        valueField.setEditable(false);
+        valueField.setEditable(true);
         valueField.setHorizontalAlignment(SwingConstants.CENTER);
         valueField.setPreferredSize(new Dimension(56, 24));
         panel.add(valueField);

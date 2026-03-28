@@ -8,8 +8,11 @@ import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowActionCon
 import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowConfigurationController;
 import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowRenderController;
 import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowTrustModelController;
+import es.ants.felixgm.trmsim_wsn.gui.support.NumericInputBindingHelper;
+import es.ants.felixgm.trmsim_wsn.gui.trustmodel.TrustModelSelectionHelper;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridLayout;
 import java.util.logging.Logger;
@@ -88,16 +91,15 @@ public final class MainWindowControlsSection {
 
         controlsPanel.setPreferredSize(new java.awt.Dimension(400, 560));
 
-        legendPanelContainer.add(legendPanel, null);
+        legendPanelContainer.setLayout(new BorderLayout());
+        legendPanelContainer.removeAll();
+        legendPanelContainer.add(legendPanel, BorderLayout.CENTER);
         legendPanel.setBackground(Color.white);
-        legendPanelContainer.setPreferredSize(new java.awt.Dimension(100, 98));
-
-        GroupLayout legendPanelContainerLayout = new GroupLayout(legendPanelContainer);
-        legendPanelContainer.setLayout(legendPanelContainerLayout);
-        legendPanelContainerLayout.setHorizontalGroup(
-                legendPanelContainerLayout.createParallelGroup(GroupLayout.Alignment.LEADING).addGap(0, 100, Short.MAX_VALUE));
-        legendPanelContainerLayout.setVerticalGroup(
-                legendPanelContainerLayout.createParallelGroup(GroupLayout.Alignment.LEADING).addGap(0, 81, Short.MAX_VALUE));
+        Dimension legendSize = TrustModelSelectionHelper.computeLegendPreferredSize(legendPanel);
+        legendPanel.setPreferredSize(legendSize);
+        legendPanel.setMinimumSize(legendSize);
+        legendPanelContainer.setPreferredSize(legendSize);
+        legendPanelContainer.setMinimumSize(legendSize);
 
         legendLabel.setText("Legend");
         legendLabel.setPreferredSize(new java.awt.Dimension(100, 15));
@@ -111,7 +113,6 @@ public final class MainWindowControlsSection {
         configureButton(runTRMButton, "Run T&R Model", evt -> MainWindowActionController.runSingle(window, evt), true);
         buttonsControlPanel.add(runTRMButton);
         configureButton(stopTRMButton, "Stop T&R Model", evt -> MainWindowActionController.stopTrm(window), true);
-        buttonsControlPanel.add(stopTRMButton);
         configureButton(loadWSNButton, "Load WSN", evt -> MainWindowActionController.loadNetwork(window), false);
         buttonsControlPanel.add(loadWSNButton);
         configureButton(saveWSNButton, "Save WSN", evt -> MainWindowActionController.saveNetwork(window), true);
@@ -131,18 +132,21 @@ public final class MainWindowControlsSection {
         numExecutionsSpinner.setModel(new javax.swing.SpinnerNumberModel(100, 1, Integer.MAX_VALUE, 1));
         numExecutionsSpinner.setAlignmentX(0.0F);
         numExecutionsSpinner.setPreferredSize(new java.awt.Dimension(100, 20));
+        NumericInputBindingHelper.configureIntegerSpinner(numExecutionsSpinner);
         spinnersControlPanel.add(numExecutionsSpinner);
         configureSpinnerLabel(numNetworksLabel, "Num networks");
         spinnersControlPanel.add(numNetworksLabel);
         numNetworksSpinner.setModel(new javax.swing.SpinnerNumberModel(100, 1, Integer.MAX_VALUE, 1));
         numNetworksSpinner.setAlignmentX(0.0F);
         numNetworksSpinner.setPreferredSize(new java.awt.Dimension(100, 20));
+        NumericInputBindingHelper.configureIntegerSpinner(numNetworksSpinner);
         spinnersControlPanel.add(numNetworksSpinner);
         configureSpinnerLabel(minNumSensorsLabel, "Min Num Sensors");
         spinnersControlPanel.add(minNumSensorsLabel);
         minNumSensorsSpinner.setModel(new javax.swing.SpinnerNumberModel(50, 1, Integer.MAX_VALUE, 1));
         minNumSensorsSpinner.setAlignmentX(0.0F);
         minNumSensorsSpinner.setPreferredSize(new java.awt.Dimension(100, 20));
+        NumericInputBindingHelper.configureIntegerSpinner(minNumSensorsSpinner);
         minNumSensorsSpinner.addChangeListener(evt -> MainWindowConfigurationController.alignMinSensors(MainWindowHosts.configuration(window)));
         spinnersControlPanel.add(minNumSensorsSpinner);
         configureSpinnerLabel(maxNumSensorsLabel, "Max Num Sensors");
@@ -150,19 +154,22 @@ public final class MainWindowControlsSection {
         maxNumSensorsSpinner.setModel(new javax.swing.SpinnerNumberModel(50, 1, Integer.MAX_VALUE, 1));
         maxNumSensorsSpinner.setAlignmentX(0.0F);
         maxNumSensorsSpinner.setPreferredSize(new java.awt.Dimension(100, 20));
+        NumericInputBindingHelper.configureIntegerSpinner(maxNumSensorsSpinner);
         maxNumSensorsSpinner.addChangeListener(evt -> MainWindowConfigurationController.alignMaxSensors(MainWindowHosts.configuration(window)));
         spinnersControlPanel.add(maxNumSensorsSpinner);
 
         slidersControlsPanel.setLayout(new java.awt.GridBagLayout());
         addLabeledSlider(slidersControlsPanel, percentageClientsLabel, "% Clients", 0, percentageClientsSlider, 15, percentageClientsTextField);
-        percentageClientsSlider.addChangeListener(evt -> MainWindowActionController.syncSliderValue(percentageClientsSlider, percentageClientsTextField));
+        NumericInputBindingHelper.bindSliderAndField(percentageClientsSlider, percentageClientsTextField);
         addLabeledSlider(slidersControlsPanel, percentageRelayServersLabel, "% Relay Servers", 2, percentageRelayServersSlider, 5, percentageRelayServersTextField);
-        percentageRelayServersSlider.addChangeListener(evt -> MainWindowActionController.syncSliderValue(percentageRelayServersSlider, percentageRelayServersTextField));
+        NumericInputBindingHelper.bindSliderAndField(percentageRelayServersSlider, percentageRelayServersTextField);
         addLabeledSlider(slidersControlsPanel, percentageMaliciousServersLabel, "% Malicious Servers", 4, percentageMaliciousServersSlider, 70, percentageMaliciousServersTextField);
-        percentageMaliciousServersSlider.addChangeListener(evt -> MainWindowActionController.syncSliderValue(percentageMaliciousServersSlider, percentageMaliciousServersTextField));
+        NumericInputBindingHelper.bindSliderAndField(percentageMaliciousServersSlider, percentageMaliciousServersTextField);
         addLabeledSlider(slidersControlsPanel, radioRangeLabel, "Radio Range", 6, radioRangeSlider, 12, radioRangeTextField);
+        NumericInputBindingHelper.bindSliderAndField(radioRangeSlider, radioRangeTextField);
         radioRangeSlider.addChangeListener(evt -> MainWindowConfigurationController.onRadioRangeChanged(MainWindowHosts.configuration(window)));
         addLabeledSlider(slidersControlsPanel, delayLabel, "Delay", 8, delaySlider, 0, delayTextField);
+        NumericInputBindingHelper.bindSliderAndField(delaySlider, delayTextField);
         delaySlider.addChangeListener(evt -> MainWindowConfigurationController.onDelayChanged(MainWindowHosts.configuration(window)));
 
         trModelLabel.setText("Trust & Reputation Model");
@@ -284,7 +291,7 @@ public final class MainWindowControlsSection {
         gbc.anchor = GridBagConstraints.NORTHWEST;
         panel.add(slider, gbc);
 
-        field.setEditable(false);
+        field.setEditable(true);
         field.setHorizontalAlignment(JTextField.CENTER);
         field.setPreferredSize(new java.awt.Dimension(45, 25));
         field.setText(String.valueOf(slider.getValue()));

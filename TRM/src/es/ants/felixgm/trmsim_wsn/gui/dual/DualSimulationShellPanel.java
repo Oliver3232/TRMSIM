@@ -10,14 +10,17 @@ import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
+import java.awt.FlowLayout;
 import java.awt.Insets;
 
 /**
  * Dual mode shell with slot-specific controls on the sides and shared session controls in the middle.
  */
 public final class DualSimulationShellPanel extends JPanel {
+    private static final int TOOLBAR_BUTTON_WIDTH = 118;
+    private static final int TOOLBAR_BUTTON_HEIGHT = 22;
+    private static final int TOOLBAR_BUTTON_GAP = 4;
+
     public static final class SlotToolbarPanel extends JPanel {
         private final JButton newNetworkButton = new JButton("New WSN");
         private final JButton loadNetworkButton = new JButton("Load WSN");
@@ -36,9 +39,9 @@ public final class DualSimulationShellPanel extends JPanel {
             configureButton(saveNetworkButton);
             configureButton(resetNetworkButton);
             configureButton(runStopButton);
-            trustModelComboBox.setPreferredSize(new Dimension(118, 22));
-            trustModelComboBox.setMinimumSize(new Dimension(100, 22));
-            trustModelComboBox.setMaximumSize(new Dimension(118, 22));
+            trustModelComboBox.setPreferredSize(new Dimension(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT));
+            trustModelComboBox.setMinimumSize(new Dimension(100, TOOLBAR_BUTTON_HEIGHT));
+            trustModelComboBox.setMaximumSize(new Dimension(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT));
             if (alignRight) {
                 add(trustModelComboBox);
                 add(runStopButton);
@@ -58,9 +61,9 @@ public final class DualSimulationShellPanel extends JPanel {
 
         private void configureButton(JButton button) {
             button.setMargin(new Insets(2, 4, 2, 4));
-            button.setMaximumSize(new Dimension(118, 22));
-            button.setMinimumSize(new Dimension(100, 22));
-            button.setPreferredSize(new Dimension(118, 22));
+            button.setMaximumSize(new Dimension(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT));
+            button.setMinimumSize(new Dimension(100, TOOLBAR_BUTTON_HEIGHT));
+            button.setPreferredSize(new Dimension(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT));
         }
 
         public JButton getNewNetworkButton() {
@@ -112,48 +115,37 @@ public final class DualSimulationShellPanel extends JPanel {
         configureCenterButton(exportButton);
         configureCenterButton(modeSwitchButton);
 
-        JPanel topBar = new JPanel(new GridBagLayout());
+        JPanel topBar = new JPanel(new BorderLayout(0, 4));
         topBar.setOpaque(false);
         topBar.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
 
-        JPanel centerToolbar = new JPanel(new WrapLayout(WrapLayout.CENTER, 4, 4));
+        JPanel centerToolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, TOOLBAR_BUTTON_GAP, 4));
         centerToolbar.setOpaque(false);
         centerToolbar.add(sessionRunButton);
         centerToolbar.add(sessionStopButton);
         centerToolbar.add(exportButton);
         centerToolbar.add(modeSwitchButton);
+        Dimension centerToolbarSize = new Dimension(
+                (TOOLBAR_BUTTON_WIDTH * 4) + (TOOLBAR_BUTTON_GAP * 3),
+                TOOLBAR_BUTTON_HEIGHT + 8);
+        centerToolbar.setMinimumSize(centerToolbarSize);
+        centerToolbar.setPreferredSize(centerToolbarSize);
 
         JPanel primaryContainer = new JPanel(new BorderLayout());
         primaryContainer.setOpaque(false);
         primaryContainer.add(primaryToolbarPanel, BorderLayout.WEST);
 
-        JPanel centerContainer = new JPanel(new BorderLayout());
-        centerContainer.setOpaque(false);
-        centerContainer.add(centerToolbar, BorderLayout.CENTER);
-
         JPanel secondaryContainer = new JPanel(new BorderLayout());
         secondaryContainer.setOpaque(false);
         secondaryContainer.add(secondaryToolbarPanel, BorderLayout.EAST);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridy = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(0, 0, 0, 0);
+        JPanel slotToolbarRow = new JPanel(new BorderLayout());
+        slotToolbarRow.setOpaque(false);
+        slotToolbarRow.add(primaryContainer, BorderLayout.WEST);
+        slotToolbarRow.add(secondaryContainer, BorderLayout.EAST);
 
-        gbc.gridx = 0;
-        gbc.weightx = 1.0;
-        gbc.anchor = GridBagConstraints.WEST;
-        topBar.add(primaryContainer, gbc);
-
-        gbc.gridx = 1;
-        gbc.weightx = 0.0;
-        gbc.anchor = GridBagConstraints.CENTER;
-        topBar.add(centerContainer, gbc);
-
-        gbc.gridx = 2;
-        gbc.weightx = 1.0;
-        gbc.anchor = GridBagConstraints.EAST;
-        topBar.add(secondaryContainer, gbc);
+        topBar.add(centerToolbar, BorderLayout.NORTH);
+        topBar.add(slotToolbarRow, BorderLayout.CENTER);
 
         primaryWorkspacePanel = new DualSimulationWorkspacePanel(SimulationSlot.PRIMARY);
         secondaryWorkspacePanel = new DualSimulationWorkspacePanel(SimulationSlot.SECONDARY);
@@ -202,9 +194,9 @@ public final class DualSimulationShellPanel extends JPanel {
 
     private void configureCenterButton(JButton button) {
         button.setMargin(new Insets(2, 4, 2, 4));
-        button.setMaximumSize(new Dimension(118, 22));
-        button.setMinimumSize(new Dimension(100, 22));
-        button.setPreferredSize(new Dimension(118, 22));
+        button.setMaximumSize(new Dimension(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT));
+        button.setMinimumSize(new Dimension(100, TOOLBAR_BUTTON_HEIGHT));
+        button.setPreferredSize(new Dimension(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT));
         button.setAlignmentX(0.5f);
     }
 }

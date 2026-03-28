@@ -17,8 +17,6 @@ import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
-import javax.swing.JPopupMenu;
-import javax.swing.JMenuItem;
 import javax.swing.JLayeredPane;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -38,6 +36,14 @@ import java.util.Collection;
  * secondary controls into collapsible-ready side/bottom containers.
  */
 public final class DualSimulationWorkspacePanel extends JPanel {
+    private static final double DEFAULT_SETUP_HEIGHT_RATIO = 0.22;
+    private static final double MIN_SETUP_HEIGHT_RATIO = 0.16;
+    private static final double MAX_SETUP_HEIGHT_RATIO = 0.30;
+    private static final double DEFAULT_RESULTS_HEIGHT_RATIO = 0.18;
+    private static final double MIN_RESULTS_HEIGHT_RATIO = 0.12;
+    private static final double MAX_RESULTS_HEIGHT_RATIO = 0.26;
+    private static final int MIN_SECTION_HEIGHT = 96;
+
     public interface LiveControlsListener {
         void onShowIdsChanged(boolean selected);
         void onShowLinksChanged(boolean selected);
@@ -57,7 +63,7 @@ public final class DualSimulationWorkspacePanel extends JPanel {
     private final JPanel headerTopRow;
     private final JButton setupToggleButton;
     private final JButton bottomToggleButton;
-    private final JButton bottomOverflowButton;
+    private final JButton detachResultsButton;
     private final JPanel networkViewportPanel;
     private final JLayeredPane networkOverlayPane;
     private final DualWorkspaceLiveDrawer liveDrawerPanel;
@@ -75,13 +81,15 @@ public final class DualSimulationWorkspacePanel extends JPanel {
     private final JPanel parametersContentPanel;
     private final JTabbedPane bottomTabbedPane;
     private final JTextArea messagesTextArea;
-    private javax.swing.JDialog detachedResultsDialog;
+    private javax.swing.JFrame detachedResultsFrame;
     private boolean restoreBottomExpandedAfterDetach;
     private LiveControlsListener liveControlsListener;
     private boolean setupExpanded = false;
     private boolean bottomExpanded = true;
+    private boolean restoringBottomLayout = false;
     private int rememberedSetupDividerLocation = -1;
     private int rememberedContentDividerLocation = -1;
+    private int rememberedBottomHeight = -1;
     private NetworkPanel networkPanel;
     private Collection<OutcomesPanel> outcomesPanels = new ArrayList<OutcomesPanel>();
 
@@ -98,10 +106,10 @@ public final class DualSimulationWorkspacePanel extends JPanel {
 
         setupToggleButton = new JButton("Hide Setup");
         bottomToggleButton = new JButton("Hide Results");
-        bottomOverflowButton = new JButton("...");
+        detachResultsButton = new JButton("Open Results");
         setupToggleButton.addActionListener(evt -> setSetupExpanded(!setupExpanded));
         bottomToggleButton.addActionListener(evt -> setBottomExpanded(!bottomExpanded));
-        bottomOverflowButton.addActionListener(evt -> showBottomOverflowMenu());
+        detachResultsButton.addActionListener(evt -> openBottomPanelInWindow());
 
         headerTopRow = new JPanel(new BorderLayout());
         headerTopRow.setOpaque(false);
@@ -110,7 +118,7 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         headerActions.setOpaque(false);
         headerActions.add(setupToggleButton);
         headerActions.add(bottomToggleButton);
-        headerActions.add(bottomOverflowButton);
+        headerActions.add(detachResultsButton);
         headerTopRow.add(headerActions, BorderLayout.EAST);
 
         headerPanel = new JPanel();
@@ -199,8 +207,10 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         bottomPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder("Outcomes & Messages"),
                 BorderFactory.createEmptyBorder(2, 2, 2, 2)));
-        bottomPanel.setPreferredSize(new Dimension(420, 180));
+        bottomPanel.setPreferredSize(new Dimension(420, 160));
+        bottomPanel.setMinimumSize(new Dimension(0, MIN_SECTION_HEIGHT));
         bottomTabbedPane = new JTabbedPane();
+        bottomTabbedPane.setMinimumSize(new Dimension(0, MIN_SECTION_HEIGHT));
         messagesTextArea = new JTextArea(8, 32);
         messagesTextArea.setEditable(false);
         bottomTabbedPane.addTab("Messages", new JScrollPane(messagesTextArea));
@@ -211,24 +221,25 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         centerPanel.setOpaque(false);
         contentSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         contentSplitPane.setBorder(BorderFactory.createEmptyBorder());
-        contentSplitPane.setResizeWeight(0.82);
+        contentSplitPane.setResizeWeight(1.0 - DEFAULT_RESULTS_HEIGHT_RATIO);
         contentSplitPane.setContinuousLayout(true);
         contentSplitPane.setTopComponent(networkViewportPanel);
         contentSplitPane.setBottomComponent(bottomPanel);
         contentSplitPane.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, new PropertyChangeListener() {
             @Override
             public void propertyChange(PropertyChangeEvent evt) {
-                if (bottomExpanded && bottomPanel.isVisible()) {
+                if (!restoringBottomLayout && bottomExpanded && bottomPanel.isVisible()) {
                     int dividerLocation = contentSplitPane.getDividerLocation();
                     if (dividerLocation > 0) {
                         rememberedContentDividerLocation = dividerLocation;
+                        rememberCurrentBottomHeight();
                     }
                 }
             }
         });
         setupContentSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         setupContentSplitPane.setBorder(BorderFactory.createEmptyBorder());
-        setupContentSplitPane.setResizeWeight(0.0);
+        setupContentSplitPane.setResizeWeight(DEFAULT_SETUP_HEIGHT_RATIO);
         setupContentSplitPane.setContinuousLayout(true);
         setupContentSplitPane.setTopComponent(drawerPanel);
         setupContentSplitPane.setBottomComponent(contentSplitPane);
@@ -278,6 +289,12 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         return bottomToggleButton;
     }
 
+    public void setWorkspaceChromeEnabled(boolean enabled) {
+        setupToggleButton.setEnabled(enabled);
+        bottomToggleButton.setEnabled(enabled);
+        detachResultsButton.setEnabled(enabled && detachedResultsFrame == null);
+    }
+
     public JComboBox<String> getTrustModelComboBox() {
         return trustModelComboBox;
     }
@@ -296,6 +313,14 @@ public final class DualSimulationWorkspacePanel extends JPanel {
 
     public JButton getResetNetworkButton() {
         return resetNetworkButton;
+    }
+
+    public void setSetupControlsEnabled(boolean enabled) {
+        trustModelComboBox.setEnabled(enabled);
+        newNetworkButton.setEnabled(enabled);
+        loadNetworkButton.setEnabled(enabled);
+        saveNetworkButton.setEnabled(enabled);
+        resetNetworkButton.setEnabled(enabled);
     }
 
     public JTextArea getMessagesTextArea() {
@@ -417,7 +442,7 @@ public final class DualSimulationWorkspacePanel extends JPanel {
 
     private void updateSetupPanelPreferredSize() {
         int panelHeight = getHeight() > 0 ? getHeight() : 760;
-        int preferredHeight = Math.max(180, Math.min(300, (int) Math.round(panelHeight * 0.24)));
+        int preferredHeight = defaultSetupHeight(panelHeight);
         drawerPanel.setPreferredSize(new Dimension(420, preferredHeight));
         drawerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferredHeight));
         drawerPanel.revalidate();
@@ -428,14 +453,17 @@ public final class DualSimulationWorkspacePanel extends JPanel {
             rememberCurrentContentDividerLocation();
         }
         bottomExpanded = expanded;
+        restoringBottomLayout = true;
         contentSplitPane.getBottomComponent().setVisible(expanded);
         contentSplitPane.setDividerSize(expanded ? 8 : 0);
-        if (expanded) {
-            restoreContentDividerLocation();
-        }
-        bottomToggleButton.setText(expanded ? "Hide Results" : "Show Results");
         revalidate();
         repaint();
+        if (expanded) {
+            restoreContentDividerLocation();
+        } else {
+            SwingUtilities.invokeLater(() -> restoringBottomLayout = false);
+        }
+        bottomToggleButton.setText(expanded ? "Hide Results" : "Show Results");
     }
 
     public boolean isSetupExpanded() {
@@ -451,14 +479,13 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         setBottomExpanded(true);
         SwingUtilities.invokeLater(() -> {
             int panelHeight = getHeight() > 0 ? getHeight() : 760;
-            int setupHeight = Math.max(180, Math.min(290, (int) Math.round(panelHeight * 0.23)));
-            int resultsHeight = Math.max(150, Math.min(210, (int) Math.round(panelHeight * 0.20)));
+            int setupHeight = defaultSetupHeight(panelHeight);
+            int resultsHeight = defaultResultsHeight(panelHeight);
             drawerPanel.setPreferredSize(new Dimension(420, setupHeight));
             drawerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, setupHeight));
             rememberedSetupDividerLocation = setupHeight;
-            rememberedContentDividerLocation = Math.max(220, panelHeight - resultsHeight);
             setupContentSplitPane.setDividerLocation(setupHeight);
-            contentSplitPane.setDividerLocation(rememberedContentDividerLocation);
+            applyBottomResultsHeight(resultsHeight);
             revalidate();
             repaint();
         });
@@ -482,33 +509,34 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         parametersContentPanel.repaint();
     }
 
-    private void showBottomOverflowMenu() {
-        JPopupMenu menu = new JPopupMenu();
-        JMenuItem openResultsWindow = new JMenuItem("Open Results In Window");
-        openResultsWindow.addActionListener(evt -> openBottomPanelInWindow());
-        menu.add(openResultsWindow);
-        menu.show(bottomOverflowButton, 0, bottomOverflowButton.getHeight());
-    }
-
     private void openBottomPanelInWindow() {
-        if (detachedResultsDialog != null && detachedResultsDialog.isShowing()) {
-            detachedResultsDialog.toFront();
-            detachedResultsDialog.requestFocus();
+        if (detachedResultsFrame != null && detachedResultsFrame.isShowing()) {
+            detachedResultsFrame.toFront();
+            detachedResultsFrame.requestFocus();
             return;
         }
         Window owner = javax.swing.SwingUtilities.getWindowAncestor(this);
-        detachedResultsDialog = new javax.swing.JDialog(owner, titleLabel.getText() + " Results", java.awt.Dialog.ModalityType.MODELESS);
+        detachedResultsFrame = new javax.swing.JFrame(titleLabel.getText() + " Results");
+        if (owner != null) {
+            detachedResultsFrame.setLocationRelativeTo(owner);
+        }
+        detachedResultsFrame.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        detachedResultsFrame.setResizable(true);
         restoreBottomExpandedAfterDetach = bottomExpanded;
         rememberCurrentContentDividerLocation();
+        restoringBottomLayout = true;
         bottomPanel.remove(bottomTabbedPane);
         bottomExpanded = false;
         bottomToggleButton.setText("Show Results");
+        detachResultsButton.setEnabled(false);
         contentSplitPane.getBottomComponent().setVisible(false);
         contentSplitPane.setDividerSize(0);
-        detachedResultsDialog.setContentPane(bottomTabbedPane);
-        detachedResultsDialog.setSize(720, 420);
-        detachedResultsDialog.setLocationRelativeTo(this);
-        detachedResultsDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+        SwingUtilities.invokeLater(() -> restoringBottomLayout = false);
+        detachedResultsFrame.setContentPane(bottomTabbedPane);
+        detachedResultsFrame.setSize(720, 420);
+        detachedResultsFrame.setMinimumSize(new Dimension(480, 320));
+        detachedResultsFrame.setLocationRelativeTo(this);
+        detachedResultsFrame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
                 restoreDetachedResultsPanel();
@@ -519,16 +547,17 @@ public final class DualSimulationWorkspacePanel extends JPanel {
                 restoreDetachedResultsPanel();
             }
         });
-        detachedResultsDialog.setVisible(true);
+        detachedResultsFrame.setVisible(true);
     }
 
     private void restoreDetachedResultsPanel() {
-        if (detachedResultsDialog == null) {
+        if (detachedResultsFrame == null) {
             return;
         }
         if (bottomTabbedPane.getParent() != bottomPanel) {
             bottomPanel.add(bottomTabbedPane, BorderLayout.CENTER);
         }
+        detachResultsButton.setEnabled(true);
         bottomPanel.revalidate();
         bottomPanel.repaint();
         revalidate();
@@ -536,7 +565,7 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         if (restoreBottomExpandedAfterDetach) {
             SwingUtilities.invokeLater(() -> setBottomExpanded(true));
         }
-        detachedResultsDialog = null;
+        detachedResultsFrame = null;
     }
 
     private void rememberCurrentSetupDividerLocation() {
@@ -550,13 +579,25 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         int dividerLocation = contentSplitPane.getDividerLocation();
         if (dividerLocation > 0) {
             rememberedContentDividerLocation = dividerLocation;
+            rememberCurrentBottomHeight();
+        }
+    }
+
+    private void rememberCurrentBottomHeight() {
+        int splitHeight = contentSplitPane.getHeight();
+        int dividerLocation = contentSplitPane.getDividerLocation();
+        if (splitHeight > 0 && dividerLocation >= 0 && dividerLocation <= splitHeight) {
+            int currentBottomHeight = splitHeight - dividerLocation;
+            if (currentBottomHeight > 0) {
+                rememberedBottomHeight = currentBottomHeight;
+            }
         }
     }
 
     private void restoreSetupDividerLocation() {
         SwingUtilities.invokeLater(() -> {
             int panelHeight = getHeight() > 0 ? getHeight() : 760;
-            int fallbackHeight = Math.max(180, Math.min(300, (int) Math.round(panelHeight * 0.24)));
+            int fallbackHeight = defaultSetupHeight(panelHeight);
             int dividerLocation = rememberedSetupDividerLocation > 0 ? rememberedSetupDividerLocation : fallbackHeight;
             setupContentSplitPane.setDividerLocation(dividerLocation);
         });
@@ -564,10 +605,65 @@ public final class DualSimulationWorkspacePanel extends JPanel {
 
     private void restoreContentDividerLocation() {
         SwingUtilities.invokeLater(() -> {
-            int panelHeight = getHeight() > 0 ? getHeight() : 760;
-            int fallbackLocation = Math.max(220, panelHeight - Math.max(150, Math.min(210, (int) Math.round(panelHeight * 0.20))));
-            int dividerLocation = rememberedContentDividerLocation > 0 ? rememberedContentDividerLocation : fallbackLocation;
-            contentSplitPane.setDividerLocation(dividerLocation);
+            SwingUtilities.invokeLater(() -> {
+                int splitHeight = contentSplitPane.getHeight() > 0 ? contentSplitPane.getHeight() : 0;
+                int dividerLocation;
+                if (splitHeight > 0 && rememberedBottomHeight > 0) {
+                    int restoredBottomHeight = Math.min(splitHeight - 1, Math.max(MIN_SECTION_HEIGHT, rememberedBottomHeight));
+                    dividerLocation = Math.max(0, splitHeight - restoredBottomHeight);
+                } else if (splitHeight > 0) {
+                    dividerLocation = Math.max(0, splitHeight - defaultResultsHeight(splitHeight));
+                } else {
+                    int panelHeight = getHeight() > 0 ? getHeight() : 760;
+                    dividerLocation = Math.max(0, panelHeight - defaultResultsHeight(panelHeight));
+                }
+                contentSplitPane.setDividerLocation(dividerLocation);
+                rememberCurrentBottomHeight();
+                restoringBottomLayout = false;
+            });
         });
+    }
+
+    private int defaultResultsHeight(int availableHeight) {
+        return scaledSectionHeight(
+                availableHeight,
+                DEFAULT_RESULTS_HEIGHT_RATIO,
+                MIN_RESULTS_HEIGHT_RATIO,
+                MAX_RESULTS_HEIGHT_RATIO);
+    }
+
+    private void applyBottomResultsHeight(int resultsHeight) {
+        SwingUtilities.invokeLater(() -> {
+            int splitHeight = contentSplitPane.getHeight();
+            if (splitHeight <= 0) {
+                splitHeight = Math.max(availableContentHeightFallback(), resultsHeight + 220);
+            }
+            rememberedBottomHeight = resultsHeight;
+            rememberedContentDividerLocation = Math.max(0, splitHeight - resultsHeight);
+            contentSplitPane.setDividerLocation(rememberedContentDividerLocation);
+        });
+    }
+
+    private int availableContentHeightFallback() {
+        int panelHeight = getHeight() > 0 ? getHeight() : 760;
+        int setupHeight = drawerPanel.isVisible() ? drawerPanel.getPreferredSize().height : 0;
+        int headerHeight = headerPanel.getPreferredSize() != null ? headerPanel.getPreferredSize().height : 0;
+        int gaps = 16;
+        return Math.max(220, panelHeight - setupHeight - headerHeight - gaps);
+    }
+
+    private int defaultSetupHeight(int availableHeight) {
+        return scaledSectionHeight(
+                availableHeight,
+                DEFAULT_SETUP_HEIGHT_RATIO,
+                MIN_SETUP_HEIGHT_RATIO,
+                MAX_SETUP_HEIGHT_RATIO);
+    }
+
+    private int scaledSectionHeight(int availableHeight, double defaultRatio, double minRatio, double maxRatio) {
+        int defaultHeight = (int) Math.round(availableHeight * defaultRatio);
+        int minHeight = Math.max(MIN_SECTION_HEIGHT, (int) Math.round(availableHeight * minRatio));
+        int maxHeight = Math.max(minHeight + 24, (int) Math.round(availableHeight * maxRatio));
+        return Math.max(minHeight, Math.min(maxHeight, defaultHeight));
     }
 }
