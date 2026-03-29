@@ -133,6 +133,7 @@ public final class MainWindowTrustModelController {
                     + ((context.getCurrentNetworkPanel() == null) ? "null"
                     : context.getCurrentNetworkPanel().getClass().getSimpleName() + "#" + System.identityHashCode(context.getCurrentNetworkPanel())));
             context.updateParametersSourceView();
+            context.refreshSingleScenarioHeaderFromCurrentSelection();
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "Model switch failed", ex);
             JOptionPane.showMessageDialog(context.window(), ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);

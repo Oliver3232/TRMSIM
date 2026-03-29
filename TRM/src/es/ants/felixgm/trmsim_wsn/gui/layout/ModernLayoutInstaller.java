@@ -36,8 +36,8 @@ public final class ModernLayoutInstaller {
 
     public static void install(
             JFrame frame,
-            javax.swing.JButton newWSNButton, javax.swing.JButton loadWSNButton, javax.swing.JButton saveWSNButton,
-            javax.swing.JButton resetWSNButton, javax.swing.JButton runTRMButton, javax.swing.JButton stopTRMButton,
+            javax.swing.JButton newWSNButton, javax.swing.JButton importScenarioButton, javax.swing.JButton loadScenarioButton, javax.swing.JButton loadWSNButton, javax.swing.JButton saveWSNButton, javax.swing.JButton resetWSNButton, javax.swing.JButton saveScenarioButton,
+            javax.swing.JButton runTRMButton, javax.swing.JButton stopTRMButton,
             javax.swing.JButton runSimulationsButton, javax.swing.JButton stopSimulationsButton, javax.swing.JButton exportDataButton,
             javax.swing.JButton modeSwitchButton,
             JLabel TRModelLabel, JComboBox TRModelComboBox,
@@ -61,13 +61,16 @@ public final class ModernLayoutInstaller {
         frame.setLayout(new BorderLayout());
 
         frame.add(createTopHeader(
-                newWSNButton, loadWSNButton, saveWSNButton, resetWSNButton,
+                newWSNButton, importScenarioButton, loadScenarioButton, loadWSNButton, saveWSNButton, resetWSNButton,
                 runTRMButton, stopTRMButton, runSimulationsButton, stopSimulationsButton, exportDataButton,
                 modeSwitchButton,
                 TRModelLabel, TRModelComboBox
         ), BorderLayout.NORTH);
 
         frame.add(createLeftSettingsPane(
+                importScenarioButton,
+                loadScenarioButton,
+                saveScenarioButton,
                 minNumSensorsLabel, minNumSensorsSpinner, maxNumSensorsLabel, maxNumSensorsSpinner,
                 radioRangeLabel, radioRangeSlider, radioRangeTextField,
                 percentageClientsLabel, percentageClientsSlider, percentageClientsTextField,
@@ -90,7 +93,7 @@ public final class ModernLayoutInstaller {
     }
 
     private static JPanel createTopHeader(
-            javax.swing.JButton newWSNButton, javax.swing.JButton loadWSNButton, javax.swing.JButton saveWSNButton,
+            javax.swing.JButton newWSNButton, javax.swing.JButton importScenarioButton, javax.swing.JButton loadScenarioButton, javax.swing.JButton loadWSNButton, javax.swing.JButton saveWSNButton,
             javax.swing.JButton resetWSNButton, javax.swing.JButton runTRMButton, javax.swing.JButton stopTRMButton,
             javax.swing.JButton runSimulationsButton, javax.swing.JButton stopSimulationsButton, javax.swing.JButton exportDataButton,
             javax.swing.JButton modeSwitchButton,
@@ -134,6 +137,9 @@ public final class ModernLayoutInstaller {
     }
 
     private static JPanel createLeftSettingsPane(
+            javax.swing.JButton importScenarioButton,
+            javax.swing.JButton loadScenarioButton,
+            javax.swing.JButton saveScenarioButton,
             JLabel minNumSensorsLabel, JSpinner minNumSensorsSpinner, JLabel maxNumSensorsLabel, JSpinner maxNumSensorsSpinner,
             JLabel radioRangeLabel, JSlider radioRangeSlider, JTextField radioRangeTextField,
             JLabel percentageClientsLabel, JSlider percentageClientsSlider, JTextField percentageClientsTextField,
@@ -156,6 +162,7 @@ public final class ModernLayoutInstaller {
 
         JTabbedPane settingsTabs = new JTabbedPane();
         settingsTabs.addTab("Simulation Settings", createSettingsScroll(
+                saveScenarioButton,
                 minNumSensorsLabel, minNumSensorsSpinner, maxNumSensorsLabel, maxNumSensorsSpinner,
                 radioRangeLabel, radioRangeSlider, radioRangeTextField,
                 percentageClientsLabel, percentageClientsSlider, percentageClientsTextField,
@@ -182,12 +189,25 @@ public final class ModernLayoutInstaller {
         leftSplit.setResizeWeight(0.62);
         leftSplit.setTopComponent(settingsTabs);
         messagePanel.setBorder(BorderFactory.createTitledBorder("Console Log"));
-        leftSplit.setBottomComponent(messagePanel);
+        JPanel consoleSection = new JPanel(new BorderLayout(0, 8));
+        consoleSection.setOpaque(false);
+        JPanel scenarioActions = new JPanel(new WrapLayout(WrapLayout.LEFT, 8, 0));
+        scenarioActions.setOpaque(false);
+        configureActionButton(importScenarioButton);
+        configureActionButton(loadScenarioButton);
+        configureActionButton(saveScenarioButton);
+        scenarioActions.add(importScenarioButton);
+        scenarioActions.add(loadScenarioButton);
+        scenarioActions.add(saveScenarioButton);
+        consoleSection.add(scenarioActions, BorderLayout.NORTH);
+        consoleSection.add(messagePanel, BorderLayout.CENTER);
+        leftSplit.setBottomComponent(consoleSection);
         sidebar.add(leftSplit, BorderLayout.CENTER);
         return sidebar;
     }
 
     private static JScrollPane createSettingsScroll(
+            javax.swing.JButton saveScenarioButton,
             JLabel minNumSensorsLabel, JSpinner minNumSensorsSpinner, JLabel maxNumSensorsLabel, JSpinner maxNumSensorsSpinner,
             JLabel radioRangeLabel, JSlider radioRangeSlider, JTextField radioRangeTextField,
             JLabel percentageClientsLabel, JSlider percentageClientsSlider, JTextField percentageClientsTextField,
@@ -253,6 +273,12 @@ public final class ModernLayoutInstaller {
         ));
         centerSplit.setBottomComponent(createChartsContainer(outcomesPanelsPanel, outcomesTabbedPane));
         return centerSplit;
+    }
+
+    private static void configureActionButton(javax.swing.JButton button) {
+        button.setPreferredSize(new Dimension(150, 25));
+        button.setMinimumSize(new Dimension(120, 25));
+        button.setMaximumSize(new Dimension(150, 25));
     }
 
     private static JPanel createMapContainer(

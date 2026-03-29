@@ -17,6 +17,11 @@ public final class MainWindowAssemblyController {
         MainWindowFrameSetup.configure(window);
 
         window.exportDataButton = new javax.swing.JButton();
+        window.importScenarioButton = new javax.swing.JButton();
+        window.saveScenarioButton = new javax.swing.JButton();
+        window.loadScenarioButton = new javax.swing.JButton();
+        window.activeScenarioLabel = new javax.swing.JLabel();
+        window.activeScenarioDescriptionTextArea = new javax.swing.JTextArea();
         MainWindowControlsSection.configure(
                 window,
                 window.controlsScrollPane,
@@ -28,12 +33,17 @@ public final class MainWindowAssemblyController {
                 window.resetWSNButton,
                 window.runTRMButton,
                 window.stopTRMButton,
+                window.importScenarioButton,
+                window.saveScenarioButton,
+                window.loadScenarioButton,
                 window.loadWSNButton,
                 window.saveWSNButton,
                 window.stopSimulationsButton,
                 window.runSimulationsButton,
                 window.modeSwitchButton,
                 window.exportDataButton,
+                window.activeScenarioLabel,
+                window.activeScenarioDescriptionTextArea,
                 window.spinnersControlPanel,
                 window.numExecutionsLabel,
                 window.numExecutionsSpinner,

@@ -42,12 +42,17 @@ public final class MainWindowControlsSection {
             JButton resetWSNButton,
             JButton runTRMButton,
             JButton stopTRMButton,
+            JButton importScenarioButton,
+            JButton saveScenarioButton,
+            JButton loadScenarioButton,
             JButton loadWSNButton,
             JButton saveWSNButton,
             JButton stopSimulationsButton,
             JButton runSimulationsButton,
             JButton modeSwitchButton,
             JButton exportDataButton,
+            JLabel activeScenarioLabel,
+            javax.swing.JTextArea activeScenarioDescriptionTextArea,
             JPanel spinnersControlPanel,
             JLabel numExecutionsLabel,
             JSpinner numExecutionsSpinner,
@@ -104,10 +109,16 @@ public final class MainWindowControlsSection {
         legendLabel.setText("Legend");
         legendLabel.setPreferredSize(new java.awt.Dimension(100, 15));
 
-        buttonsControlPanel.setMinimumSize(new java.awt.Dimension(250, 140));
-        buttonsControlPanel.setLayout(new GridLayout(5, 2, 5, 5));
+        buttonsControlPanel.setMinimumSize(new java.awt.Dimension(250, 210));
+        buttonsControlPanel.setLayout(new GridLayout(7, 2, 5, 5));
         configureButton(newWSNButton, "New WSN", evt -> MainWindowActionController.createNewNetwork(window), false);
         buttonsControlPanel.add(newWSNButton);
+        configureButton(importScenarioButton, "Import Scenario", evt -> MainWindowActionController.importScenario(window), false);
+        buttonsControlPanel.add(importScenarioButton);
+        configureButton(saveScenarioButton, "Save Scenario", evt -> MainWindowActionController.saveScenario(window), false);
+        buttonsControlPanel.add(saveScenarioButton);
+        configureButton(loadScenarioButton, "Load Scenario", evt -> MainWindowActionController.loadScenario(window), false);
+        buttonsControlPanel.add(loadScenarioButton);
         configureButton(resetWSNButton, "Reset WSN", evt -> MainWindowActionController.resetCurrentNetwork(window), true);
         buttonsControlPanel.add(resetWSNButton);
         configureButton(runTRMButton, "Run T&R Model", evt -> MainWindowActionController.runSingle(window, evt), true);
@@ -125,6 +136,21 @@ public final class MainWindowControlsSection {
         buttonsControlPanel.add(exportDataButton);
         configureButton(modeSwitchButton, "Dual Mode", evt -> window.switchAppMode(es.ants.felixgm.trmsim_wsn.gui.AppMode.DUAL), false);
 
+        JPanel activeScenarioPanel = new JPanel(new BorderLayout(0, 4));
+        activeScenarioPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Active Scenario"));
+        activeScenarioPanel.setOpaque(false);
+        activeScenarioLabel.setText("Scenario: Custom Configuration");
+        activeScenarioLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        activeScenarioDescriptionTextArea.setText("Settings were entered manually. Use Load Scenario to apply a bundled predefined profile.");
+        activeScenarioDescriptionTextArea.setEditable(false);
+        activeScenarioDescriptionTextArea.setLineWrap(true);
+        activeScenarioDescriptionTextArea.setWrapStyleWord(true);
+        activeScenarioDescriptionTextArea.setRows(3);
+        activeScenarioDescriptionTextArea.setOpaque(false);
+        activeScenarioDescriptionTextArea.setAlignmentX(0.5F);
+        activeScenarioPanel.add(activeScenarioLabel, BorderLayout.NORTH);
+        activeScenarioPanel.add(activeScenarioDescriptionTextArea, BorderLayout.CENTER);
+
         spinnersControlPanel.setPreferredSize(new java.awt.Dimension(100, 205));
         spinnersControlPanel.setLayout(new javax.swing.BoxLayout(spinnersControlPanel, javax.swing.BoxLayout.Y_AXIS));
         configureSpinnerLabel(numExecutionsLabel, "Num executions");
@@ -133,6 +159,7 @@ public final class MainWindowControlsSection {
         numExecutionsSpinner.setAlignmentX(0.0F);
         numExecutionsSpinner.setPreferredSize(new java.awt.Dimension(100, 20));
         NumericInputBindingHelper.configureIntegerSpinner(numExecutionsSpinner);
+        numExecutionsSpinner.addChangeListener(evt -> MainWindowActionController.invalidateScenarioSelection(window));
         spinnersControlPanel.add(numExecutionsSpinner);
         configureSpinnerLabel(numNetworksLabel, "Num networks");
         spinnersControlPanel.add(numNetworksLabel);
@@ -140,6 +167,7 @@ public final class MainWindowControlsSection {
         numNetworksSpinner.setAlignmentX(0.0F);
         numNetworksSpinner.setPreferredSize(new java.awt.Dimension(100, 20));
         NumericInputBindingHelper.configureIntegerSpinner(numNetworksSpinner);
+        numNetworksSpinner.addChangeListener(evt -> MainWindowActionController.invalidateScenarioSelection(window));
         spinnersControlPanel.add(numNetworksSpinner);
         configureSpinnerLabel(minNumSensorsLabel, "Min Num Sensors");
         spinnersControlPanel.add(minNumSensorsLabel);
@@ -147,7 +175,10 @@ public final class MainWindowControlsSection {
         minNumSensorsSpinner.setAlignmentX(0.0F);
         minNumSensorsSpinner.setPreferredSize(new java.awt.Dimension(100, 20));
         NumericInputBindingHelper.configureIntegerSpinner(minNumSensorsSpinner);
-        minNumSensorsSpinner.addChangeListener(evt -> MainWindowConfigurationController.alignMinSensors(MainWindowHosts.configuration(window)));
+        minNumSensorsSpinner.addChangeListener(evt -> {
+            MainWindowConfigurationController.alignMinSensors(MainWindowHosts.configuration(window));
+            MainWindowActionController.invalidateScenarioSelection(window);
+        });
         spinnersControlPanel.add(minNumSensorsSpinner);
         configureSpinnerLabel(maxNumSensorsLabel, "Max Num Sensors");
         spinnersControlPanel.add(maxNumSensorsLabel);
@@ -155,26 +186,40 @@ public final class MainWindowControlsSection {
         maxNumSensorsSpinner.setAlignmentX(0.0F);
         maxNumSensorsSpinner.setPreferredSize(new java.awt.Dimension(100, 20));
         NumericInputBindingHelper.configureIntegerSpinner(maxNumSensorsSpinner);
-        maxNumSensorsSpinner.addChangeListener(evt -> MainWindowConfigurationController.alignMaxSensors(MainWindowHosts.configuration(window)));
+        maxNumSensorsSpinner.addChangeListener(evt -> {
+            MainWindowConfigurationController.alignMaxSensors(MainWindowHosts.configuration(window));
+            MainWindowActionController.invalidateScenarioSelection(window);
+        });
         spinnersControlPanel.add(maxNumSensorsSpinner);
 
         slidersControlsPanel.setLayout(new java.awt.GridBagLayout());
         addLabeledSlider(slidersControlsPanel, percentageClientsLabel, "% Clients", 0, percentageClientsSlider, 15, percentageClientsTextField);
         NumericInputBindingHelper.bindSliderAndField(percentageClientsSlider, percentageClientsTextField);
+        percentageClientsSlider.addChangeListener(evt -> MainWindowActionController.invalidateScenarioSelection(window));
         addLabeledSlider(slidersControlsPanel, percentageRelayServersLabel, "% Relay Servers", 2, percentageRelayServersSlider, 5, percentageRelayServersTextField);
         NumericInputBindingHelper.bindSliderAndField(percentageRelayServersSlider, percentageRelayServersTextField);
+        percentageRelayServersSlider.addChangeListener(evt -> MainWindowActionController.invalidateScenarioSelection(window));
         addLabeledSlider(slidersControlsPanel, percentageMaliciousServersLabel, "% Malicious Servers", 4, percentageMaliciousServersSlider, 70, percentageMaliciousServersTextField);
         NumericInputBindingHelper.bindSliderAndField(percentageMaliciousServersSlider, percentageMaliciousServersTextField);
+        percentageMaliciousServersSlider.addChangeListener(evt -> MainWindowActionController.invalidateScenarioSelection(window));
         addLabeledSlider(slidersControlsPanel, radioRangeLabel, "Radio Range", 6, radioRangeSlider, 12, radioRangeTextField);
         NumericInputBindingHelper.bindSliderAndField(radioRangeSlider, radioRangeTextField);
-        radioRangeSlider.addChangeListener(evt -> MainWindowConfigurationController.onRadioRangeChanged(MainWindowHosts.configuration(window)));
+        radioRangeSlider.addChangeListener(evt -> {
+            MainWindowConfigurationController.onRadioRangeChanged(MainWindowHosts.configuration(window));
+            MainWindowActionController.invalidateScenarioSelection(window);
+        });
         addLabeledSlider(slidersControlsPanel, delayLabel, "Delay", 8, delaySlider, 0, delayTextField);
         NumericInputBindingHelper.bindSliderAndField(delaySlider, delayTextField);
         delaySlider.addChangeListener(evt -> MainWindowConfigurationController.onDelayChanged(MainWindowHosts.configuration(window)));
 
         trModelLabel.setText("Trust & Reputation Model");
         trModelComboBox.setPreferredSize(new java.awt.Dimension(140, 25));
-        trModelComboBox.addItemListener(evt -> MainWindowTrustModelController.handleSelection(new MainWindowContext(window), evt, Logger.getLogger(TRMSim_WSN.class.getName())));
+        trModelComboBox.addItemListener(evt -> {
+            MainWindowTrustModelController.handleSelection(new MainWindowContext(window), evt, Logger.getLogger(TRMSim_WSN.class.getName()));
+            if (evt.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
+                MainWindowActionController.invalidateScenarioSelection(window);
+            }
+        });
 
         displayControlsPanel.setLayout(new javax.swing.BoxLayout(displayControlsPanel, javax.swing.BoxLayout.Y_AXIS));
         configureDisplayCheckBox(showIdsCheckBox, "Show ids", false, evt -> MainWindowActionController.toggleDisplay(window, showIdsCheckBox, "Ids"));
@@ -189,10 +234,13 @@ public final class MainWindowControlsSection {
 
         threatsControlsPanel.setLayout(new javax.swing.BoxLayout(threatsControlsPanel, javax.swing.BoxLayout.Y_AXIS));
         configureThreatCheckBox(collusionCheckBox, "Collusion");
+        collusionCheckBox.addItemListener(evt -> MainWindowActionController.invalidateScenarioSelection(window));
         threatsControlsPanel.add(collusionCheckBox);
         configureThreatCheckBox(oscillatingWSNsCheckBox, "Oscillating WSNs");
+        oscillatingWSNsCheckBox.addItemListener(evt -> MainWindowActionController.invalidateScenarioSelection(window));
         threatsControlsPanel.add(oscillatingWSNsCheckBox);
         configureThreatCheckBox(dynamicWSNsCheckBox, "Dynamic WSNs");
+        dynamicWSNsCheckBox.addItemListener(evt -> MainWindowActionController.invalidateScenarioSelection(window));
         threatsControlsPanel.add(dynamicWSNsCheckBox);
 
         GroupLayout controlsPanelLayout = new GroupLayout(controlsPanel);
@@ -208,6 +256,7 @@ public final class MainWindowControlsSection {
                                                 .addGroup(controlsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
                                                         .addComponent(legendPanelContainer, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                                                         .addComponent(legendLabel, GroupLayout.PREFERRED_SIZE, 100, GroupLayout.PREFERRED_SIZE)))
+                                        .addComponent(activeScenarioPanel, GroupLayout.PREFERRED_SIZE, 365, GroupLayout.PREFERRED_SIZE)
                                         .addComponent(trModelLabel)
                                         .addComponent(trModelComboBox, GroupLayout.PREFERRED_SIZE, 140, GroupLayout.PREFERRED_SIZE)
                                         .addGroup(controlsPanelLayout.createSequentialGroup()
@@ -235,6 +284,8 @@ public final class MainWindowControlsSection {
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                                 .addComponent(legendPanelContainer, GroupLayout.DEFAULT_SIZE, 81, Short.MAX_VALUE))
                                         .addComponent(buttonsControlPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(activeScenarioPanel, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addGroup(controlsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING, false)
                                         .addComponent(spinnersControlPanel, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)

@@ -34,6 +34,8 @@ public final class MainWindowInitializationController {
         void updateRunSimulationsControls();
         List<MiniLegendPanel.Item> createLegendItems();
         void syncEmbeddedAndFullscreenDisplayControls();
+        boolean isSingleSimulationActive();
+        java.awt.Component getWindowComponent();
         void initializeTRModels();
         void setController(Controller controller);
         void setSimulationService(SimulationApplicationService service);
@@ -119,6 +121,21 @@ public final class MainWindowInitializationController {
             @Override
             public void onDelayChanged(int value) {
                 host.getDelaySlider().setValue(value);
+            }
+        });
+        graphWorkspace.setFullscreenAccessGuard(new SimulationGraphWorkspace.FullscreenAccessGuard() {
+            @Override
+            public boolean canToggleFullscreen() {
+                return !host.isSingleSimulationActive();
+            }
+
+            @Override
+            public void onFullscreenBlocked() {
+                javax.swing.JOptionPane.showMessageDialog(
+                        host.getWindowComponent(),
+                        "Stop the active T&R simulation before opening fullscreen mode.",
+                        "Fullscreen Blocked",
+                        javax.swing.JOptionPane.WARNING_MESSAGE);
             }
         });
         return graphWorkspace;

@@ -7,6 +7,11 @@ import es.ants.felixgm.trmsim_wsn.gui.network.NetworkFileHelper;
 import es.ants.felixgm.trmsim_wsn.gui.network.WirelessSensorNetworkHelper;
 import es.ants.felixgm.trmsim_wsn.gui.support.SimulationUiHelper;
 import es.ants.felixgm.trmsim_wsn.network.Network;
+import es.ants.felixgm.trmsim_wsn.scenario.ScenarioDefinition;
+import es.ants.felixgm.trmsim_wsn.scenario.ScenarioFileHelper;
+import es.ants.felixgm.trmsim_wsn.scenario.PredefinedScenarioLoader;
+import es.ants.felixgm.trmsim_wsn.scenario.ScenarioSelectionHelper;
+import es.ants.felixgm.trmsim_wsn.scenario.ScenarioUiBindingHelper;
 import java.io.File;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -35,6 +40,36 @@ public final class MainWindowSimulationController {
         if (selectedFile != null) {
             saveCurrentNetwork(context, selectedFile);
         }
+    }
+
+    public static void saveScenario(MainWindowContext context) throws Exception {
+        if (ScenarioFileHelper.saveScenario(
+                context.window(),
+                context.getSelectedTrustModelName(),
+                context.buildBatchSimulationConfig())) {
+            context.prependMessage("Scenario saved successfully\n");
+        }
+    }
+
+    public static void loadScenario(MainWindowContext context) throws Exception {
+        ScenarioDefinition scenario = ScenarioSelectionHelper.chooseScenario(context.window());
+        if (scenario == null) {
+            return;
+        }
+        ScenarioUiBindingHelper.applyToMainWindow(context, scenario);
+        createNewNetwork(context);
+        context.prependMessage("Predefined scenario loaded: " + scenario.getDisplayName() + "\n");
+    }
+
+    public static void importScenario(MainWindowContext context) throws Exception {
+        File selectedFile = ScenarioFileHelper.chooseScenarioFile(context.window(), ".", "Import Scenario", JFileChooser.OPEN_DIALOG);
+        if (selectedFile == null) {
+            return;
+        }
+        ScenarioDefinition scenario = ScenarioFileHelper.loadScenarioFromFile(selectedFile);
+        ScenarioUiBindingHelper.applyToMainWindow(context, scenario);
+        createNewNetwork(context);
+        context.prependMessage("Scenario imported: " + scenario.getDisplayName() + "\n");
     }
 
     public static void runBatch(MainWindowContext context) throws Exception {
@@ -81,6 +116,9 @@ public final class MainWindowSimulationController {
 
     public static void finishSimulationUi(MainWindowContext context) {
         context.setSingleSimulationStartPending(false);
+        if (context.getGraphWorkspace() != null) {
+            context.getGraphWorkspace().setFullscreenInteractionLocked(false);
+        }
         SimulationUiHelper.finishSimulationUi(
                 context::resetBatchSimulationState,
                 () -> context.setSimulationComponentsEnabled(false),
@@ -90,10 +128,14 @@ public final class MainWindowSimulationController {
                 context.getStopSimulationsMenuItem(),
                 context.getMessagesTextArea());
         restoreSingleRunAvailability(context);
+        context.updateRunSimulationsControls();
     }
 
     public static void handleSimulationFailure(MainWindowContext context, Exception exception) {
         context.setSingleSimulationStartPending(false);
+        if (context.getGraphWorkspace() != null) {
+            context.getGraphWorkspace().setFullscreenInteractionLocked(false);
+        }
         SimulationUiHelper.handleSimulationFailure(
                 context.window(),
                 exception,
@@ -105,6 +147,7 @@ public final class MainWindowSimulationController {
                 context.getStopSimulationsButton(),
                 context.getStopSimulationsMenuItem());
         restoreSingleRunAvailability(context);
+        context.updateRunSimulationsControls();
     }
 
     public static void prepareEditableParametersForExecution(MainWindowContext context) throws Exception {
@@ -121,6 +164,7 @@ public final class MainWindowSimulationController {
     private static void loadSelectedNetwork(MainWindowContext context, File selectedFile) throws Exception {
         Network network = NetworkFileHelper.loadSelectedNetwork(context.window(), context.getSimulationService(), selectedFile.getCanonicalPath());
         if (network != null) {
+            ScenarioUiBindingHelper.updateSingleScenarioSummary(context, PredefinedScenarioLoader.customScenarioPlaceholder());
             context.paintNetwork(network, context.getController().get_requiredService());
             context.getSaveWsnButton().setEnabled(true);
             context.getSaveWsnMenuItem().setEnabled(true);
@@ -196,6 +240,9 @@ public final class MainWindowSimulationController {
         context.getRunTrmMenuItem().setText("Stop T&R Model");
         context.getStopTrmButton().setEnabled(true);
         context.getStopTrmMenuItem().setEnabled(true);
+        if (context.getGraphWorkspace() != null) {
+            context.getGraphWorkspace().setFullscreenInteractionLocked(true);
+        }
         SimulationUiHelper.resetOutcomePanels(context.getOutcomesPanels());
         context.getSimulationService().runSimulation(context.window(), context.buildSimulationConfig());
     }
@@ -203,6 +250,9 @@ public final class MainWindowSimulationController {
     private static void stopRunningSimulations(MainWindowContext context, boolean resetBatchStateOnStop, boolean disableSingleStopControls, boolean disableBatchStopControls) throws Exception {
         context.getController().stopSimulations();
         context.setSingleSimulationStartPending(false);
+        if (context.getGraphWorkspace() != null) {
+            context.getGraphWorkspace().setFullscreenInteractionLocked(false);
+        }
         if (resetBatchStateOnStop) {
             context.resetBatchSimulationState();
         }
@@ -216,6 +266,7 @@ public final class MainWindowSimulationController {
             context.getStopSimulationsMenuItem().setEnabled(false);
         }
         restoreSingleRunAvailability(context);
+        context.updateRunSimulationsControls();
     }
 
     private static void restoreSingleRunAvailability(MainWindowContext context) {

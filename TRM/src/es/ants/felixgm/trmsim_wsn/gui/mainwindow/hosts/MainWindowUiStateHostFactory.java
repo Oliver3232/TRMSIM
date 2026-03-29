@@ -16,8 +16,11 @@ public final class MainWindowUiStateHostFactory {
             public javax.swing.JMenuItem getResetWsnMenuItem() { return context.getResetWsnMenuItem(); }
             public javax.swing.AbstractButton getSaveWsnButton() { return context.getSaveWsnButton(); }
             public javax.swing.JMenuItem getSaveWsnMenuItem() { return context.getSaveWsnMenuItem(); }
+            public javax.swing.AbstractButton getSaveScenarioButton() { return context.getSaveScenarioButton(); }
             public javax.swing.AbstractButton getRunSimulationsButton() { return context.getRunSimulationsButton(); }
             public javax.swing.JMenuItem getRunSimulationsMenuItem() { return context.getRunSimulationsMenuItem(); }
+            public javax.swing.AbstractButton getImportScenarioButton() { return context.getImportScenarioButton(); }
+            public javax.swing.AbstractButton getLoadScenarioButton() { return context.getLoadScenarioButton(); }
             public javax.swing.AbstractButton getLoadWsnButton() { return context.getLoadWsnButton(); }
             public javax.swing.JMenuItem getLoadWsnMenuItem() { return context.getLoadWsnMenuItem(); }
             public javax.swing.AbstractButton getNewWsnButton() { return context.getNewWsnButton(); }

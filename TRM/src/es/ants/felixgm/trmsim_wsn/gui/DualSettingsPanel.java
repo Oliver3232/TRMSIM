@@ -19,7 +19,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 
-final class DualSettingsPanel extends JPanel {
+public final class DualSettingsPanel extends JPanel {
     private final JSpinner minSensorsSpinner;
     private final JSpinner maxSensorsSpinner;
     private final JSpinner networksSpinner;
@@ -35,6 +35,8 @@ final class DualSettingsPanel extends JPanel {
     private final JCheckBox dynamicCheckBox;
     private final JCheckBox oscillatingCheckBox;
     private final JCheckBox collusionCheckBox;
+    private Runnable scenarioDirtyListener;
+    private boolean scenarioSyncInProgress = false;
 
     private static final Dimension LABEL_SIZE = new Dimension(110, 20);
     private static final Dimension SPINNER_SIZE = new Dimension(84, 22);
@@ -69,12 +71,27 @@ final class DualSettingsPanel extends JPanel {
         NumericInputBindingHelper.configureIntegerSpinner(networksSpinner);
         NumericInputBindingHelper.configureIntegerSpinner(executionsSpinner);
 
-        minSensorsSpinner.addChangeListener(evt -> alignMinMax(true));
-        maxSensorsSpinner.addChangeListener(evt -> alignMinMax(false));
+        minSensorsSpinner.addChangeListener(evt -> {
+            alignMinMax(true);
+            notifyScenarioDirty();
+        });
+        maxSensorsSpinner.addChangeListener(evt -> {
+            alignMinMax(false);
+            notifyScenarioDirty();
+        });
+        networksSpinner.addChangeListener(evt -> notifyScenarioDirty());
+        executionsSpinner.addChangeListener(evt -> notifyScenarioDirty());
         NumericInputBindingHelper.bindSliderAndField(clientsSlider, clientsValue);
         NumericInputBindingHelper.bindSliderAndField(relaySlider, relayValue);
         NumericInputBindingHelper.bindSliderAndField(maliciousSlider, maliciousValue);
         NumericInputBindingHelper.bindSliderAndField(radioRangeSliderLocal, radioRangeValue);
+        clientsSlider.addChangeListener(evt -> notifyScenarioDirty());
+        relaySlider.addChangeListener(evt -> notifyScenarioDirty());
+        maliciousSlider.addChangeListener(evt -> notifyScenarioDirty());
+        radioRangeSliderLocal.addChangeListener(evt -> notifyScenarioDirty());
+        dynamicCheckBox.addItemListener(evt -> notifyScenarioDirty());
+        oscillatingCheckBox.addItemListener(evt -> notifyScenarioDirty());
+        collusionCheckBox.addItemListener(evt -> notifyScenarioDirty());
 
         JPanel networkSection = createSettingsSection(
                 "Network",
@@ -122,6 +139,32 @@ final class DualSettingsPanel extends JPanel {
                 buildNetworkGenerationConfig(),
                 ((Integer) networksSpinner.getValue()).intValue(),
                 ((Integer) executionsSpinner.getValue()).intValue());
+    }
+
+    public void applyScenario(es.ants.felixgm.trmsim_wsn.scenario.ScenarioDefinition scenario) {
+        if (scenario == null) {
+            return;
+        }
+        scenarioSyncInProgress = true;
+        NetworkGenerationConfig networkConfig = scenario.getNetworkGenerationConfig();
+        BatchSimulationConfig batchConfig = scenario.getBatchSimulationConfig();
+        minSensorsSpinner.setValue(Integer.valueOf(networkConfig.getMinNumSensors()));
+        maxSensorsSpinner.setValue(Integer.valueOf(networkConfig.getMaxNumSensors()));
+        clientsSlider.setValue((int) Math.round(networkConfig.getProbClients() * 100.0));
+        relaySlider.setValue((int) Math.round(networkConfig.getProbRelay() * 100.0));
+        maliciousSlider.setValue((int) Math.round(networkConfig.getProbMalicious() * 100.0));
+        radioRangeSliderLocal.setValue((int) Math.round(networkConfig.getRadioRange() * 100.0));
+        dynamicCheckBox.setSelected(networkConfig.isDynamic());
+        oscillatingCheckBox.setSelected(networkConfig.isOscillating());
+        collusionCheckBox.setSelected(networkConfig.isCollusion());
+        networksSpinner.setValue(Integer.valueOf(batchConfig.getNumNetworks()));
+        executionsSpinner.setValue(Integer.valueOf(batchConfig.getNumExecutions()));
+        alignMinMax(true);
+        scenarioSyncInProgress = false;
+    }
+
+    void setScenarioDirtyListener(Runnable scenarioDirtyListener) {
+        this.scenarioDirtyListener = scenarioDirtyListener;
     }
 
     @Override
@@ -206,6 +249,12 @@ final class DualSettingsPanel extends JPanel {
     private void updateChildrenEnabled(boolean enabled) {
         for (Component child : getComponents()) {
             setComponentTreeEnabled(child, enabled);
+        }
+    }
+
+    private void notifyScenarioDirty() {
+        if (!scenarioSyncInProgress && scenarioDirtyListener != null) {
+            scenarioDirtyListener.run();
         }
     }
 

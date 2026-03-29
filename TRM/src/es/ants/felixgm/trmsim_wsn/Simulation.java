@@ -46,6 +46,7 @@ import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.network.Service;
 
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
+import es.ants.felixgm.trmsim_wsn.trm.TRModel_WSN;
 
 import java.util.Collection;
 import java.util.ArrayList;
@@ -74,6 +75,7 @@ public class Simulation implements Runnable {
     private final Controller controller;
     private final SimulationSlot slot;
     private final SimulationContext simulationContext;
+    private final SimulationContext workspaceSimulationContext;
     private final Collection<SimulationListener> listeners;
 
 	/** Wireless sensor network to test */
@@ -207,7 +209,10 @@ public class Simulation implements Runnable {
 		this.collusion = collusion;
 		this.numNetworks = numNetworks;
 		this.numExecutions = numExecutions;
-        this.simulationContext = simulationContext;
+        this.workspaceSimulationContext = simulationContext;
+        this.simulationContext = copySimulationContext(simulationContext);
+        this.simulationContext.setDynamic(dynamic);
+        this.simulationContext.setCollusion(collusion);
         this.listeners = new ArrayList<SimulationListener>(listeners);
         initializeSimulationState();
 	}
@@ -258,7 +263,10 @@ public class Simulation implements Runnable {
 		this.collusion = collusion;
 		this.numNetworks = 1;
 		this.numExecutions = numExecutions;
-        this.simulationContext = simulationContext;
+        this.workspaceSimulationContext = simulationContext;
+        this.simulationContext = copySimulationContext(simulationContext);
+        this.simulationContext.setDynamic(dynamic);
+        this.simulationContext.setCollusion(collusion);
         this.listeners = new ArrayList<SimulationListener>(listeners);
         initializeSimulationState();
 	}
@@ -267,6 +275,17 @@ public class Simulation implements Runnable {
 		globalOutcomes = new ArrayList<Outcome>();
 		stop = false;
 		paused = false;
+    }
+
+    private SimulationContext copySimulationContext(SimulationContext source) {
+        SimulationContext snapshot = new SimulationContext();
+        if (source != null) {
+            snapshot.setCollusion(source.isCollusion());
+            snapshot.setDynamic(source.isDynamic());
+            snapshot.setRunningSimulation(source.isRunningSimulation());
+            snapshot.setTrustModel(source.getTrustModel());
+        }
+        return snapshot;
     }
 
     private void notifyNetworkUpdated(Network network) {
@@ -338,7 +357,14 @@ public class Simulation implements Runnable {
         Thread[] clients = new Thread[network.get_numClients()];
         int index = 0;
         for (Sensor client : network.get_clients()) {
-            clients[index++] = new Thread(client);
+            clients[index++] = new Thread(() -> {
+                Sensor.activateSimulationContext(simulationContext);
+                try {
+                    client.run();
+                } finally {
+                    Sensor.clearActiveSimulationContext();
+                }
+            });
         }
         for (Thread clientThread : clients) {
             clientThread.start();
@@ -349,13 +375,27 @@ public class Simulation implements Runnable {
     }
 
     private Network resolveNetworkForExecution() throws Exception {
-        if ((network == null) || (numNetworks != 1)) {
+        if ((network == null) || (numNetworks != 1) || !isNetworkCompatibleWithTrustModel(network, simulationContext.getTrustModel())) {
+            if ((network != null) && (numNetworks == 1)) {
+                notifyMessage("Current network is incompatible with the selected trust model. Generating a compatible WSN automatically.\n");
+            }
             network = controller.createNewNetwork(slot, minNumSensors,
                     maxNumSensors, probClients, probRelay,
                     probMalicious, radioRange, dynamic, oscillating,
                     collusion);
         }
         return network;
+    }
+
+    private boolean isNetworkCompatibleWithTrustModel(Network currentNetwork, TRModel_WSN trustModel) {
+        if (currentNetwork == null || trustModel == null || currentNetwork.get_sensors() == null || currentNetwork.get_sensors().isEmpty()) {
+            return true;
+        }
+        Sensor firstSensor = currentNetwork.get_sensors().iterator().next();
+        if (firstSensor == null || firstSensor.getClass().getPackage() == null || trustModel.getClass().getPackage() == null) {
+            return true;
+        }
+        return firstSensor.getClass().getPackage().getName().equals(trustModel.getClass().getPackage().getName());
     }
 
     private void prepareClients(Network network) {
@@ -375,7 +415,9 @@ public class Simulation implements Runnable {
 
     private void setRunningSimulation(boolean running) {
         simulationContext.setRunningSimulation(running);
-        Sensor.setRunningSimulation(running);
+        if (workspaceSimulationContext != null) {
+            workspaceSimulationContext.setRunningSimulation(running);
+        }
     }
 
     private void refreshNetworkIfNeeded(Network network, int executionIndex) {
@@ -433,10 +475,14 @@ public class Simulation implements Runnable {
 				for (; (Ne < numExecutions) && !stop; Ne++) {
 					waitIfPaused();
                     executeClients(network);
+                    Sensor.activateSimulationContext(simulationContext);
 
-					for (Sensor client : network.get_clients())
-						if (client.get_outcome() != null)
-							outcomes.add(client.get_outcome());
+					for (Sensor client : network.get_clients()) {
+                        Sensor.activateSimulationContext(simulationContext);
+                        Outcome clientOutcome = client.get_outcome();
+						if (clientOutcome != null)
+							outcomes.add(clientOutcome);
+                    }
 
 					if ((oscillating) && (Ne % 20 == 0))
 						network.oscillate(requiredService);

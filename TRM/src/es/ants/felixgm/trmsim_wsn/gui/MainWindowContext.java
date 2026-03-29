@@ -218,6 +218,36 @@ public final class MainWindowContext {
     public void sleepAfterUiUpdate() { TRMSim_WSN.C.sleep(); }
     public String getSelectedTrustModelName() { return MainWindowRuntimeSupport.getSelectedTrustModelName(window); }
     public JTextArea getMessagesTextArea() { return window.messagesTextArea; }
+    public JLabel getActiveScenarioLabel() { return window.activeScenarioLabel; }
+    public JTextArea getActiveScenarioDescriptionTextArea() { return window.activeScenarioDescriptionTextArea; }
+    public boolean isSingleScenarioSelectionSync() { return window.singleScenarioSelectionSync; }
+    public void setSingleScenarioSelectionSync(boolean sync) { window.singleScenarioSelectionSync = sync; }
+    public void refreshSingleScenarioSummary(String scenarioName, String description) {
+        String normalizedScenarioName = (scenarioName == null || scenarioName.trim().isEmpty() || "Custom Configuration".equals(scenarioName))
+                ? null
+                : scenarioName.trim();
+        getActiveScenarioLabel().putClientProperty("scenarioName", normalizedScenarioName);
+        Object selectedTrustModel = getTrustModelComboBox().getSelectedItem();
+        String trustModelName = (selectedTrustModel instanceof String) ? ((String) selectedTrustModel).trim() : "";
+        if (trustModelName.isEmpty()) {
+            getActiveScenarioLabel().setText(normalizedScenarioName == null ? "No trust model selected" : "Scenario: " + normalizedScenarioName);
+        } else if (normalizedScenarioName == null) {
+            getActiveScenarioLabel().setText(trustModelName);
+        } else {
+            getActiveScenarioLabel().setText(trustModelName + " | Scenario: " + normalizedScenarioName);
+        }
+        getActiveScenarioDescriptionTextArea().setText(description == null ? "" : description);
+        getActiveScenarioDescriptionTextArea().setCaretPosition(0);
+    }
+    public void refreshSingleScenarioHeaderFromCurrentSelection() {
+        Object storedScenarioName = getActiveScenarioLabel().getClientProperty("scenarioName");
+        refreshSingleScenarioSummary(
+                (storedScenarioName instanceof String) ? (String) storedScenarioName : null,
+                getActiveScenarioDescriptionTextArea().getText());
+    }
+    public void markSingleScenarioAsCustom() {
+        refreshSingleScenarioSummary(null, "Settings were adjusted manually or a stored WSN was loaded directly.");
+    }
     public AbstractButton getRunTrmButton() { return window.runTRMButton; }
     public JMenuItem getRunTrmMenuItem() { return window.runTRMmenuItem; }
     public AbstractButton getStopTrmButton() { return window.stopTRMButton; }
@@ -226,6 +256,9 @@ public final class MainWindowContext {
     public JMenuItem getResetWsnMenuItem() { return window.resetWSNmenuItem; }
     public AbstractButton getSaveWsnButton() { return window.saveWSNButton; }
     public JMenuItem getSaveWsnMenuItem() { return window.saveWSNmenuItem; }
+    public AbstractButton getSaveScenarioButton() { return window.saveScenarioButton; }
+    public AbstractButton getImportScenarioButton() { return window.importScenarioButton; }
+    public AbstractButton getLoadScenarioButton() { return window.loadScenarioButton; }
     public AbstractButton getLoadWsnButton() { return window.loadWSNButton; }
     public JMenuItem getLoadWsnMenuItem() { return window.loadWSNmenuItem; }
     public AbstractButton getNewWsnButton() { return window.newWSNButton; }
