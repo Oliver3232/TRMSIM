@@ -164,7 +164,7 @@ public class LFTM_Sensor extends Sensor {
         numRequests++;
         if (numRequests == numRequestsThreshold) {
             numRequests = 0;
-            if (dynamic) {
+            if (isDynamicNetwork()) {
                 activeState = false;
                 Timer timer = new Timer();
                 timer.schedule(new TimerTask(){
@@ -266,7 +266,7 @@ public class LFTM_Sensor extends Sensor {
                 if (link.get_destination().equals(sensor)) {
                     transmittedDistance += this.distance(sensor);
                     try {
-                        if (collusion && (get_goodness(requiredService) < 0.5) &&
+                        if (isCollusionEnabled() && (get_goodness(requiredService) < 0.5) &&
                                 (sensor.get_numServices() > 0)) {
                             if (sensor.get_goodness(requiredService) < 0.5)
                                 return LFTM_Link.MAX_PHEROMONE;

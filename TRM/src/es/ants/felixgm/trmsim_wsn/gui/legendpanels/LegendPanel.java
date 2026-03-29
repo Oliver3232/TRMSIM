@@ -43,8 +43,9 @@ package es.ants.felixgm.trmsim_wsn.gui.legendpanels;
 
 import es.ants.felixgm.trmsim_wsn.gui.*;
 import java.awt.Color;
-import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 
 /**
@@ -54,6 +55,24 @@ import java.util.Vector;
  * @since 0.4
  */
 public class LegendPanel extends javax.swing.JPanel {
+    public static final class LegendItem {
+        private final String label;
+        private final Color color;
+
+        LegendItem(String label, Color color) {
+            this.label = label;
+            this.color = color;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public Color getColor() {
+            return color;
+        }
+    }
+
 
     /** Background color */
     protected Color backgroundColor = Color.WHITE;
@@ -115,19 +134,11 @@ public class LegendPanel extends javax.swing.JPanel {
             return;
         }
 
-        int y = Math.max(20, height / 2);
-        int x = 10;
-        FontMetrics metrics = graphics.getFontMetrics();
         for (int i = 0; i < legendElements.size(); i++) {
-            LegendElement element = legendElements.get(i);
             graphics.setColor(legendElements.get(i).getColor());
-            graphics.fillArc(x, y - 6, 10, 10, 0, 360);
+            graphics.fillArc(5, (int)(height*((i+1)/(double)(legendElements.size()+1)))-5, 10, 10, 0, 360);
             graphics.setColor(charactersColor);
-            graphics.drawString(element.getLabel(), x + 14, y + 4);
-            x += 14 + metrics.stringWidth(element.getLabel()) + 18;
-            if (x > width - 30) {
-                break;
-            }
+            graphics.drawString(legendElements.get(i).getLabel(),20,(int)(height*((i+1)/(double)(legendElements.size()+1)))+5);
         }
     }
 
@@ -145,6 +156,14 @@ public class LegendPanel extends javax.swing.JPanel {
      */
     protected void addLegendElement(String label, Color color) {
         legendElements.add(new LegendElement(label,color));
+    }
+
+    public List<LegendItem> getLegendItems() {
+        List<LegendItem> items = new ArrayList<LegendItem>(legendElements.size());
+        for (LegendElement legendElement : legendElements) {
+            items.add(new LegendItem(legendElement.getLabel(), legendElement.getColor()));
+        }
+        return items;
     }
 
     /** This method is called from within the constructor to
