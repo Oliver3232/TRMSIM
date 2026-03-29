@@ -1,6 +1,5 @@
 package es.ants.felixgm.trmsim_wsn.gui.graph;
 
-
 import es.ants.felixgm.trmsim_wsn.gui.layout.CompactLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.layout.MiniLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.JavaFXNetworkPanel;
@@ -51,6 +50,11 @@ public final class SimulationGraphWorkspace {
         void onDelayChanged(int value);
     }
 
+    public interface FullscreenAccessGuard {
+        boolean canToggleFullscreen();
+        void onFullscreenBlocked();
+    }
+
     private final JComboBox<String> visualThemeComboBox = new JComboBox<String>();
     private final JComboBox<String> cameraPresetComboBox = new JComboBox<String>();
     private final JCheckBox enable3DNavigationCheckBox = new JCheckBox("3D navigation");
@@ -60,10 +64,12 @@ public final class SimulationGraphWorkspace {
     private NodeSelectionListener nodeSelectionListener;
     private SimulationControlListener simulationControlListener;
     private DisplayControlListener displayControlListener;
+    private FullscreenAccessGuard fullscreenAccessGuard;
 
     private JFrame fullscreenFrame;
     private JavaFXNetworkPanel fullscreenNetworkPanel;
     private JPanel fullscreenDrawerPanel;
+    private JPopupMenu fullscreenToolbarPopup;
     private javax.swing.Timer fullscreenDrawerAnimator;
     private int fullscreenDrawerCurrentWidth = 16;
     private int fullscreenDrawerTargetWidth = 16;
@@ -71,8 +77,12 @@ public final class SimulationGraphWorkspace {
     private javax.swing.JTextArea fullscreenInspectorTextArea;
     private JButton fullscreenPauseResumeButton;
     private JButton fullscreenStopButton;
+    private JButton fullscreenCloseButton;
     private JLabel fullscreenSimulationStateLabel;
     private JCheckBox fullscreenPinDrawerCheckBox;
+    private JComboBox<String> fullscreenThemeComboBox;
+    private JComboBox<String> fullscreenPresetComboBox;
+    private JCheckBox fullscreenEnable3DCheckBox;
     private CompactLegendPanel fullscreenLegendPanel;
     private JCheckBox fullscreenShowIdsCheckBox;
     private JCheckBox fullscreenShowLinksCheckBox;
@@ -83,6 +93,8 @@ public final class SimulationGraphWorkspace {
     private String currentInspectorBody = "Click any node in the graph to inspect its live state and exported metrics.";
     private String currentSimulationStateLabel = "Idle";
     private String currentPauseResumeLabel = "Pause";
+    private boolean currentCanPauseResume;
+    private boolean currentCanStop;
     private boolean currentShowIds;
     private boolean currentShowLinks;
     private boolean currentShowRanges;
@@ -91,6 +103,7 @@ public final class SimulationGraphWorkspace {
     private int currentDelayMin;
     private int currentDelayMax = 100;
     private boolean drawerPinned = false;
+    private boolean fullscreenInteractionLocked = false;
 
     public SimulationGraphWorkspace(PanelRenderer renderer) {
         this.renderer = renderer;
@@ -112,6 +125,10 @@ public final class SimulationGraphWorkspace {
         return fullscreenGraphButton;
     }
 
+    public boolean isFullscreenOpen() {
+        return fullscreenFrame != null && fullscreenFrame.isShowing();
+    }
+
     public void setNodeSelectionListener(NodeSelectionListener nodeSelectionListener) {
         this.nodeSelectionListener = nodeSelectionListener;
     }
@@ -124,33 +141,40 @@ public final class SimulationGraphWorkspace {
         this.displayControlListener = displayControlListener;
     }
 
+    public void setFullscreenAccessGuard(FullscreenAccessGuard fullscreenAccessGuard) {
+        this.fullscreenAccessGuard = fullscreenAccessGuard;
+    }
+
     public void updateSelectedNodeSummary(String title, String body) {
         currentInspectorTitle = (title == null || title.trim().isEmpty()) ? "No node selected" : title;
         currentInspectorBody = (body == null || body.trim().isEmpty())
                 ? "Click any node in the graph to inspect its live state and exported metrics."
                 : body;
-        if (fullscreenInspectorTitleLabel != null) {
-            fullscreenInspectorTitleLabel.setText(currentInspectorTitle);
-        }
-        if (fullscreenInspectorTextArea != null) {
-            fullscreenInspectorTextArea.setText(currentInspectorBody);
-            fullscreenInspectorTextArea.setCaretPosition(0);
-        }
+        SimulationGraphStateSupport.applySelectedNodeSummary(
+                currentInspectorTitle,
+                currentInspectorBody,
+                fullscreenInspectorTitleLabel,
+                fullscreenInspectorTextArea);
     }
 
     public void updateSimulationControlsState(String stateLabel, String runLabel, String pauseResumeLabel,
                                        boolean canRun, boolean canPauseResume, boolean canStop) {
         currentSimulationStateLabel = stateLabel;
         currentPauseResumeLabel = pauseResumeLabel;
-        if (fullscreenSimulationStateLabel != null) {
-            fullscreenSimulationStateLabel.setText(stateLabel);
-        }
-        if (fullscreenPauseResumeButton != null) {
-            fullscreenPauseResumeButton.setText(canRun ? runLabel : pauseResumeLabel);
-            fullscreenPauseResumeButton.setEnabled(canRun || canPauseResume);
-        }
-        if (fullscreenStopButton != null) {
-            fullscreenStopButton.setEnabled(canStop);
+        currentCanPauseResume = canRun || canPauseResume;
+        currentCanStop = canStop;
+        SimulationGraphStateSupport.applySimulationControlsState(
+                stateLabel,
+                runLabel,
+                pauseResumeLabel,
+                canRun,
+                canPauseResume,
+                canStop,
+                fullscreenSimulationStateLabel,
+                fullscreenPauseResumeButton,
+                fullscreenStopButton);
+        if (fullscreenInteractionLocked) {
+            applyFullscreenInteractionLockState();
         }
     }
 
@@ -172,23 +196,43 @@ public final class SimulationGraphWorkspace {
         currentDelayValue = delayValue;
         currentDelayMin = delayMin;
         currentDelayMax = delayMax;
-        if (fullscreenShowIdsCheckBox != null) {
-            fullscreenShowIdsCheckBox.setSelected(showIds);
-        }
-        if (fullscreenShowLinksCheckBox != null) {
-            fullscreenShowLinksCheckBox.setSelected(showLinks);
-        }
-        if (fullscreenShowRangesCheckBox != null) {
-            fullscreenShowRangesCheckBox.setSelected(showRanges);
-        }
-        if (fullscreenShowGridCheckBox != null) {
-            fullscreenShowGridCheckBox.setSelected(showGrid);
-        }
-        if (fullscreenDelaySlider != null) {
-            fullscreenDelaySlider.setMinimum(delayMin);
-            fullscreenDelaySlider.setMaximum(delayMax);
-            fullscreenDelaySlider.setValue(delayValue);
-        }
+        SimulationGraphStateSupport.applyDisplayControlsState(
+                showIds,
+                showLinks,
+                showRanges,
+                showGrid,
+                delayValue,
+                delayMin,
+                delayMax,
+                fullscreenShowIdsCheckBox,
+                fullscreenShowLinksCheckBox,
+                fullscreenShowRangesCheckBox,
+                fullscreenShowGridCheckBox,
+                fullscreenDelaySlider);
+    }
+
+    public void setFullscreenInteractionLocked(boolean locked) {
+        fullscreenInteractionLocked = locked;
+        applyFullscreenInteractionLockState();
+    }
+
+    private void applyFullscreenInteractionLockState() {
+        SimulationGraphStateSupport.applyFullscreenInteractionLockState(
+                fullscreenInteractionLocked,
+                currentCanPauseResume,
+                currentCanStop,
+                fullscreenEnable3DCheckBox,
+                fullscreenThemeComboBox,
+                fullscreenPresetComboBox,
+                fullscreenPauseResumeButton,
+                fullscreenStopButton,
+                fullscreenShowIdsCheckBox,
+                fullscreenShowLinksCheckBox,
+                fullscreenShowRangesCheckBox,
+                fullscreenShowGridCheckBox,
+                fullscreenDelaySlider,
+                fullscreenPinDrawerCheckBox,
+                fullscreenCloseButton);
     }
 
     public void setFullscreenLegendItems(java.util.List<MiniLegendPanel.Item> items) {
@@ -197,36 +241,23 @@ public final class SimulationGraphWorkspace {
     }
 
     public void initializeControls() {
-        visualThemeComboBox.setModel(new javax.swing.DefaultComboBoxModel<String>(
-                new String[]{"Futuristic", "Classic", "Wireframe"}));
-        visualThemeComboBox.setSelectedItem("Futuristic");
-        visualThemeComboBox.addActionListener(e -> applyVisualizationControlsToPanels(null));
-
-        enable3DNavigationCheckBox.setSelected(false);
-        enable3DNavigationCheckBox.setOpaque(false);
-        enable3DNavigationCheckBox.addActionListener(e -> applyVisualizationControlsToPanels(null));
-
-        cameraPresetComboBox.setModel(new javax.swing.DefaultComboBoxModel<String>(
-                new String[]{"Isometric", "Top", "Front"}));
-        cameraPresetComboBox.setSelectedItem("Isometric");
-        cameraPresetComboBox.addActionListener(e -> applyVisualizationControlsToPanels(null));
-        cameraPresetComboBox.setEnabled(enable3DNavigationCheckBox.isSelected());
-
-        fullscreenGraphButton.setText("Open Fullscreen");
-        fullscreenGraphButton.addActionListener(e -> toggleFullscreenGraphWindow());
+        SimulationGraphStateSupport.initializeControls(
+                visualThemeComboBox,
+                enable3DNavigationCheckBox,
+                cameraPresetComboBox,
+                fullscreenGraphButton,
+                () -> applyVisualizationControlsToPanels(null),
+                this::toggleFullscreenGraphWindow);
     }
 
     public void applyVisualizationControlsToPanels(NetworkPanel mainPanel) {
-        if (mainPanel != null) {
-            mainNetworkPanel = mainPanel;
-        }
-        NetworkPanel panelToApply = (mainPanel != null) ? mainPanel : mainNetworkPanel;
-        if (panelToApply instanceof JavaFXNetworkPanel) {
-            applyVisualizationControls((JavaFXNetworkPanel) panelToApply);
-        }
-        if (fullscreenNetworkPanel != null) {
-            applyVisualizationControls(fullscreenNetworkPanel);
-        }
+        mainNetworkPanel = SimulationGraphStateSupport.applyVisualizationControlsToPanels(
+                mainPanel,
+                mainNetworkPanel,
+                fullscreenNetworkPanel,
+                enable3DNavigationCheckBox,
+                visualThemeComboBox,
+                cameraPresetComboBox);
     }
 
     public void renderOnFullscreen(Network network, Service requiredService, double radioRange,
@@ -240,18 +271,20 @@ public final class SimulationGraphWorkspace {
     }
 
     private void applyVisualizationControls(JavaFXNetworkPanel panel) {
-        boolean enable3D = enable3DNavigationCheckBox.isSelected();
-        cameraPresetComboBox.setEnabled(enable3D);
-        panel.setVisualTheme((String) visualThemeComboBox.getSelectedItem());
-        panel.set3DNavigationEnabled(enable3D);
-        if (enable3D) {
-            panel.applyCameraPreset((String) cameraPresetComboBox.getSelectedItem());
-        }
+        SimulationGraphStateSupport.applyVisualizationControls(
+                panel,
+                enable3DNavigationCheckBox,
+                visualThemeComboBox,
+                cameraPresetComboBox);
     }
 
     private void toggleFullscreenGraphWindow() {
         if (fullscreenFrame != null && fullscreenFrame.isShowing()) {
             closeFullscreenGraphWindow();
+            return;
+        }
+        if (fullscreenAccessGuard != null && !fullscreenAccessGuard.canToggleFullscreen()) {
+            fullscreenAccessGuard.onFullscreenBlocked();
             return;
         }
 
@@ -275,11 +308,13 @@ public final class SimulationGraphWorkspace {
         fullscreenDrawerPanel = buildFullscreenHoverDrawer();
         fullscreenContainer.add(fullscreenDrawerPanel, BorderLayout.EAST);
         fullscreenFrame.setContentPane(fullscreenContainer);
-        JPopupMenu fullscreenToolbarPopup = buildFullscreenToolbarPopup();
+        fullscreenToolbarPopup = buildFullscreenToolbarPopup();
         fullscreenNetworkPanel.addMouseListener(new java.awt.event.MouseAdapter() {
             private void maybeShowPopup(java.awt.event.MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    fullscreenToolbarPopup.show(e.getComponent(), e.getX(), e.getY());
+                    if (!fullscreenInteractionLocked && fullscreenToolbarPopup != null) {
+                        fullscreenToolbarPopup.show(e.getComponent(), e.getX(), e.getY());
+                    }
                 }
             }
 
@@ -309,6 +344,7 @@ public final class SimulationGraphWorkspace {
                 fullscreenFrame = null;
                 fullscreenNetworkPanel = null;
                 fullscreenDrawerPanel = null;
+                fullscreenToolbarPopup = null;
                 fullscreenGraphButton.setText("Open Fullscreen");
             }
         });
@@ -321,6 +357,7 @@ public final class SimulationGraphWorkspace {
         fullscreenFrame.setVisible(true);
         renderer.render(fullscreenNetworkPanel);
         fullscreenGraphButton.setText("Close Fullscreen");
+        applyFullscreenInteractionLockState();
     }
 
     private void closeFullscreenGraphWindow() {
@@ -329,6 +366,7 @@ public final class SimulationGraphWorkspace {
             fullscreenFrame = null;
             fullscreenNetworkPanel = null;
             fullscreenDrawerPanel = null;
+            fullscreenToolbarPopup = null;
             if (fullscreenDrawerAnimator != null) {
                 fullscreenDrawerAnimator.stop();
             }
@@ -361,15 +399,15 @@ public final class SimulationGraphWorkspace {
         themeLabel.setAlignmentX(0.0f);
         content.add(themeLabel);
 
-        JComboBox<String> themeCombo = new JComboBox<String>(new String[]{"Futuristic", "Classic", "Wireframe"});
-        themeCombo.setSelectedItem(visualThemeComboBox.getSelectedItem());
-        themeCombo.setMaximumSize(new Dimension(230, 26));
-        themeCombo.setAlignmentX(0.0f);
-        themeCombo.addActionListener(e -> {
-            visualThemeComboBox.setSelectedItem(themeCombo.getSelectedItem());
+        fullscreenThemeComboBox = new JComboBox<String>(new String[]{"Futuristic", "Classic", "Wireframe"});
+        fullscreenThemeComboBox.setSelectedItem(visualThemeComboBox.getSelectedItem());
+        fullscreenThemeComboBox.setMaximumSize(new Dimension(230, 26));
+        fullscreenThemeComboBox.setAlignmentX(0.0f);
+        fullscreenThemeComboBox.addActionListener(e -> {
+            visualThemeComboBox.setSelectedItem(fullscreenThemeComboBox.getSelectedItem());
             applyVisualizationControlsToPanels(null);
         });
-        content.add(themeCombo);
+        content.add(fullscreenThemeComboBox);
         content.add(Box.createVerticalStrut(8));
 
         JLabel presetLabel = new JLabel("3D View");
@@ -377,35 +415,35 @@ public final class SimulationGraphWorkspace {
         presetLabel.setAlignmentX(0.0f);
         content.add(presetLabel);
 
-        JComboBox<String> presetCombo = new JComboBox<String>(new String[]{"Isometric", "Top", "Front"});
-        presetCombo.setSelectedItem(cameraPresetComboBox.getSelectedItem());
-        presetCombo.setMaximumSize(new Dimension(230, 26));
-        presetCombo.setAlignmentX(0.0f);
-        presetCombo.setEnabled(enable3DNavigationCheckBox.isSelected());
-        presetCombo.addActionListener(e -> {
-            cameraPresetComboBox.setSelectedItem(presetCombo.getSelectedItem());
+        fullscreenPresetComboBox = new JComboBox<String>(new String[]{"Isometric", "Top", "Front"});
+        fullscreenPresetComboBox.setSelectedItem(cameraPresetComboBox.getSelectedItem());
+        fullscreenPresetComboBox.setMaximumSize(new Dimension(230, 26));
+        fullscreenPresetComboBox.setAlignmentX(0.0f);
+        fullscreenPresetComboBox.setEnabled(enable3DNavigationCheckBox.isSelected());
+        fullscreenPresetComboBox.addActionListener(e -> {
+            cameraPresetComboBox.setSelectedItem(fullscreenPresetComboBox.getSelectedItem());
             applyVisualizationControlsToPanels(null);
         });
-        content.add(presetCombo);
+        content.add(fullscreenPresetComboBox);
         content.add(Box.createVerticalStrut(8));
 
-        JCheckBox enable3D = new JCheckBox("Enable 3D navigation");
-        enable3D.setOpaque(false);
-        enable3D.setForeground(new Color(220, 245, 255));
-        enable3D.setSelected(enable3DNavigationCheckBox.isSelected());
-        enable3D.setAlignmentX(0.0f);
-        enable3D.addActionListener(e -> {
-            enable3DNavigationCheckBox.setSelected(enable3D.isSelected());
-            presetCombo.setEnabled(enable3D.isSelected());
+        fullscreenEnable3DCheckBox = new JCheckBox("Enable 3D navigation");
+        fullscreenEnable3DCheckBox.setOpaque(false);
+        fullscreenEnable3DCheckBox.setForeground(new Color(220, 245, 255));
+        fullscreenEnable3DCheckBox.setSelected(enable3DNavigationCheckBox.isSelected());
+        fullscreenEnable3DCheckBox.setAlignmentX(0.0f);
+        fullscreenEnable3DCheckBox.addActionListener(e -> {
+            enable3DNavigationCheckBox.setSelected(fullscreenEnable3DCheckBox.isSelected());
+            fullscreenPresetComboBox.setEnabled(fullscreenEnable3DCheckBox.isSelected());
             applyVisualizationControlsToPanels(null);
         });
-        content.add(enable3D);
+        content.add(fullscreenEnable3DCheckBox);
         content.add(Box.createVerticalStrut(10));
 
-        JButton closeButton = new JButton("Close Fullscreen");
-        closeButton.setAlignmentX(0.0f);
-        closeButton.addActionListener(e -> closeFullscreenGraphWindow());
-        content.add(closeButton);
+        fullscreenCloseButton = new JButton("Close Fullscreen");
+        fullscreenCloseButton.setAlignmentX(0.0f);
+        fullscreenCloseButton.addActionListener(e -> closeFullscreenGraphWindow());
+        content.add(fullscreenCloseButton);
         content.add(Box.createVerticalStrut(14));
 
         JLabel liveLabel = new JLabel("Live Simulation");

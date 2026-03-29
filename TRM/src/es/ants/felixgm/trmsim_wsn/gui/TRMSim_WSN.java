@@ -172,7 +172,10 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
             new EnumMap<SimulationSlot, Boolean>(SimulationSlot.class);
     final Map<SimulationSlot, Integer> dualDelayValues =
             new EnumMap<SimulationSlot, Integer>(SimulationSlot.class);
+    final Map<SimulationSlot, Boolean> dualScenarioSelectionSync =
+            new EnumMap<SimulationSlot, Boolean>(SimulationSlot.class);
     DualModeCoordinator dualModeCoordinator;
+    boolean singleScenarioSelectionSync = false;
 
     public static void main(String[] args) {
         if ((args != null) && (args.length > 0) && "--verbose".equals(args[0])) {
@@ -247,6 +250,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
         dualShowRanges.put(slot, Boolean.valueOf(showRangesCheckBox != null && showRangesCheckBox.isSelected()));
         dualShowGrid.put(slot, Boolean.valueOf(showGridCheckBox != null && showGridCheckBox.isSelected()));
         dualDelayValues.put(slot, Integer.valueOf(delaySlider != null ? delaySlider.getValue() : 0));
+        dualScenarioSelectionSync.put(slot, Boolean.FALSE);
     }
 
     boolean dualShowIds(SimulationSlot slot) {
@@ -597,9 +601,9 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
     // Variables declaration - do not modify//GEN-BEGIN:variables
 
     javax.swing.JButton exportDataButton, applyChangesButton, applyParametersChangesButton, browseButton,
-            hideSensorPropertiesPanelButton, loadWSNButton, newWSNButton, resetWSNButton, runSimulationsButton,
+            hideSensorPropertiesPanelButton, importScenarioButton, loadScenarioButton, loadWSNButton, newWSNButton, resetWSNButton, runSimulationsButton,
             runTRMButton, saveParametersFileContentButton, saveWSNButton, stopSimulationsButton, stopTRMButton,
-            modeSwitchButton;
+            modeSwitchButton, saveScenarioButton;
     javax.swing.JMenuItem exportDataMenuItem, aboutTRMSim_WSNmenuItem, applyParametersChangesMenuItem,
             helpMenuItem, loadParametersMenuItem, loadWSNmenuItem, newWSNmenuItem, resetWSNmenuItem,
             runSimulationsMenuItem, runTRMmenuItem, saveParametersMenuItem, saveWSNmenuItem,
@@ -615,7 +619,8 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
     javax.swing.JLabel TRModelLabel, delayLabel, legendLabel, maxNumSensorsLabel, minNumSensorsLabel,
             neighborsLabel, numExecutionsLabel, numNetworksLabel, parametersFileLabel, parametersSourceLabel,
             percentageClientsLabel, percentageMaliciousServersLabel, percentageRelayServersLabel, radioRangeLabel,
-            radioRangePropertyLabel, sensorIdLabel, sensorTypeLabel, xCoordinateLabel, yCoordinateLabel;
+            radioRangePropertyLabel, sensorIdLabel, sensorTypeLabel, xCoordinateLabel, yCoordinateLabel,
+            activeScenarioLabel;
     javax.swing.JMenu TRModelMenu, helpMenu, parametersMenu, simulationsMenu, wsnMenu;
     javax.swing.JCheckBox collusionCheckBox, dynamicWSNsCheckBox, oscillatingWSNsCheckBox, showGridCheckBox,
             showIdsCheckBox, showLinksCheckBox, showRangesCheckBox;
@@ -626,7 +631,7 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
     javax.swing.JSpinner maxNumSensorsSpinner, minNumSensorsSpinner, numExecutionsSpinner, numNetworksSpinner,
             radioRangeSpinner;
     javax.swing.JMenuBar menuBar;
-    javax.swing.JTextArea messagesTextArea, parametersFileContentTextArea;
+    javax.swing.JTextArea messagesTextArea, parametersFileContentTextArea, activeScenarioDescriptionTextArea;
     javax.swing.JList neighborsList;
     javax.swing.JTabbedPane outcomesTabbedPane, tabbedPane;
     javax.swing.JSlider delaySlider, percentageClientsSlider, percentageMaliciousServersSlider,

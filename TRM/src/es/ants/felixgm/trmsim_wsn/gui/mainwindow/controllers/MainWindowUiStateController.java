@@ -19,8 +19,11 @@ public final class MainWindowUiStateController {
         javax.swing.JMenuItem getResetWsnMenuItem();
         AbstractButton getSaveWsnButton();
         javax.swing.JMenuItem getSaveWsnMenuItem();
+        AbstractButton getSaveScenarioButton();
         AbstractButton getRunSimulationsButton();
         javax.swing.JMenuItem getRunSimulationsMenuItem();
+        AbstractButton getImportScenarioButton();
+        AbstractButton getLoadScenarioButton();
         AbstractButton getLoadWsnButton();
         javax.swing.JMenuItem getLoadWsnMenuItem();
         AbstractButton getNewWsnButton();
@@ -60,7 +63,10 @@ public final class MainWindowUiStateController {
         UiStateHelper.setComponentsEnabled(enabled,
                 host.getResetWsnButton(), host.getResetWsnMenuItem(),
                 host.getSaveWsnButton(), host.getSaveWsnMenuItem(),
+                host.getSaveScenarioButton(),
                 host.getRunSimulationsButton(), host.getRunSimulationsMenuItem(),
+                host.getImportScenarioButton(),
+                host.getLoadScenarioButton(),
                 host.getLoadWsnButton(), host.getLoadWsnMenuItem(),
                 host.getNewWsnButton(), host.getNewWsnMenuItem(),
                 host.getModeSwitchButton(),

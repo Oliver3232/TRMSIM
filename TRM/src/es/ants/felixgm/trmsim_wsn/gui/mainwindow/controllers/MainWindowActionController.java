@@ -73,6 +73,37 @@ public final class MainWindowActionController {
         }
     }
 
+    public static void loadScenario(TRMSim_WSN window) {
+        try {
+            MainWindowSimulationController.loadScenario(new MainWindowContext(window));
+        } catch (Exception ex) {
+            MainWindowSimulationController.showError(new MainWindowContext(window), ex);
+        }
+    }
+
+    public static void importScenario(TRMSim_WSN window) {
+        try {
+            MainWindowSimulationController.importScenario(new MainWindowContext(window));
+        } catch (Exception ex) {
+            MainWindowSimulationController.showError(new MainWindowContext(window), ex);
+        }
+    }
+
+    public static void saveScenario(TRMSim_WSN window) {
+        try {
+            MainWindowSimulationController.saveScenario(new MainWindowContext(window));
+        } catch (Exception ex) {
+            MainWindowSimulationController.showError(new MainWindowContext(window), ex);
+        }
+    }
+
+    public static void invalidateScenarioSelection(TRMSim_WSN window) {
+        MainWindowContext context = new MainWindowContext(window);
+        if (!context.isSingleScenarioSelectionSync()) {
+            context.markSingleScenarioAsCustom();
+        }
+    }
+
     public static void saveNetwork(TRMSim_WSN window) {
         try {
             MainWindowSimulationController.saveNetwork(new MainWindowContext(window));

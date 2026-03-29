@@ -199,9 +199,22 @@ final class DualModeWorkspaceSupport {
 
     void openDualFullscreen(SimulationSlot slot) {
         SimulationGraphWorkspace workspace = owner.dualGraphWorkspaces.get(slot);
-        if (workspace != null) {
-            workspace.getFullscreenGraphButton().doClick();
+        if (workspace == null) {
+            return;
         }
+        if (workspace.isFullscreenOpen()) {
+            workspace.getFullscreenGraphButton().doClick();
+            return;
+        }
+        if (owner.isDualSlotTrmActive(slot)) {
+            JOptionPane.showMessageDialog(
+                    owner,
+                    owner.slotLabel(slot) + " is running a T&R simulation. Stop it before opening fullscreen mode.",
+                    "Fullscreen Blocked",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        workspace.getFullscreenGraphButton().doClick();
     }
 
     void showDualExportDialog() {

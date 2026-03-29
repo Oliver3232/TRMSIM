@@ -23,10 +23,10 @@ public final class DualSimulationShellPanel extends JPanel {
 
     public static final class SlotToolbarPanel extends JPanel {
         private final JButton newNetworkButton = new JButton("New WSN");
+        private final JButton loadScenarioButton = new JButton("Load Scenario");
         private final JButton loadNetworkButton = new JButton("Load WSN");
         private final JButton saveNetworkButton = new JButton("Save WSN");
         private final JButton resetNetworkButton = new JButton("Reset WSN");
-        private final JButton runStopButton = new JButton("Run T&R");
         private final JComboBox<String> trustModelComboBox = new JComboBox<String>();
         private final boolean alignRight;
 
@@ -35,26 +35,26 @@ public final class DualSimulationShellPanel extends JPanel {
             setOpaque(false);
             setLayout(new WrapLayout(alignRight ? WrapLayout.RIGHT : WrapLayout.LEFT, 4, 4));
             configureButton(newNetworkButton);
+            configureButton(loadScenarioButton);
             configureButton(loadNetworkButton);
             configureButton(saveNetworkButton);
             configureButton(resetNetworkButton);
-            configureButton(runStopButton);
             trustModelComboBox.setPreferredSize(new Dimension(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT));
             trustModelComboBox.setMinimumSize(new Dimension(100, TOOLBAR_BUTTON_HEIGHT));
             trustModelComboBox.setMaximumSize(new Dimension(TOOLBAR_BUTTON_WIDTH, TOOLBAR_BUTTON_HEIGHT));
             if (alignRight) {
                 add(trustModelComboBox);
-                add(runStopButton);
                 add(resetNetworkButton);
                 add(saveNetworkButton);
                 add(loadNetworkButton);
+                add(loadScenarioButton);
                 add(newNetworkButton);
             } else {
                 add(newNetworkButton);
+                add(loadScenarioButton);
                 add(loadNetworkButton);
                 add(saveNetworkButton);
                 add(resetNetworkButton);
-                add(runStopButton);
                 add(trustModelComboBox);
             }
         }
@@ -74,6 +74,10 @@ public final class DualSimulationShellPanel extends JPanel {
             return loadNetworkButton;
         }
 
+        public JButton getLoadScenarioButton() {
+            return loadScenarioButton;
+        }
+
         public JButton getSaveNetworkButton() {
             return saveNetworkButton;
         }
@@ -82,17 +86,15 @@ public final class DualSimulationShellPanel extends JPanel {
             return resetNetworkButton;
         }
 
-        public JButton getRunStopButton() {
-            return runStopButton;
-        }
-
         public JComboBox<String> getTrustModelComboBox() {
             return trustModelComboBox;
         }
     }
 
+    private final JButton sessionTrmButton;
     private final JButton sessionRunButton;
     private final JButton sessionStopButton;
+    private final JButton importScenarioButton;
     private final JButton exportButton;
     private final JButton modeSwitchButton;
     private final SlotToolbarPanel primaryToolbarPanel;
@@ -106,12 +108,16 @@ public final class DualSimulationShellPanel extends JPanel {
 
         primaryToolbarPanel = new SlotToolbarPanel(false);
         secondaryToolbarPanel = new SlotToolbarPanel(true);
-        sessionRunButton = new JButton("Run");
-        sessionStopButton = new JButton("Stop");
+        sessionTrmButton = new JButton("Run T&R");
+        sessionRunButton = new JButton("Run Simulations");
+        sessionStopButton = new JButton("Stop Simulations");
+        importScenarioButton = new JButton("Import Scenario");
         exportButton = new JButton("Export");
         modeSwitchButton = new JButton("Single Mode");
+        configureCenterButton(sessionTrmButton);
         configureCenterButton(sessionRunButton);
         configureCenterButton(sessionStopButton);
+        configureCenterButton(importScenarioButton);
         configureCenterButton(exportButton);
         configureCenterButton(modeSwitchButton);
 
@@ -121,12 +127,14 @@ public final class DualSimulationShellPanel extends JPanel {
 
         JPanel centerToolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, TOOLBAR_BUTTON_GAP, 4));
         centerToolbar.setOpaque(false);
+        centerToolbar.add(sessionTrmButton);
         centerToolbar.add(sessionRunButton);
         centerToolbar.add(sessionStopButton);
+        centerToolbar.add(importScenarioButton);
         centerToolbar.add(exportButton);
         centerToolbar.add(modeSwitchButton);
         Dimension centerToolbarSize = new Dimension(
-                (TOOLBAR_BUTTON_WIDTH * 4) + (TOOLBAR_BUTTON_GAP * 3),
+                (TOOLBAR_BUTTON_WIDTH * 6) + (TOOLBAR_BUTTON_GAP * 5),
                 TOOLBAR_BUTTON_HEIGHT + 8);
         centerToolbar.setMinimumSize(centerToolbarSize);
         centerToolbar.setPreferredSize(centerToolbarSize);
@@ -168,8 +176,16 @@ public final class DualSimulationShellPanel extends JPanel {
         return sessionStopButton;
     }
 
+    public JButton getSessionTrmButton() {
+        return sessionTrmButton;
+    }
+
     public JButton getExportButton() {
         return exportButton;
+    }
+
+    public JButton getImportScenarioButton() {
+        return importScenarioButton;
     }
 
     public JButton getModeSwitchButton() {

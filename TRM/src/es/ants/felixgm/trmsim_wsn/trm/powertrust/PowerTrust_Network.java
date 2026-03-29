@@ -92,7 +92,10 @@ public class PowerTrust_Network extends Network {
 
     @Override
     public void reset() {
-        PowerTrust_Sensor.setNumSensors(sensors.size());
+        int maxSensorId = 0;
+        for (Sensor sensor : sensors)
+            maxSensorId = Math.max(maxSensorId, sensor.id());
+        PowerTrust_Sensor.configureSensorSpace(sensors.size(), maxSensorId);
         super.reset();
         int m = (int)(sensors.size()*((PowerTrust_Parameters)PowerTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_powerNodesPercentage());
         if ((((PowerTrust_Parameters)PowerTrust_Sensor.get_TRModel_WSN().get_TRMParameters()).get_powerNodesPercentage() > 0) && (m == 0))

@@ -74,6 +74,8 @@ final class DualModeParametersSupport {
         DualSettingsPanel settingsPanel = owner.dualSettingsPanels.get(slot);
         if (settingsPanel == null) {
             settingsPanel = new DualSettingsPanel(owner.buildNetworkGenerationConfig(), owner.buildBatchSimulationConfig());
+            final SimulationSlot targetSlot = slot;
+            settingsPanel.setScenarioDirtyListener(() -> owner.dualModeCoordinator.invalidateDualScenarioSelection(targetSlot));
             owner.dualSettingsPanels.put(slot, settingsPanel);
         }
         Controller controller = owner.dualController(slot);

@@ -49,7 +49,7 @@ public final class MainWindowRuntimeSupport {
     static void applyModernLayout(TRMSim_WSN window) {
         ModernLayoutInstaller.install(
                 window,
-                window.newWSNButton, window.loadWSNButton, window.saveWSNButton, window.resetWSNButton,
+                window.newWSNButton, window.importScenarioButton, window.loadScenarioButton, window.loadWSNButton, window.saveWSNButton, window.resetWSNButton, window.saveScenarioButton,
                 window.runTRMButton, window.stopTRMButton, window.runSimulationsButton, window.stopSimulationsButton, window.exportDataButton,
                 window.modeSwitchButton,
                 window.TRModelLabel, window.TRModelComboBox,

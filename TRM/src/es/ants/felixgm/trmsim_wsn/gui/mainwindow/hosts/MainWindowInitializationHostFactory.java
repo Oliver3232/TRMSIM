@@ -33,6 +33,8 @@ public final class MainWindowInitializationHostFactory {
             public void updateRunSimulationsControls() { context.updateRunSimulationsControls(); }
             public java.util.List<MiniLegendPanel.Item> createLegendItems() { return context.createLegendItems(); }
             public void syncEmbeddedAndFullscreenDisplayControls() { context.syncEmbeddedAndFullscreenDisplayControls(); }
+            public boolean isSingleSimulationActive() { return context.isSingleSimulationActive(); }
+            public java.awt.Component getWindowComponent() { return context.window(); }
             public void initializeTRModels() { context.initializeTRModels(); }
             public void setController(es.ants.felixgm.trmsim_wsn.Controller controller) { context.setController(controller); }
             public void setSimulationService(es.ants.felixgm.trmsim_wsn.app.SimulationApplicationService service) { context.setSimulationService(service); }

@@ -63,6 +63,7 @@ public final class DualSimulationWorkspacePanel extends JPanel {
     private final JPanel headerTopRow;
     private final JButton setupToggleButton;
     private final JButton bottomToggleButton;
+    private final JButton saveScenarioButton;
     private final JButton detachResultsButton;
     private final JPanel networkViewportPanel;
     private final JLayeredPane networkOverlayPane;
@@ -92,6 +93,8 @@ public final class DualSimulationWorkspacePanel extends JPanel {
     private int rememberedBottomHeight = -1;
     private NetworkPanel networkPanel;
     private Collection<OutcomesPanel> outcomesPanels = new ArrayList<OutcomesPanel>();
+    private String selectedTrustModelName;
+    private String selectedScenarioName;
 
     public DualSimulationWorkspacePanel(SimulationSlot slot) {
         this.slot = slot;
@@ -102,10 +105,13 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         titleLabel.setFont(titleLabel.getFont().deriveFont(15f));
 
         modelLabel = new JLabel("No trust model selected");
+        modelLabel.setHorizontalAlignment(JLabel.CENTER);
+        modelLabel.setAlignmentX(0.5f);
         modelLabel.setForeground(new Color(92, 102, 116));
 
         setupToggleButton = new JButton("Hide Setup");
         bottomToggleButton = new JButton("Hide Results");
+        saveScenarioButton = new JButton("Save Scenario");
         detachResultsButton = new JButton("Open Results");
         setupToggleButton.addActionListener(evt -> setSetupExpanded(!setupExpanded));
         bottomToggleButton.addActionListener(evt -> setBottomExpanded(!bottomExpanded));
@@ -118,6 +124,7 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         headerActions.setOpaque(false);
         headerActions.add(setupToggleButton);
         headerActions.add(bottomToggleButton);
+        headerActions.add(saveScenarioButton);
         headerActions.add(detachResultsButton);
         headerTopRow.add(headerActions, BorderLayout.EAST);
 
@@ -289,10 +296,15 @@ public final class DualSimulationWorkspacePanel extends JPanel {
         return bottomToggleButton;
     }
 
+    public JButton getSaveScenarioButton() {
+        return saveScenarioButton;
+    }
+
     public void setWorkspaceChromeEnabled(boolean enabled) {
-        setupToggleButton.setEnabled(enabled);
-        bottomToggleButton.setEnabled(enabled);
-        detachResultsButton.setEnabled(enabled && detachedResultsFrame == null);
+        setupToggleButton.setEnabled(true);
+        bottomToggleButton.setEnabled(true);
+        saveScenarioButton.setEnabled(true);
+        detachResultsButton.setEnabled(detachedResultsFrame == null);
     }
 
     public JComboBox<String> getTrustModelComboBox() {
@@ -343,6 +355,13 @@ public final class DualSimulationWorkspacePanel extends JPanel {
 
     public void updateSelectedNodeSummary(String title, String body) {
         liveDrawerPanel.updateSelectedNodeSummary(title, body);
+    }
+
+    public void updateScenarioSummary(String title, String body) {
+        selectedScenarioName = (title == null || title.trim().isEmpty() || "Custom Configuration".equals(title))
+                ? null
+                : title;
+        refreshHeaderSummary();
     }
 
     public void setLegendItems(java.util.List<MiniLegendPanel.Item> items) {
@@ -415,11 +434,20 @@ public final class DualSimulationWorkspacePanel extends JPanel {
     }
 
     public void setSelectedTrustModelName(String trustModelName) {
-        if (trustModelName == null || trustModelName.trim().isEmpty()) {
+        selectedTrustModelName = (trustModelName == null || trustModelName.trim().isEmpty()) ? null : trustModelName;
+        refreshHeaderSummary();
+    }
+
+    private void refreshHeaderSummary() {
+        if (selectedTrustModelName == null) {
             modelLabel.setText("No trust model selected");
-        } else {
-            modelLabel.setText(trustModelName);
+            return;
         }
+        if (selectedScenarioName == null) {
+            modelLabel.setText(selectedTrustModelName);
+            return;
+        }
+        modelLabel.setText(selectedTrustModelName + " | Scenario: " + selectedScenarioName);
     }
 
     public void setSetupExpanded(boolean expanded) {

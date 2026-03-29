@@ -59,6 +59,8 @@ import java.util.Vector;
 public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_Sensor>{
     /** Number of sensors composing the network this sensor belongs to */
     protected static int _numSensors = 0;
+    /** Maximum sensor identifier in the network, used as array capacity for sparse ids */
+    protected static int _maxSensorId = 0;
     /** Score v_i */
     protected double globalReputationScore;
     /** Vector r_i */
@@ -91,8 +93,8 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
     public void reset() {
         transactions = new LinkedList<Transaction>();
         globalReputationScore = 1.0/_numSensors;
-        normalizedLocalTrustVector = new double[_numSensors];
-        mostRecentFeedbackScoreVector = new double[_numSensors];
+        normalizedLocalTrustVector = new double[_maxSensorId];
+        mostRecentFeedbackScoreVector = new double[_maxSensorId];
         isPowerNode = false;
     }
 
@@ -152,11 +154,13 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
         ((LinkedList<Transaction>)transactions).addFirst(new Transaction(client,server,outcome));
 
         if (get_numServices() == 0) {
-            mostRecentFeedbackScoreVector[server.id()-1] = outcome.get_satisfaction().isSatisfied() ? 1.0 : 0.0;
+            int serverIndex = sensorIndex(server);
+            mostRecentFeedbackScoreVector[serverIndex] = outcome.get_satisfaction().isSatisfied() ? 1.0 : 0.0;
             double localTrustValueSum = 0.0;
             for (int i = 0; i < mostRecentFeedbackScoreVector.length; i++)
                 localTrustValueSum += mostRecentFeedbackScoreVector[i];
-            normalizedLocalTrustVector[server.id()-1] = mostRecentFeedbackScoreVector[server.id()-1]/localTrustValueSum;
+            if (localTrustValueSum > 0.0)
+                normalizedLocalTrustVector[serverIndex] = mostRecentFeedbackScoreVector[serverIndex]/localTrustValueSum;
         }
     }
 
@@ -211,7 +215,12 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
      * Sets the number of sensors composing the network this sensor belongs to
      * @param numSensors The number of sensors composing the network this sensor belongs to
      */
-    public static void setNumSensors(int numSensors){ _numSensors = numSensors; }
+    public static void configureSensorSpace(int numSensors, int maxSensorId) {
+        _numSensors = numSensors;
+        _maxSensorId = Math.max(numSensors, maxSensorId);
+    }
+
+    public static void setNumSensors(int numSensors){ configureSensorSpace(numSensors, numSensors); }
 
     /**
      * Sets this senor as a power node or not
@@ -230,6 +239,14 @@ public class PowerTrust_Sensor extends Sensor implements Comparable<PowerTrust_S
      * @return The number of sensors composing the network this sensor belongs to
      */
     public static int getNumSensors() { return _numSensors; }
+
+    private static int sensorIndex(Sensor sensor) {
+        int index = sensor.id() - 1;
+        if ((index < 0) || (index >= _maxSensorId))
+            throw new IllegalStateException("PowerTrust sensor id " + sensor.id()
+                    + " is incompatible with configured sensor space " + _maxSensorId);
+        return index;
+    }
 
     /**
      * Returns the current global reputation score v_i^t
