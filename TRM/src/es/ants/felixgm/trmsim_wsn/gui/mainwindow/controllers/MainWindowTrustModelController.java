@@ -2,12 +2,10 @@ package es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers;
 
 
 import es.ants.felixgm.trmsim_wsn.gui.MainWindowContext;
-import es.ants.felixgm.trmsim_wsn.gui.layout.MiniLegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.TRMParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.trustmodel.TrustModelSelectionHelper;
 import es.ants.felixgm.trmsim_wsn.trm.TrustModelRegistry;
 import java.awt.Color;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -67,6 +65,16 @@ public final class MainWindowTrustModelController {
                 return;
             }
             String trustModelName = (String) context.getTrustModelComboBox().getSelectedItem();
+            if (context.isSingleSimulationActive()) {
+                if (context.getLastAllowedTrustModel() != null && !context.getLastAllowedTrustModel().equals(trustModelName)) {
+                    SwingUtilities.invokeLater(() -> context.getTrustModelComboBox().setSelectedItem(context.getLastAllowedTrustModel()));
+                }
+                JOptionPane.showMessageDialog(context.window(),
+                        "Stop the active simulation before changing the trust model.",
+                        "Model Switch Blocked",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             if (context.isTrustModelDisabled(trustModelName)) {
                 if (context.getLastAllowedTrustModel() != null && !context.getLastAllowedTrustModel().equals(trustModelName)) {
                     SwingUtilities.invokeLater(() -> context.getTrustModelComboBox().setSelectedItem(context.getLastAllowedTrustModel()));
@@ -102,7 +110,9 @@ public final class MainWindowTrustModelController {
             context.setLegendPanel(selectionResult.getLegendPanel());
             context.setCurrentNetworkPanel(selectionResult.getNetworkPanel());
             context.setOutcomesPanels(selectionResult.getOutcomesPanels());
+            context.refreshInspectorLegendPanel();
             if (context.getGraphWorkspace() != null) {
+                context.getGraphWorkspace().setFullscreenLegendItems(context.createLegendItemsFromCurrentLegend());
                 context.applyVisualizationControls(context.getCurrentNetworkPanel());
             }
 
@@ -166,10 +176,6 @@ public final class MainWindowTrustModelController {
 
             public void clearNodeInspector() {
                 context.clearNodeInspector();
-            }
-
-            public java.util.List<MiniLegendPanel.Item> createLegendItems() {
-                return new ArrayList<MiniLegendPanel.Item>(context.createLegendItemsFromCurrentLegend());
             }
         };
     }

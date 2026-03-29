@@ -25,6 +25,7 @@ public final class MainWindowUiStateController {
         javax.swing.JMenuItem getLoadWsnMenuItem();
         AbstractButton getNewWsnButton();
         javax.swing.JMenuItem getNewWsnMenuItem();
+        AbstractButton getModeSwitchButton();
         JSlider getPercentageMaliciousServersSlider();
         JLabel getPercentageMaliciousServersLabel();
         JSlider getPercentageRelayServersSlider();
@@ -57,12 +58,12 @@ public final class MainWindowUiStateController {
     public static void setSimulationComponentsEnabled(Host host, boolean simulationRunning) {
         boolean enabled = !simulationRunning;
         UiStateHelper.setComponentsEnabled(enabled,
-                host.getRunTrmButton(), host.getRunTrmMenuItem(),
                 host.getResetWsnButton(), host.getResetWsnMenuItem(),
                 host.getSaveWsnButton(), host.getSaveWsnMenuItem(),
                 host.getRunSimulationsButton(), host.getRunSimulationsMenuItem(),
                 host.getLoadWsnButton(), host.getLoadWsnMenuItem(),
                 host.getNewWsnButton(), host.getNewWsnMenuItem(),
+                host.getModeSwitchButton(),
                 host.getPercentageMaliciousServersSlider(), host.getPercentageMaliciousServersLabel(),
                 host.getPercentageRelayServersSlider(), host.getPercentageRelayServersLabel(),
                 host.getRadioRangeSlider(), host.getRadioRangeLabel(),
@@ -73,6 +74,13 @@ public final class MainWindowUiStateController {
                 host.getDynamicCheckBox(), host.getOscillatingCheckBox(), host.getCollusionCheckBox(),
                 host.getTrModelLabel(), host.getTrModelComboBox(), host.getTrModelMenu());
         host.getSensorPropertiesPanel().setVisible(false);
+
+        host.getRunTrmButton().setText(simulationRunning ? "Stop T&R Model" : "Run T&R Model");
+        host.getRunTrmMenuItem().setText(simulationRunning ? "Stop T&R Model" : "Run T&R Model");
+        if (simulationRunning) {
+            host.getRunTrmButton().setEnabled(true);
+            host.getRunTrmMenuItem().setEnabled(true);
+        }
 
         if (!EigenTrust.get_name().equals(host.getSelectedTrustModelName())) {
             UiStateHelper.setComponentsEnabled(enabled,

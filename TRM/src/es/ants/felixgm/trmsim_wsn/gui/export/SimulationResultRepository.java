@@ -1,5 +1,6 @@
 package es.ants.felixgm.trmsim_wsn.gui.export;
 
+import es.ants.felixgm.trmsim_wsn.SimulationSlot;
 import es.ants.felixgm.trmsim_wsn.outcomes.*;
 import java.awt.Component;
 import java.io.*;
@@ -8,20 +9,47 @@ import java.util.*;
 import javax.swing.JOptionPane;
 
 public class SimulationResultRepository {
-    private static SimulationResultRepository instance;
+    private static final Map<SimulationSlot, SimulationResultRepository> INSTANCES =
+            new EnumMap<SimulationSlot, SimulationResultRepository>(SimulationSlot.class);
     private List<Outcome> simulationResults;
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private final SimulationSlot slot;
 
-    private SimulationResultRepository() {
+    private SimulationResultRepository(SimulationSlot slot) {
+        this.slot = slot;
         simulationResults = new Vector<>();
         new File("simulation_results/").mkdirs();
     }
 
     public static SimulationResultRepository getInstance() {
-        if (instance == null) {
-            instance = new SimulationResultRepository();
+        return getInstance(SimulationSlot.PRIMARY);
+    }
+
+    public static synchronized SimulationResultRepository getInstance(SimulationSlot slot) {
+        SimulationResultRepository repository = INSTANCES.get(slot);
+        if (repository == null) {
+            repository = new SimulationResultRepository(slot);
+            INSTANCES.put(slot, repository);
         }
-        return instance;
+        return repository;
+    }
+
+    public static synchronized Collection<SimulationResultRepository> getAllInstances() {
+        List<SimulationResultRepository> repositories = new ArrayList<SimulationResultRepository>();
+        for (SimulationSlot slot : SimulationSlot.values()) {
+            repositories.add(getInstance(slot));
+        }
+        return repositories;
+    }
+
+    public static synchronized void clearAll() {
+        for (SimulationResultRepository repository : getAllInstances()) {
+            repository.clearRepository();
+        }
+    }
+
+    public SimulationSlot getSlot() {
+        return slot;
     }
 
     public void addOutcome(Outcome outcome) {

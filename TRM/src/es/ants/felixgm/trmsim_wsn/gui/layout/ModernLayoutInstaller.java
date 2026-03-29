@@ -39,6 +39,7 @@ public final class ModernLayoutInstaller {
             javax.swing.JButton newWSNButton, javax.swing.JButton loadWSNButton, javax.swing.JButton saveWSNButton,
             javax.swing.JButton resetWSNButton, javax.swing.JButton runTRMButton, javax.swing.JButton stopTRMButton,
             javax.swing.JButton runSimulationsButton, javax.swing.JButton stopSimulationsButton, javax.swing.JButton exportDataButton,
+            javax.swing.JButton modeSwitchButton,
             JLabel TRModelLabel, JComboBox TRModelComboBox,
             JLabel minNumSensorsLabel, JSpinner minNumSensorsSpinner, JLabel maxNumSensorsLabel, JSpinner maxNumSensorsSpinner,
             JLabel radioRangeLabel, JSlider radioRangeSlider, JTextField radioRangeTextField,
@@ -62,6 +63,7 @@ public final class ModernLayoutInstaller {
         frame.add(createTopHeader(
                 newWSNButton, loadWSNButton, saveWSNButton, resetWSNButton,
                 runTRMButton, stopTRMButton, runSimulationsButton, stopSimulationsButton, exportDataButton,
+                modeSwitchButton,
                 TRModelLabel, TRModelComboBox
         ), BorderLayout.NORTH);
 
@@ -91,6 +93,7 @@ public final class ModernLayoutInstaller {
             javax.swing.JButton newWSNButton, javax.swing.JButton loadWSNButton, javax.swing.JButton saveWSNButton,
             javax.swing.JButton resetWSNButton, javax.swing.JButton runTRMButton, javax.swing.JButton stopTRMButton,
             javax.swing.JButton runSimulationsButton, javax.swing.JButton stopSimulationsButton, javax.swing.JButton exportDataButton,
+            javax.swing.JButton modeSwitchButton,
             JLabel TRModelLabel, JComboBox TRModelComboBox
     ) {
         JPanel header = new JPanel();
@@ -105,7 +108,6 @@ public final class ModernLayoutInstaller {
         actions.add(saveWSNButton);
         actions.add(resetWSNButton);
         actions.add(runTRMButton);
-        actions.add(stopTRMButton);
         actions.add(runSimulationsButton);
         actions.add(stopSimulationsButton);
         actions.add(exportDataButton);
@@ -122,6 +124,8 @@ public final class ModernLayoutInstaller {
         modelBox.add(TRModelLabel, BorderLayout.NORTH);
         TRModelComboBox.setPreferredSize(new Dimension(170, 28));
         modelBox.add(TRModelComboBox, BorderLayout.CENTER);
+        modeSwitchButton.setPreferredSize(new Dimension(150, 28));
+        modelRow.add(modeSwitchButton, BorderLayout.WEST);
         modelRow.add(modelBox, BorderLayout.EAST);
         modelRow.setAlignmentX(0.0f);
         header.add(modelRow);
@@ -415,7 +419,7 @@ public final class ModernLayoutInstaller {
         center.setOpaque(false);
         center.add(slider, BorderLayout.CENTER);
 
-        valueField.setEditable(false);
+        valueField.setEditable(true);
         valueField.setHorizontalAlignment(SwingConstants.CENTER);
         valueField.setPreferredSize(new Dimension(48, 24));
         center.add(valueField, BorderLayout.EAST);
@@ -430,7 +434,7 @@ public final class ModernLayoutInstaller {
         panel.add(label);
         slider.setPreferredSize(new Dimension(132, 24));
         panel.add(slider);
-        valueField.setEditable(false);
+        valueField.setEditable(true);
         valueField.setHorizontalAlignment(SwingConstants.CENTER);
         valueField.setPreferredSize(new Dimension(56, 24));
         panel.add(valueField);

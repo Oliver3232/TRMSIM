@@ -80,6 +80,7 @@ public final class MainWindowSimulationController {
     }
 
     public static void finishSimulationUi(MainWindowContext context) {
+        context.setSingleSimulationStartPending(false);
         SimulationUiHelper.finishSimulationUi(
                 context::resetBatchSimulationState,
                 () -> context.setSimulationComponentsEnabled(false),
@@ -88,9 +89,11 @@ public final class MainWindowSimulationController {
                 context.getStopSimulationsButton(),
                 context.getStopSimulationsMenuItem(),
                 context.getMessagesTextArea());
+        restoreSingleRunAvailability(context);
     }
 
     public static void handleSimulationFailure(MainWindowContext context, Exception exception) {
+        context.setSingleSimulationStartPending(false);
         SimulationUiHelper.handleSimulationFailure(
                 context.window(),
                 exception,
@@ -101,6 +104,7 @@ public final class MainWindowSimulationController {
                 context.getStopTrmMenuItem(),
                 context.getStopSimulationsButton(),
                 context.getStopSimulationsMenuItem());
+        restoreSingleRunAvailability(context);
     }
 
     public static void prepareEditableParametersForExecution(MainWindowContext context) throws Exception {
@@ -123,7 +127,9 @@ public final class MainWindowSimulationController {
             context.getResetWsnButton().setEnabled(true);
             context.getResetWsnMenuItem().setEnabled(true);
             context.getRunTrmButton().setEnabled(true);
+            context.getRunTrmButton().setText("Run T&R Model");
             context.getRunTrmMenuItem().setEnabled(true);
+            context.getRunTrmMenuItem().setText("Run T&R Model");
         }
     }
 
@@ -165,6 +171,10 @@ public final class MainWindowSimulationController {
         context.setSimulationComponentsEnabled(true);
         context.markBatchRunning();
         context.updateRunSimulationsControls();
+        context.getRunTrmButton().setEnabled(false);
+        context.getRunTrmButton().setText("Run T&R Model");
+        context.getRunTrmMenuItem().setEnabled(false);
+        context.getRunTrmMenuItem().setText("Run T&R Model");
         context.getRunSimulationsButton().setEnabled(true);
         context.getRunSimulationsMenuItem().setEnabled(true);
         context.getStopSimulationsButton().setEnabled(true);
@@ -178,7 +188,12 @@ public final class MainWindowSimulationController {
         SimulationResultRepository.getInstance().clearRepository();
         context.setVisualizationDelay(context.getSelectedDelayMillis());
 
+        context.setSingleSimulationStartPending(true);
         context.setSimulationComponentsEnabled(true);
+        context.getRunTrmButton().setEnabled(true);
+        context.getRunTrmButton().setText("Stop T&R Model");
+        context.getRunTrmMenuItem().setEnabled(true);
+        context.getRunTrmMenuItem().setText("Stop T&R Model");
         context.getStopTrmButton().setEnabled(true);
         context.getStopTrmMenuItem().setEnabled(true);
         SimulationUiHelper.resetOutcomePanels(context.getOutcomesPanels());
@@ -187,6 +202,7 @@ public final class MainWindowSimulationController {
 
     private static void stopRunningSimulations(MainWindowContext context, boolean resetBatchStateOnStop, boolean disableSingleStopControls, boolean disableBatchStopControls) throws Exception {
         context.getController().stopSimulations();
+        context.setSingleSimulationStartPending(false);
         if (resetBatchStateOnStop) {
             context.resetBatchSimulationState();
         }
@@ -198,6 +214,16 @@ public final class MainWindowSimulationController {
         if (disableBatchStopControls) {
             context.getStopSimulationsButton().setEnabled(false);
             context.getStopSimulationsMenuItem().setEnabled(false);
+        }
+        restoreSingleRunAvailability(context);
+    }
+
+    private static void restoreSingleRunAvailability(MainWindowContext context) {
+        if (context.getCurrentNetwork() != null) {
+            context.getRunTrmButton().setEnabled(true);
+            context.getRunTrmButton().setText("Run T&R Model");
+            context.getRunTrmMenuItem().setEnabled(true);
+            context.getRunTrmMenuItem().setText("Run T&R Model");
         }
     }
 }

@@ -36,9 +36,9 @@ public final class SimulationUiHelper {
         stopSimulationsMenuItem.setEnabled(false);
 
         es.ants.felixgm.trmsim_wsn.gui.export.SimulationResultRepository repository = es.ants.felixgm.trmsim_wsn.gui.export.SimulationResultRepository.getInstance();
-        messagesTextArea.setText(
-                "Simulation completed. " + repository.getResultCount() + " results saved. Use 'Export Data' to save to file.\n"
-                        + messagesTextArea.getText());
+        MessageConsoleHelper.appendMessage(
+                messagesTextArea,
+                "Simulation completed. " + repository.getResultCount() + " results saved. Use 'Export Data' to save to file.\n");
     }
 
     public static void handleSimulationFailure(

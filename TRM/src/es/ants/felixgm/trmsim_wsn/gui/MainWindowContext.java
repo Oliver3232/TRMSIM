@@ -19,6 +19,7 @@ import es.ants.felixgm.trmsim_wsn.gui.mainwindow.hosts.MainWindowSimulationEvent
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.NetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.OutcomesPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.TRMParametersPanel;
+import es.ants.felixgm.trmsim_wsn.gui.support.MessageConsoleHelper;
 import es.ants.felixgm.trmsim_wsn.gui.support.NetworkRenderSupport;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
@@ -152,8 +153,10 @@ public final class MainWindowContext {
     public void applyCurrentParameters() throws Exception { window.set_TRMParameters(); }
     public void setVisualizationDelay(long delayMillis) { window.simulationService.setVisualizationDelay(delayMillis); }
     public void setMessagesText(String text) { window.messagesTextArea.setText(text); }
-    public void prependMessage(String text) { window.messagesTextArea.setText(text + window.messagesTextArea.getText()); }
+    public void prependMessage(String text) { MessageConsoleHelper.appendMessage(window.messagesTextArea, text); }
     public void setSimulationComponentsEnabled(boolean enable) { window.simulationComponentsEnabling(enable); }
+    public boolean isSingleSimulationActive() { return window.isSingleSimulationActive(); }
+    public void setSingleSimulationStartPending(boolean pending) { window.setSingleSimulationStartPending(pending); }
     public void setClientsProbabilityControlsEnabled(boolean enabled) { MainWindowRuntimeSupport.setClientsProbabilityControlsEnabled(window, enabled); }
     public JTextField getDelayTextField() { return window.delayTextField; }
     public JSlider getRadioRangeSlider() { return window.radioRangeSlider; }
@@ -227,6 +230,7 @@ public final class MainWindowContext {
     public JMenuItem getLoadWsnMenuItem() { return window.loadWSNmenuItem; }
     public AbstractButton getNewWsnButton() { return window.newWSNButton; }
     public JMenuItem getNewWsnMenuItem() { return window.newWSNmenuItem; }
+    public AbstractButton getModeSwitchButton() { return window.modeSwitchButton; }
     public AbstractButton getStopSimulationsButton() { return window.stopSimulationsButton; }
     public JMenuItem getStopSimulationsMenuItem() { return window.stopSimulationsMenuItem; }
     public JLabel getPercentageMaliciousServersLabel() { return window.percentageMaliciousServersLabel; }
@@ -244,7 +248,9 @@ public final class MainWindowContext {
         window.resetWSNButton.setEnabled(true);
         window.resetWSNmenuItem.setEnabled(true);
         window.runTRMButton.setEnabled(true);
+        window.runTRMButton.setText("Run T&R Model");
         window.runTRMmenuItem.setEnabled(true);
+        window.runTRMmenuItem.setText("Run T&R Model");
         window.saveWSNButton.setEnabled(true);
         window.saveWSNmenuItem.setEnabled(true);
     }

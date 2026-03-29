@@ -32,6 +32,7 @@ public final class MainWindowAssemblyController {
                 window.saveWSNButton,
                 window.stopSimulationsButton,
                 window.runSimulationsButton,
+                window.modeSwitchButton,
                 window.exportDataButton,
                 window.spinnersControlPanel,
                 window.numExecutionsLabel,

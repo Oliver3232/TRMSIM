@@ -70,7 +70,14 @@ import java.util.Vector;
  * @since 0.1
  */
 public abstract class Sensor implements Runnable {
-    private static final SimulationContext simulationContext = new SimulationContext();
+    private static final SimulationContext defaultSimulationContext = new SimulationContext();
+    private static final InheritableThreadLocal<SimulationContext> simulationContextHolder =
+            new InheritableThreadLocal<SimulationContext>() {
+                @Override
+                protected SimulationContext initialValue() {
+                    return defaultSimulationContext;
+                }
+            };
     /** Indicates whether a collusion among malicious sensors is built */
     public static boolean collusion = false;
     /** Indicates whether some sensors will switch off sometimes in order to save energy */
@@ -151,7 +158,7 @@ public abstract class Sensor implements Runnable {
      */
     public void run() {
         if (reachesQualifiedService(requiredService)) {
-            TRModel_WSN trustModel = simulationContext.getTrustModel();
+            TRModel_WSN trustModel = getSimulationContext().getTrustModel();
             GatheredInformation gi = trustModel.gatherInformation(this, requiredService);
             Vector<Sensor> path = trustModel.scoreAndRanking(this,gi);
             outcome = trustModel.performTransaction(path,requiredService);
@@ -191,7 +198,7 @@ public abstract class Sensor implements Runnable {
         numRequests++;
         if (numRequests == numRequestsThreshold) { // Edited by Hamed Khiabani
             numRequests = 0;
-            if (simulationContext.isDynamic() && simulationContext.isRunningSimulation()) {
+            if (getSimulationContext().isDynamic() && getSimulationContext().isRunningSimulation()) {
                 activeState = false;
                 numRequestsTimer = new Timer();
                 numRequestsTimer.schedule(new TimerTask(){
@@ -481,7 +488,7 @@ public abstract class Sensor implements Runnable {
      * Edited by Hamed Khiabani
      */
     private void sleepIfInactive(final long time) {
-        if (simulationContext.isDynamic() && simulationContext.isRunningSimulation()) {
+        if (getSimulationContext().isDynamic() && getSimulationContext().isRunningSimulation()) {
             sleepTimer = new Timer();
             sleepTimer.schedule(new TimerTask() {
                 @Override
@@ -538,33 +545,43 @@ public abstract class Sensor implements Runnable {
      * This method returns a boolean indicating whether there is currently a simulation running or not
      * @return Boolean indicating whether there is currently a simulation running or not
      */
-    public static boolean isRunningSimulation() { return simulationContext.isRunningSimulation(); }
+    public static boolean isRunningSimulation() { return getSimulationContext().isRunningSimulation(); }
     
     /**
      * Returns Current Trust and Reputation model used by every Sensor
      * @return Current Trust and Reputation model used by every Sensor
      */
-    public static TRModel_WSN get_TRModel_WSN() { return simulationContext.getTrustModel(); }
+    public static TRModel_WSN get_TRModel_WSN() { return getSimulationContext().getTrustModel(); }
 
-    protected final TRModel_WSN trustModel() { return simulationContext.getTrustModel(); }
+    protected final TRModel_WSN trustModel() { return getSimulationContext().getTrustModel(); }
 
-    protected final boolean isCollusionEnabled() { return simulationContext.isCollusion(); }
+    protected final boolean isCollusionEnabled() { return getSimulationContext().isCollusion(); }
 
-    protected final boolean isDynamicNetwork() { return simulationContext.isDynamic(); }
+    protected final boolean isDynamicNetwork() { return getSimulationContext().isDynamic(); }
 
-    protected final boolean isSimulationRunningFlag() { return simulationContext.isRunningSimulation(); }
+    protected final boolean isSimulationRunningFlag() { return getSimulationContext().isRunningSimulation(); }
 
-    protected static TRModel_WSN currentTrustModel() { return simulationContext.getTrustModel(); }
+    protected static TRModel_WSN currentTrustModel() { return getSimulationContext().getTrustModel(); }
 
-    protected static boolean isCollusionConfigured() { return simulationContext.isCollusion(); }
+    protected static boolean isCollusionConfigured() { return getSimulationContext().isCollusion(); }
 
-    protected static boolean isDynamicConfigured() { return simulationContext.isDynamic(); }
+    protected static boolean isDynamicConfigured() { return getSimulationContext().isDynamic(); }
 
     /**
      * Returns the central runtime context currently backing sensor state.
      * @return Active simulation context
      */
-    public static SimulationContext getSimulationContext() { return simulationContext; }
+    public static SimulationContext getSimulationContext() { return simulationContextHolder.get(); }
+
+    public static SimulationContext getDefaultSimulationContext() { return defaultSimulationContext; }
+
+    public static void activateSimulationContext(SimulationContext simulationContext) {
+        simulationContextHolder.set((simulationContext == null) ? defaultSimulationContext : simulationContext);
+    }
+
+    public static void clearActiveSimulationContext() {
+        simulationContextHolder.set(defaultSimulationContext);
+    }
 
 
     /**
@@ -586,7 +603,7 @@ public abstract class Sensor implements Runnable {
      */
     public static void setCollusion(boolean coll) {
         collusion = coll;
-        simulationContext.setCollusion(coll);
+        getSimulationContext().setCollusion(coll);
     }
 
     /**
@@ -595,7 +612,7 @@ public abstract class Sensor implements Runnable {
      */
     public static void setDynamic(boolean dyn) {
         dynamic = dyn;
-        simulationContext.setDynamic(dyn);
+        getSimulationContext().setDynamic(dyn);
     }
     
     /**
@@ -604,7 +621,7 @@ public abstract class Sensor implements Runnable {
      */
     public static void setRunningSimulation(boolean _runningSimulation) {
         runningSimulation = _runningSimulation;
-        simulationContext.setRunningSimulation(_runningSimulation);
+        getSimulationContext().setRunningSimulation(_runningSimulation);
     }
     
     /**
@@ -625,7 +642,7 @@ public abstract class Sensor implements Runnable {
      */
     public static void set_TRModel_WSN(TRModel_WSN TRModel_WSN) {
         trmmodelWSN = TRModel_WSN;
-        simulationContext.setTrustModel(TRModel_WSN);
+        getSimulationContext().setTrustModel(TRModel_WSN);
     }
 
     /**

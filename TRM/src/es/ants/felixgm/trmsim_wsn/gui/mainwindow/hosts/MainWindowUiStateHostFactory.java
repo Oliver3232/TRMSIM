@@ -22,6 +22,7 @@ public final class MainWindowUiStateHostFactory {
             public javax.swing.JMenuItem getLoadWsnMenuItem() { return context.getLoadWsnMenuItem(); }
             public javax.swing.AbstractButton getNewWsnButton() { return context.getNewWsnButton(); }
             public javax.swing.JMenuItem getNewWsnMenuItem() { return context.getNewWsnMenuItem(); }
+            public javax.swing.AbstractButton getModeSwitchButton() { return context.getModeSwitchButton(); }
             public javax.swing.JSlider getPercentageMaliciousServersSlider() { return context.getPercentageMaliciousServersSlider(); }
             public javax.swing.JLabel getPercentageMaliciousServersLabel() { return context.getPercentageMaliciousServersLabel(); }
             public javax.swing.JSlider getPercentageRelayServersSlider() { return context.getPercentageRelayServersSlider(); }

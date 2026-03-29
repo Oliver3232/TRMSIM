@@ -51,6 +51,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import javax.swing.ToolTipManager;
 import javax.swing.JPanel;
 
@@ -108,7 +109,7 @@ public abstract class OutcomesPanel extends JPanel {
      * @param outcomes Outcomes to be plotted in this outcomes panel
      */
     public void plotOutcomes(Collection<Outcome> outcomes) {
-        this.outcomes = outcomes;
+        this.outcomes = snapshot(outcomes);
         repaint();
     }
 
@@ -179,7 +180,16 @@ public abstract class OutcomesPanel extends JPanel {
      * This method sets the outcomes to be plotted in this outcomes panel
      * @param outcomes Outcomes to be plotted in this outcomes panel
      */
-    public void setOutcomes(Collection<Outcome> outcomes) { this.outcomes = outcomes; }
+    public void setOutcomes(Collection<Outcome> outcomes) { this.outcomes = snapshot(outcomes); }
+
+    protected Collection<Outcome> snapshot(Collection<Outcome> source) {
+        if (source == null) {
+            return new ArrayList<Outcome>();
+        }
+        List<Outcome> copy = new ArrayList<Outcome>(source.size());
+        copy.addAll(source);
+        return copy;
+    }
 
     private void initializeInteractions() {
         setToolTipText(" ");

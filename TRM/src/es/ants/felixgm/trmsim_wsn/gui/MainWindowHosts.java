@@ -1,5 +1,6 @@
 package es.ants.felixgm.trmsim_wsn.gui;
 
+import es.ants.felixgm.trmsim_wsn.SimulationSlot;
 import es.ants.felixgm.trmsim_wsn.gui.events.SimulationEventHelper;
 import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowConfigurationController;
 import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowInitializationController;
@@ -51,5 +52,9 @@ public final class MainWindowHosts {
 
     static SimulationEventHelper.EventHost simulationEvents(TRMSim_WSN window) {
         return MainWindowSimulationEventHostFactory.create(new MainWindowContext(window));
+    }
+
+    static SimulationEventHelper.EventHost simulationEvents(TRMSim_WSN window, SimulationSlot slot) {
+        return MainWindowSimulationEventHostFactory.create(new MainWindowContext(window), slot);
     }
 }

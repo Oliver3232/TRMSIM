@@ -59,7 +59,9 @@ import es.ants.felixgm.trmsim_wsn.trm.TrustModelFactory;
 import es.ants.felixgm.trmsim_wsn.trm.TrustModelRegistry;
 
 import java.util.Collection;
+import java.util.EnumMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -73,24 +75,14 @@ import java.util.concurrent.Future;
 public class Controller {
     /** Singleton instance of Controller */
     private static Controller controlador = null;
-    /** Current working network*/
-    private Network currentNetwork;
-    /** Parameters file name for the current trust and reputation model */
-    private String parametersFile;
-    /** Current trust and reputation model */
-    private TRModel_WSN trmodel_wsn;
     /** Service requested by every client in the network */
     private Service requiredService;
     /** Delay used to allow a better visualization of some simulationThread */
     private long delay;
     /** Executor controlling current simulation lifecycle */
     private final ExecutorService simulationExecutor;
-    /** Future associated with the current simulation */
-    private Future<?> simulationFuture;
-    /** Current simulation */
-    private Simulation simulation;
-    /** Central runtime context for active simulation state */
-    private final SimulationContext simulationContext;
+    /** Per-slot runtime workspaces */
+    private final Map<SimulationSlot, SimulationWorkspaceState> workspaces;
     
     /**
      * Returns the current instance of this controller
@@ -102,6 +94,10 @@ public class Controller {
             controlador = new Controller();
         return controlador;
     }
+
+    public static Controller createIndependent() throws Exception {
+        return new Controller();
+    }
     
     /**
      * Creates a new instance of Controller
@@ -110,30 +106,61 @@ public class Controller {
     private Controller() throws Exception {
         requiredService = new Service("My service");
         delay = 0;
-        simulationContext = Sensor.getSimulationContext();
-        simulationExecutor = Executors.newSingleThreadExecutor();
+        simulationExecutor = Executors.newFixedThreadPool(SimulationSlot.values().length);
+        workspaces = new EnumMap<SimulationSlot, SimulationWorkspaceState>(SimulationSlot.class);
+        workspaces.put(SimulationSlot.PRIMARY,
+                new SimulationWorkspaceState(SimulationSlot.PRIMARY, Sensor.getDefaultSimulationContext()));
+        workspaces.put(SimulationSlot.SECONDARY,
+                new SimulationWorkspaceState(SimulationSlot.SECONDARY, new SimulationContext()));
     }
 
-    private void submitSimulation(Simulation nextSimulation) {
-        simulation = nextSimulation;
-        simulationFuture = simulationExecutor.submit(nextSimulation);
+    private SimulationWorkspaceState workspace(SimulationSlot slot) {
+        return workspaces.get(slot);
+    }
+
+    private SimulationWorkspaceState primaryWorkspace() {
+        return workspace(SimulationSlot.PRIMARY);
+    }
+
+    private void submitSimulation(SimulationSlot slot, Simulation nextSimulation) {
+        SimulationWorkspaceState workspaceState = workspace(slot);
+        workspaceState.setSimulation(nextSimulation);
+        workspaceState.setSimulationFuture(simulationExecutor.submit(nextSimulation));
     }
 
     private Collection<SimulationListener> buildSimulationListeners(SimulationListener listener) {
+        return buildSimulationListeners(SimulationSlot.PRIMARY, listener);
+    }
+
+    private Collection<SimulationListener> buildSimulationListeners(SimulationSlot slot, SimulationListener listener) {
         Collection<SimulationListener> listeners = new LinkedList<SimulationListener>();
         listeners.add(listener);
-        listeners.add(createControllerListener());
+        listeners.add(createControllerListener(slot));
         return listeners;
     }
 
     private void updateCurrentTrustModel(TRModel_WSN trustModel, String defaultParametersFile) {
-        parametersFile = defaultParametersFile;
-        trmodel_wsn = trustModel;
-        Sensor.set_TRModel_WSN(trmodel_wsn);
+        updateCurrentTrustModel(SimulationSlot.PRIMARY, trustModel, defaultParametersFile);
+    }
+
+    private void updateCurrentTrustModel(SimulationSlot slot, TRModel_WSN trustModel, String defaultParametersFile) {
+        SimulationWorkspaceState workspaceState = workspace(slot);
+        workspaceState.setParametersFile(defaultParametersFile);
+        workspaceState.setTrustModel(trustModel);
+        Sensor.activateSimulationContext(workspaceState.getSimulationContext());
+        try {
+            Sensor.set_TRModel_WSN(trustModel);
+        } finally {
+            Sensor.clearActiveSimulationContext();
+        }
     }
 
     private boolean hasCurrentNetwork() {
-        return currentNetwork != null;
+        return hasCurrentNetwork(SimulationSlot.PRIMARY);
+    }
+
+    private boolean hasCurrentNetwork(SimulationSlot slot) {
+        return workspace(slot).getCurrentNetwork() != null;
     }
     
     /**
@@ -154,17 +181,36 @@ public class Controller {
                                 double probClients, double probRelay, double probMalicious,
                                 double radioRange, boolean dynamic, boolean oscillating, 
                                 boolean collusion) {
-        currentNetwork = ControllerNetworkGenerationSupport.createRandomNetwork(
-                trmodel_wsn,
-                requiredService,
-                minNumSensors,
-                maxNumSensors,
-                probClients,
-                probRelay,
-                probMalicious,
-                radioRange,
-                dynamic,
-                collusion);
+        return createNewNetwork(SimulationSlot.PRIMARY, minNumSensors, maxNumSensors, probClients, probRelay,
+                probMalicious, radioRange, dynamic, oscillating, collusion);
+    }
+
+    public Network createNewNetwork(SimulationSlot slot, int minNumSensors, int maxNumSensors,
+                                double probClients, double probRelay, double probMalicious,
+                                double radioRange, boolean dynamic, boolean oscillating,
+                                boolean collusion) {
+        SimulationWorkspaceState workspaceState = workspace(slot);
+        workspaceState.getSimulationContext().setDynamic(dynamic);
+        workspaceState.getSimulationContext().setCollusion(collusion);
+        Network currentNetwork;
+        Sensor.activateSimulationContext(workspaceState.getSimulationContext());
+        try {
+            Sensor.set_TRModel_WSN(workspaceState.getTrustModel());
+            currentNetwork = ControllerNetworkGenerationSupport.createRandomNetwork(
+                    workspaceState.getTrustModel(),
+                    requiredService,
+                    minNumSensors,
+                    maxNumSensors,
+                    probClients,
+                    probRelay,
+                    probMalicious,
+                    radioRange,
+                    dynamic,
+                    collusion);
+        } finally {
+            Sensor.clearActiveSimulationContext();
+        }
+        workspaceState.setCurrentNetwork(currentNetwork);
         return currentNetwork;
     }
 
@@ -175,6 +221,13 @@ public class Controller {
      */
     public Network createNewNetwork(NetworkGenerationConfig config) {
         return createNewNetwork(
+                SimulationSlot.PRIMARY,
+                config);
+    }
+
+    public Network createNewNetwork(SimulationSlot slot, NetworkGenerationConfig config) {
+        return createNewNetwork(
+                slot,
                 config.getMinNumSensors(),
                 config.getMaxNumSensors(),
                 config.getProbClients(),
@@ -192,7 +245,12 @@ public class Controller {
      * @return The new current WSN
      */
     public Network setNewNeighborsNetwork(double newRange) {
-        if (hasCurrentNetwork()) {
+        return setNewNeighborsNetwork(SimulationSlot.PRIMARY, newRange);
+    }
+
+    public Network setNewNeighborsNetwork(SimulationSlot slot, double newRange) {
+        if (hasCurrentNetwork(slot)) {
+            Network currentNetwork = workspace(slot).getCurrentNetwork();
             currentNetwork.setNewNeighbors(newRange);
             return currentNetwork;
         }
@@ -203,8 +261,20 @@ public class Controller {
      * This method resets the current network to its initial state
      */
     public void resetCurrentNetwork() {
-        if (hasCurrentNetwork())
-            currentNetwork.reset();
+        resetCurrentNetwork(SimulationSlot.PRIMARY);
+    }
+
+    public void resetCurrentNetwork(SimulationSlot slot) {
+        if (hasCurrentNetwork(slot)) {
+            SimulationWorkspaceState workspaceState = workspace(slot);
+            Sensor.activateSimulationContext(workspaceState.getSimulationContext());
+            try {
+                Sensor.set_TRModel_WSN(workspaceState.getTrustModel());
+                workspaceState.getCurrentNetwork().reset();
+            } finally {
+                Sensor.clearActiveSimulationContext();
+            }
+        }
     }
 
     /**
@@ -212,10 +282,10 @@ public class Controller {
      * @param observable
      * @param arg
      */
-    private SimulationListener createControllerListener() {
+    private SimulationListener createControllerListener(SimulationSlot slot) {
         return new SimulationListener() {
             public void onNetworkUpdated(Network network) {
-                currentNetwork = network;
+                workspace(slot).setCurrentNetwork(network);
             }
 
             public void onOutcomesUpdated(Collection<es.ants.felixgm.trmsim_wsn.outcomes.Outcome> outcomes) {
@@ -249,11 +319,33 @@ public class Controller {
                                 double probClients, double probRelay, double probMalicious,
                                 double radioRange, boolean dynamic, boolean oscillating, 
                                 boolean collusion, int numNetworks, int numExecutions) {
-        simulation = new Simulation(buildSimulationListeners(listener),requiredService,minNumSensors,maxNumSensors,
+        runSimulations(
+                SimulationSlot.PRIMARY,
+                listener,
+                minNumSensors,
+                maxNumSensors,
+                probClients,
+                probRelay,
+                probMalicious,
+                radioRange,
+                dynamic,
+                oscillating,
+                collusion,
+                numNetworks,
+                numExecutions);
+    }
+
+    public void runSimulations(SimulationSlot slot, SimulationListener listener, int minNumSensors, int maxNumSensors,
+                                double probClients, double probRelay, double probMalicious,
+                                double radioRange, boolean dynamic, boolean oscillating,
+                                boolean collusion, int numNetworks, int numExecutions) {
+        SimulationWorkspaceState workspaceState = workspace(slot);
+        Simulation simulation = new Simulation(this, slot, workspaceState.getSimulationContext(),
+                buildSimulationListeners(slot, listener), requiredService, minNumSensors,maxNumSensors,
                         probClients,probRelay,probMalicious,radioRange,
                         dynamic, oscillating, collusion, 
                         numNetworks,numExecutions);
-        submitSimulation(simulation);
+        submitSimulation(slot, simulation);
     }
 
     /**
@@ -262,8 +354,13 @@ public class Controller {
      * @param config Batch configuration
      */
     public void runSimulations(SimulationListener listener, BatchSimulationConfig config) {
+        runSimulations(SimulationSlot.PRIMARY, listener, config);
+    }
+
+    public void runSimulations(SimulationSlot slot, SimulationListener listener, BatchSimulationConfig config) {
         NetworkGenerationConfig networkConfig = config.getNetworkGenerationConfig();
         runSimulations(
+                slot,
                 listener,
                 networkConfig.getMinNumSensors(),
                 networkConfig.getMaxNumSensors(),
@@ -282,14 +379,36 @@ public class Controller {
      * This method stops the current simulation process
      */
     public void stopSimulations() {
-        if (simulationFuture != null)
-            simulation.stop();
+        stopSimulations(SimulationSlot.PRIMARY);
+    }
+
+    public void stopAllSimulations() {
+        for (SimulationSlot slot : SimulationSlot.values()) {
+            stopSimulations(slot);
+        }
+    }
+
+    public void stopSimulations(SimulationSlot slot) {
+        SimulationWorkspaceState workspaceState = workspace(slot);
+        if (workspaceState.getSimulationFuture() != null && workspaceState.getSimulation() != null)
+            workspaceState.getSimulation().stop();
     }
 
     /**
      * Pauses the current simulation process
      */
     public void pauseSimulation() {
+        pauseSimulation(SimulationSlot.PRIMARY);
+    }
+
+    public void pauseAllSimulations() {
+        for (SimulationSlot slot : SimulationSlot.values()) {
+            pauseSimulation(slot);
+        }
+    }
+
+    public void pauseSimulation(SimulationSlot slot) {
+        Simulation simulation = workspace(slot).getSimulation();
         if (simulation != null)
             simulation.pause();
     }
@@ -298,6 +417,17 @@ public class Controller {
      * Resumes the current simulation process
      */
     public void resumeSimulation() {
+        resumeSimulation(SimulationSlot.PRIMARY);
+    }
+
+    public void resumeAllSimulations() {
+        for (SimulationSlot slot : SimulationSlot.values()) {
+            resumeSimulation(slot);
+        }
+    }
+
+    public void resumeSimulation(SimulationSlot slot) {
+        Simulation simulation = workspace(slot).getSimulation();
         if (simulation != null)
             simulation.resume();
     }
@@ -312,10 +442,17 @@ public class Controller {
      */
     public void runTRM_WSN(SimulationListener listener, boolean dynamic, boolean oscillating, 
                             boolean collusion, int numExecutions) {
-        simulation = new Simulation(buildSimulationListeners(listener), requiredService,
+        runTRM_WSN(SimulationSlot.PRIMARY, listener, dynamic, oscillating, collusion, numExecutions);
+    }
+
+    public void runTRM_WSN(SimulationSlot slot, SimulationListener listener, boolean dynamic, boolean oscillating,
+                            boolean collusion, int numExecutions) {
+        SimulationWorkspaceState workspaceState = workspace(slot);
+        Simulation simulation = new Simulation(this, slot, workspaceState.getSimulationContext(),
+                buildSimulationListeners(slot, listener), requiredService,
                         dynamic, oscillating, collusion, 
-                        numExecutions, currentNetwork);
-        submitSimulation(simulation);
+                        numExecutions, workspaceState.getCurrentNetwork());
+        submitSimulation(slot, simulation);
     }
 
     /**
@@ -324,7 +461,12 @@ public class Controller {
      * @param config Simulation execution configuration
      */
     public void runTRM_WSN(SimulationListener listener, SimulationConfig config) {
+        runTRM_WSN(SimulationSlot.PRIMARY, listener, config);
+    }
+
+    public void runTRM_WSN(SimulationSlot slot, SimulationListener listener, SimulationConfig config) {
         runTRM_WSN(
+                slot,
                 listener,
                 config.isDynamic(),
                 config.isOscillating(),
@@ -338,7 +480,11 @@ public class Controller {
      * @throws Exception If there is any problem when writing to the XML file
      */
     public void saveCurrentNetwork(String fileName) throws Exception {
-        currentNetwork.writeToXMLFile(fileName);
+        saveCurrentNetwork(SimulationSlot.PRIMARY, fileName);
+    }
+
+    public void saveCurrentNetwork(SimulationSlot slot, String fileName) throws Exception {
+        workspace(slot).getCurrentNetwork().writeToXMLFile(fileName);
     }
     
     /**
@@ -349,7 +495,20 @@ public class Controller {
      * there is any problem reading the file
      */
     public Network loadCurrentNetwork(String fileName) throws Exception {
-        currentNetwork = trmodel_wsn.loadCurrentNetwork(fileName);
+        return loadCurrentNetwork(SimulationSlot.PRIMARY, fileName);
+    }
+
+    public Network loadCurrentNetwork(SimulationSlot slot, String fileName) throws Exception {
+        SimulationWorkspaceState workspaceState = workspace(slot);
+        Network currentNetwork;
+        Sensor.activateSimulationContext(workspaceState.getSimulationContext());
+        try {
+            Sensor.set_TRModel_WSN(workspaceState.getTrustModel());
+            currentNetwork = workspaceState.getTrustModel().loadCurrentNetwork(fileName);
+        } finally {
+            Sensor.clearActiveSimulationContext();
+        }
+        workspaceState.setCurrentNetwork(currentNetwork);
         return currentNetwork;
     }
 
@@ -368,13 +527,19 @@ public class Controller {
      * This method returns current network
      * @return Current Network
      */
-    public Network get_currentNetwork() { return currentNetwork; }
+    public Network get_currentNetwork() { return get_currentNetwork(SimulationSlot.PRIMARY); }
+
+    public Network get_currentNetwork(SimulationSlot slot) { return workspace(slot).getCurrentNetwork(); }
 
     /**
      * Clears the current network reference so UI starts from a clean state.
      */
     public void clearCurrentNetwork() {
-        currentNetwork = null;
+        clearCurrentNetwork(SimulationSlot.PRIMARY);
+    }
+
+    public void clearCurrentNetwork(SimulationSlot slot) {
+        workspace(slot).setCurrentNetwork(null);
     }
 
     /**
@@ -387,32 +552,67 @@ public class Controller {
      * This method returns the parameters file name for the current trust and reputation model
      * @return The parameters file name for the current trust and reputation model
      */
-    public String get_parametersFile() { return parametersFile; }
+    public String get_parametersFile() { return get_parametersFile(SimulationSlot.PRIMARY); }
+
+    public String get_parametersFile(SimulationSlot slot) { return workspace(slot).getParametersFile(); }
 
     /**
      * This method returns the parameters of the current trust and/or reputation model
      * @return The parameters of the current trust and/or reputation model
      */
-    public TRMParameters get_TRMParameters() { return trmodel_wsn.get_TRMParameters(); }
+    public TRMParameters get_TRMParameters() { return get_TRMParameters(SimulationSlot.PRIMARY); }
+
+    public TRMParameters get_TRMParameters(SimulationSlot slot) { return workspace(slot).getTrustModel().get_TRMParameters(); }
 
     /**
      * This method returns a boolean indicating whether there is currently a simulation running or not
      * @return Boolean indicating whether there is currently a simulation running or not
      */
-    public boolean isSimulationRunning() { return Sensor.isRunningSimulation(); }
+    public boolean isSimulationRunning() { return isSimulationRunning(SimulationSlot.PRIMARY); }
+
+    public boolean isSimulationRunning(SimulationSlot slot) { return workspace(slot).getSimulationContext().isRunningSimulation(); }
+
+    public boolean isAnySimulationRunning() {
+        for (SimulationSlot slot : SimulationSlot.values()) {
+            if (isSimulationRunning(slot)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * Returns the shared simulation runtime context.
      * @return Active simulation context
      */
-    public SimulationContext getSimulationContext() { return simulationContext; }
+    public SimulationContext getSimulationContext() { return getSimulationContext(SimulationSlot.PRIMARY); }
+
+    public SimulationContext getSimulationContext(SimulationSlot slot) { return workspace(slot).getSimulationContext(); }
 
     /**
      * This method returns whether the current simulation is paused
      * @return true if the current simulation is paused
      */
     public boolean isSimulationPaused() {
+        return isSimulationPaused(SimulationSlot.PRIMARY);
+    }
+
+    public boolean isSimulationPaused(SimulationSlot slot) {
+        Simulation simulation = workspace(slot).getSimulation();
         return (simulation != null) && simulation.isPaused();
+    }
+
+    public boolean areAllRunningSimulationsPaused() {
+        boolean hasRunningSimulation = false;
+        for (SimulationSlot slot : SimulationSlot.values()) {
+            if (isSimulationRunning(slot)) {
+                hasRunningSimulation = true;
+                if (!isSimulationPaused(slot)) {
+                    return false;
+                }
+            }
+        }
+        return hasRunningSimulation;
     }
     
     /**
@@ -422,7 +622,11 @@ public class Controller {
      * parameters from
      */
     public void set_TRMParameters(TRMParametersPanel trmParametersPanel) {
-        applyTrustModelParameters(trmParametersPanel.get_TRMParameters());
+        applyTrustModelParameters(SimulationSlot.PRIMARY, trmParametersPanel.get_TRMParameters());
+    }
+
+    public void set_TRMParameters(SimulationSlot slot, TRMParametersPanel trmParametersPanel) {
+        applyTrustModelParameters(slot, trmParametersPanel.get_TRMParameters());
     }
     
     /**
@@ -433,13 +637,24 @@ public class Controller {
      * Trust and Reputation Model
      */
     public TRMParameters set_TRMParameters(String parametersFile) throws Exception {
-        applyTrustModelParameters(TrustModelFactory.instantiateParameters(trmodel_wsn.getClass(), parametersFile));
-        return trmodel_wsn.get_TRMParameters();
+        return set_TRMParameters(SimulationSlot.PRIMARY, parametersFile);
     }
 
-    private void applyTrustModelParameters(TRMParameters parameters) {
-        trmodel_wsn.set_TRMParameters(parameters);
-        Sensor.set_TRModel_WSN(trmodel_wsn);
+    public TRMParameters set_TRMParameters(SimulationSlot slot, String parametersFile) throws Exception {
+        applyTrustModelParameters(slot, TrustModelFactory.instantiateParameters(workspace(slot).getTrustModel().getClass(), parametersFile));
+        return workspace(slot).getTrustModel().get_TRMParameters();
+    }
+
+    private void applyTrustModelParameters(SimulationSlot slot, TRMParameters parameters) {
+        SimulationWorkspaceState workspaceState = workspace(slot);
+        workspaceState.getTrustModel().set_TRMParameters(parameters);
+        workspaceState.getSimulationContext().setTrustModel(workspaceState.getTrustModel());
+        Sensor.activateSimulationContext(workspaceState.getSimulationContext());
+        try {
+            Sensor.set_TRModel_WSN(workspaceState.getTrustModel());
+        } finally {
+            Sensor.clearActiveSimulationContext();
+        }
     }
 
     /**
@@ -449,8 +664,20 @@ public class Controller {
      * for its Trust and Reputation Model
      */
     public void set_TRModel_WSN(String trmodel_wsn) throws Exception {
+        set_TRModel_WSN(SimulationSlot.PRIMARY, trmodel_wsn);
+    }
+
+    public void set_TRModel_WSN(SimulationSlot slot, String trmodel_wsn) throws Exception {
         TrustModelBundle bundle = TrustModelFactory.create(trmodel_wsn);
-        updateCurrentTrustModel(bundle.getModel(), bundle.getDefaultParametersFile());
+        updateCurrentTrustModel(slot, bundle.getModel(), bundle.getDefaultParametersFile());
+    }
+
+    public String getTrustModelName(SimulationSlot slot) {
+        TRModel_WSN trustModel = workspace(slot).getTrustModel();
+        if (trustModel == null) {
+            return null;
+        }
+        return TrustModelRegistry.getByModelClass(trustModel.getClass()).getModelName();
     }
 
     /**
@@ -469,7 +696,11 @@ public class Controller {
      * @throws Exception If an error occurs while retrieving the content of the current parameters file
      */
     public String get_ParametersFileContent() throws Exception {
-        return ControllerParametersIO.getParametersFileContent(parametersFile);
+        return get_ParametersFileContent(SimulationSlot.PRIMARY);
+    }
+
+    public String get_ParametersFileContent(SimulationSlot slot) throws Exception {
+        return ControllerParametersIO.getParametersFileContent(workspace(slot).getParametersFile());
     }
 
     /**
@@ -492,14 +723,16 @@ public class Controller {
      * This method sets the parameters file name for the current trust and reputation model
      * @param parametersFile Parameters file name for the current trust and reputation model
      */
-    public void set_parametersFile(String parametersFile) { this.parametersFile = parametersFile; }
+    public void set_parametersFile(String parametersFile) { set_parametersFile(SimulationSlot.PRIMARY, parametersFile); }
+
+    public void set_parametersFile(SimulationSlot slot, String parametersFile) { workspace(slot).setParametersFile(parametersFile); }
 
     
     public Sensor getSensorAtCoordinate(double x, double y) {
         if (!hasCurrentNetwork())
             return null;
         int error = 2;
-        for (Sensor sensor : currentNetwork.get_sensors()) {
+        for (Sensor sensor : primaryWorkspace().getCurrentNetwork().get_sensors()) {
             if (((x <= (sensor.getX()+error)) && (x >= (sensor.getX()-error)))
                     &&
                 ((y <= (sensor.getY()+error)) && (y >= (sensor.getY()-error))))
@@ -515,9 +748,12 @@ public class Controller {
      * @return The sensor with identifier id. If such sensor does not exist, it returns null
      */
     public Sensor getSensor(int id) {
-        if (!hasCurrentNetwork())
-            return null;
+        return getSensor(SimulationSlot.PRIMARY, id);
+    }
 
-        return currentNetwork.getSensor(id);
+    public Sensor getSensor(SimulationSlot slot, int id) {
+        if (!hasCurrentNetwork(slot))
+            return null;
+        return workspace(slot).getCurrentNetwork().getSensor(id);
     }
 }

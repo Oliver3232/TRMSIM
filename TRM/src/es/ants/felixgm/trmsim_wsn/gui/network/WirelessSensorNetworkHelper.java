@@ -2,6 +2,7 @@ package es.ants.felixgm.trmsim_wsn.gui.network;
 
 
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.OutcomesPanel;
+import es.ants.felixgm.trmsim_wsn.gui.support.MessageConsoleHelper;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 
 import javax.swing.AbstractButton;
@@ -33,12 +34,14 @@ public final class WirelessSensorNetworkHelper {
         resetWSNButton.setEnabled(true);
         resetWSNmenuItem.setEnabled(true);
         runTRMButton.setEnabled(true);
+        runTRMButton.setText("Run T&R Model");
         runTRMmenuItem.setEnabled(true);
+        runTRMmenuItem.setText("Run T&R Model");
         saveWSNButton.setEnabled(true);
         saveWSNmenuItem.setEnabled(true);
         sensorPropertiesPanel.setVisible(false);
         host.clearNodeInspector();
-        messagesTextArea.setText("New WSN created\n" + messagesTextArea.getText());
+        MessageConsoleHelper.appendMessage(messagesTextArea, "New WSN created\n");
         for (OutcomesPanel outcomesPanel : outcomesPanels) {
             outcomesPanel.setOutcomes(null);
             if (outcomesPanel.isShowing()) {
