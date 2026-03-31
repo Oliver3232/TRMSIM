@@ -51,10 +51,14 @@ import es.ants.felixgm.trmsim_wsn.search.IsSensorSearchCondition;
 
 import java.util.Collection;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.PriorityQueue;
+import java.util.Comparator;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
@@ -86,6 +90,8 @@ public abstract class Sensor implements Runnable {
     public static boolean runningSimulation = false;
     /** Sensors' identifier counter  */
     public static int idCount = 1;
+    /** Monotonic topology version used to invalidate cached shortest-path trees */
+    private static long topologyVersion = 0L;
     /** Sensor's identifier */
     public int id;
     /** Maximum distance between two nodes in the network */
@@ -114,6 +120,8 @@ public abstract class Sensor implements Runnable {
     public Outcome outcome;
     /** Total distance traveled by the messages sent from this sensor */
     public long transmittedDistance;
+    /** Cached shortest-path tree for stable topologies */
+    private volatile CachedPathTree cachedPathTree;
     /** Three timers that are used to set the timing for sleep/active state */
     public Timer numRequestsTimer;
     public Timer sleepTimer;
@@ -313,39 +321,7 @@ public abstract class Sensor implements Runnable {
      */
     public Collection<Vector<Sensor>> findSensors(ISearchCondition searchCondition) {
         Collection<Vector<Sensor>> out = new LinkedList<Vector<Sensor>>();
-        Collection<Sensor> Q = new ArrayList<Sensor>(); // All nodes in the graph are unoptimized - thus are in Q
-        Collection<Sensor> visitedNodes = new ArrayList<Sensor>(); // Visited nodes
-        Hashtable<Sensor,Double> distanceFromSource = new Hashtable<Sensor,Double>(); // Distance from source
-        Hashtable<Sensor,Sensor> previousNode = new Hashtable<Sensor,Sensor>(); // Previous node in optimal path from source
-
-        distanceFromSource.put(this, 0.0); // Distance from source to source
-        previousNode.put(this, this);
-        Q.add(this);
-
-        while (!Q.isEmpty()) { // The main loop
-            double minD = Double.POSITIVE_INFINITY;
-            Sensor closestNode = null;
-            for (Sensor sensor : Q) //closestNode := vertex in Q with smallest dist[]
-                if (distanceFromSource.get(sensor) < minD) {
-                    minD = distanceFromSource.get(sensor);
-                    closestNode = sensor;
-                }
-
-            Q.remove(closestNode);
-            visitedNodes.add(closestNode);
-            for (Sensor sensor : closestNode.getNeighbors()) { // where sensor has not yet been removed from Q.
-                if ((!Q.contains(sensor)) && (!visitedNodes.contains(sensor))){
-                    distanceFromSource.put(sensor, Double.POSITIVE_INFINITY);
-                    Q.add(sensor);
-                }
-
-                double alternative = distanceFromSource.get(closestNode) + closestNode.distance(sensor);
-                if (alternative < distanceFromSource.get(sensor)) {
-                    distanceFromSource.put(sensor, alternative);
-                    previousNode.put(sensor, closestNode);
-                }
-            }
-        }
+        HashMap<Sensor,Sensor> previousNode = getOrBuildPreviousNodeTree();
 
         for (Sensor sensor : previousNode.keySet()) {
             if ((sensor.id() != id) && sensor.isActive() && (searchCondition.sensorAcomplishesCondition(sensor))) {
@@ -369,6 +345,78 @@ public abstract class Sensor implements Runnable {
         }
 
         return out;
+    }
+
+    private HashMap<Sensor,Sensor> getOrBuildPreviousNodeTree() {
+        long currentTopologyVersion = topologyVersion;
+        CachedPathTree localCache = cachedPathTree;
+        if ((localCache != null) && (localCache.topologyVersion == currentTopologyVersion))
+            return localCache.previousNode;
+
+        synchronized (this) {
+            localCache = cachedPathTree;
+            if ((localCache != null) && (localCache.topologyVersion == currentTopologyVersion))
+                return localCache.previousNode;
+
+            HashSet<Sensor> visitedNodes = new HashSet<Sensor>();
+            HashMap<Sensor,Double> distanceFromSource = new HashMap<Sensor,Double>();
+            HashMap<Sensor,Sensor> previousNode = new HashMap<Sensor,Sensor>();
+            PriorityQueue<SensorDistance> queue = new PriorityQueue<SensorDistance>(11, new Comparator<SensorDistance>() {
+                @Override
+                public int compare(SensorDistance left, SensorDistance right) {
+                    return Double.compare(left.distance, right.distance);
+                }
+            });
+
+            distanceFromSource.put(this, Double.valueOf(0.0));
+            previousNode.put(this, this);
+            queue.offer(new SensorDistance(this, 0.0));
+
+            while (!queue.isEmpty()) {
+                SensorDistance current = queue.poll();
+                Sensor closestNode = current.sensor;
+                if (!visitedNodes.add(closestNode))
+                    continue;
+
+                for (Link link : closestNode.links) {
+                    Sensor sensor = link.get_destination();
+                    if (visitedNodes.contains(sensor))
+                        continue;
+
+                    double alternative = distanceFromSource.get(closestNode).doubleValue() + closestNode.distance(sensor);
+                    Double currentDistance = distanceFromSource.get(sensor);
+                    if ((currentDistance == null) || (alternative < currentDistance.doubleValue())) {
+                        distanceFromSource.put(sensor, Double.valueOf(alternative));
+                        previousNode.put(sensor, closestNode);
+                        queue.offer(new SensorDistance(sensor, alternative));
+                    }
+                }
+            }
+
+            HashMap<Sensor,Sensor> cachedPreviousNode = new HashMap<Sensor,Sensor>(previousNode);
+            cachedPathTree = new CachedPathTree(currentTopologyVersion, cachedPreviousNode);
+            return cachedPreviousNode;
+        }
+    }
+
+    private static final class SensorDistance {
+        private final Sensor sensor;
+        private final double distance;
+
+        private SensorDistance(Sensor sensor, double distance) {
+            this.sensor = sensor;
+            this.distance = distance;
+        }
+    }
+
+    private static final class CachedPathTree {
+        private final long topologyVersion;
+        private final HashMap<Sensor,Sensor> previousNode;
+
+        private CachedPathTree(long topologyVersion, HashMap<Sensor,Sensor> previousNode) {
+            this.topologyVersion = topologyVersion;
+            this.previousNode = previousNode;
+        }
     }
 
     /**
@@ -404,12 +452,34 @@ public abstract class Sensor implements Runnable {
         }
         return neighbors;
     }
+
+    /**
+     * Returns the underlying outgoing links without creating a neighbor snapshot.
+     * Callers must treat the returned collection as read-only.
+     * @return Outgoing links of this sensor
+     */
+    public synchronized Collection<Link> getLinksView() {
+        if (links == null)
+            return Collections.<Link>emptyList();
+        return links;
+    }
+
+    /**
+     * Returns the current number of outgoing links without allocating a neighbor snapshot.
+     * @return Number of direct neighbors
+     */
+    public synchronized int get_numNeighborsFast() {
+        if (links == null)
+            return 0;
+        return links.size();
+    }
     
     /**
      * Deletes all the neighbors of this sensor
      */
     public void removeAllNeighbors() {
         links = new ArrayList<Link>();
+        invalidatePathCache();
     }
 
     /**
@@ -437,6 +507,7 @@ public abstract class Sensor implements Runnable {
 
             Link link = new Link(this,sensor);
             links.add(link);
+            invalidatePathCache();
         }
     }
 
@@ -452,6 +523,16 @@ public abstract class Sensor implements Runnable {
             if (link.get_destination().equals(sensor))
                 linkIt.remove();
         }
+        invalidatePathCache();
+    }
+
+    private void invalidatePathCache() {
+        cachedPathTree = null;
+        bumpTopologyVersion();
+    }
+
+    private static synchronized void bumpTopologyVersion() {
+        topologyVersion++;
     }
     
     /**

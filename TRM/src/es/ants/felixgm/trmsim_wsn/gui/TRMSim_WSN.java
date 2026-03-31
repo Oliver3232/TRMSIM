@@ -43,6 +43,8 @@ package es.ants.felixgm.trmsim_wsn.gui;
 
 
 import es.ants.felixgm.trmsim_wsn.Controller;
+import es.ants.felixgm.trmsim_wsn.HeadlessBatchScenarioRunner;
+import es.ants.felixgm.trmsim_wsn.ScenarioBenchmarkRunner;
 import es.ants.felixgm.trmsim_wsn.app.BatchSimulationConfig;
 import es.ants.felixgm.trmsim_wsn.app.NetworkGenerationConfig;
 import es.ants.felixgm.trmsim_wsn.app.SimulationApplicationService;
@@ -178,6 +180,20 @@ public class TRMSim_WSN extends javax.swing.JFrame implements SimulationListener
     boolean singleScenarioSelectionSync = false;
 
     public static void main(String[] args) {
+        if ((args != null) && (args.length > 0) && "--benchmark-scenario".equals(args[0])) {
+            int exitCode = ScenarioBenchmarkRunner.run(args, CURRENT_VERSION);
+            if (exitCode != 0) {
+                System.exit(exitCode);
+            }
+            return;
+        }
+        if ((args != null) && (args.length > 0) && "--headless-batch-scenario".equals(args[0])) {
+            int exitCode = HeadlessBatchScenarioRunner.run(args, CURRENT_VERSION);
+            if (exitCode != 0) {
+                System.exit(exitCode);
+            }
+            return;
+        }
         if ((args != null) && (args.length > 0) && "--verbose".equals(args[0])) {
             VerboseSimulationRunner.runVerbose(
                     new String[] {BTRM_WSN.get_name(), LFTM.get_name()},

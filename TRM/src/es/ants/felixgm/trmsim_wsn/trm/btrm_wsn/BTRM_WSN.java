@@ -53,6 +53,7 @@ import es.ants.felixgm.trmsim_wsn.satisfaction.SatisfactionBinary;
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.network.Service;
+import es.ants.felixgm.trmsim_wsn.network.Link;
 
 import es.ants.felixgm.trmsim_wsn.trm.TRModel_WSN;
 
@@ -277,7 +278,8 @@ public class BTRM_WSN extends TRModel_WSN
         }
         BTRM_Sensor maliciousServer = (BTRM_Sensor)path.lastElement();
         if (((BasicOutcome)outcome).get_avgSatisfaction() < punishmentThreshold)
-            for (Sensor neighbor : maliciousServer.getNeighbors()) {
+            for (Link link : maliciousServer.getLinksView()) {
+                Sensor neighbor = link.get_destination();
                 double pheromone = ((BTRM_Sensor)neighbor).getPheromone(maliciousServer);
                 pheromone -= phi;
                 pheromone *= ((BasicOutcome)outcome).get_avgSatisfaction();

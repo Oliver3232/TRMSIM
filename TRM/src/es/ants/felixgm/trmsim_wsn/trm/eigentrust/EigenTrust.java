@@ -42,8 +42,6 @@
 package es.ants.felixgm.trmsim_wsn.trm.eigentrust;
 
 import es.ants.felixgm.trmsim_wsn.search.IsServerSearchCondition;
-import es.ants.felixgm.trmsim_wsn.search.IsSensorSearchCondition;
-
 import es.ants.felixgm.trmsim_wsn.trm.GatheredInformation;
 import es.ants.felixgm.trmsim_wsn.trm.TRModel_WSN;
 
@@ -113,9 +111,11 @@ public class EigenTrust extends TRModel_WSN {
 
     @Override
     public synchronized GatheredInformation gatherInformation(Sensor client, Service service) {
+        long startedAt = System.nanoTime();
         GatheredInformationEigenTrust gatheredInfo = new GatheredInformationEigenTrust(client.findSensors(new IsServerSearchCondition(service)),EigenTrust_Sensor.getNumSensors());
         Collection<Vector<Sensor>> pathsToClients = client.findSensors(new IsServerSearchCondition());
 
+        long matrixStartedAt = System.nanoTime();
         for (Vector<Sensor> pathToClient : pathsToClients) {
             if (pathToClient.lastElement().isActive()) {
                 gatheredInfo.setNormalizedTrustValue((EigenTrust_Sensor)pathToClient.lastElement()); //Set c_ij
@@ -125,15 +125,19 @@ public class EigenTrust extends TRModel_WSN {
         }
         gatheredInfo.setNormalizedTrustValue((EigenTrust_Sensor) client);
         gatheredInfo.setCollectionClients(pathsToClients);
+        EigenTrustProfiler.recordMatrixFill(System.nanoTime() - matrixStartedAt);
+        EigenTrustProfiler.recordGather(System.nanoTime() - startedAt);
 
         return gatheredInfo;
     }
 
     @Override
     public synchronized Vector<Sensor> scoreAndRanking(Sensor client, GatheredInformation gi) {
+        long startedAt = System.nanoTime();
         double delta = Double.NEGATIVE_INFINITY;
         double[] newGlobalTrustVector;
         int mostTrustworthyServerId = 0;
+        int iterations = 0;
 
         double[][] normalizedLocalTrustValuesMatrix =
                 ((GatheredInformationEigenTrust)gi).get_normalizedLocalTrustValuesMatrix();
@@ -143,16 +147,21 @@ public class EigenTrust extends TRModel_WSN {
                                                ((EigenTrust_Sensor)client).get_globalTrustVector());
             delta = globalTrustVectorsDistance(((EigenTrust_Sensor)client).get_globalTrustVector(),newGlobalTrustVector);
             ((EigenTrust_Sensor)client).set_globalTrustVector(newGlobalTrustVector);
+            iterations++;
         } while (delta >= ((EigenTrust_Parameters)trmParameters).get_epsilon());
 
-        mostTrustworthyServerId = selectServiceProvider(client,((EigenTrust_Sensor)client).get_globalTrustVector());
+        long selectionStartedAt = System.nanoTime();
+        mostTrustworthyServerId = selectServiceProvider(client, (GatheredInformationEigenTrust)gi, ((EigenTrust_Sensor)client).get_globalTrustVector());
+        EigenTrustProfiler.recordProviderSelection(System.nanoTime() - selectionStartedAt, ((GatheredInformationEigenTrust)gi).getPathCount());
         Vector<Sensor> path =
             ((GatheredInformationEigenTrust)gi).getPathToServer(mostTrustworthyServerId);
+        EigenTrustProfiler.recordScore(System.nanoTime() - startedAt, iterations);
         return path;
     }
 
     @Override
     public synchronized Outcome performTransaction(Vector<Sensor> path, Service service) {
+        long startedAt = System.nanoTime();
         Outcome outcome = null;
         if ((path == null) || (path.size() <= 0) || (!path.lastElement().isActive()))
             return outcome;
@@ -165,8 +174,9 @@ public class EigenTrust extends TRModel_WSN {
             outcome = new EigenTrustEnergyConsumptionOutcome(new SatisfactionInterval(MIN_SATISFACTION,MAX_SATISFACTION,MIN_SATISFACTION),path.size());
         else
             outcome = new EigenTrustEnergyConsumptionOutcome(new SatisfactionInterval(MIN_SATISFACTION,MAX_SATISFACTION,MAX_SATISFACTION),path.size());
-        
+
         client.addNewTransaction(client, server, outcome);
+        EigenTrustProfiler.recordTransaction(System.nanoTime() - startedAt);
 
         return outcome;
     }
@@ -196,7 +206,7 @@ public class EigenTrust extends TRModel_WSN {
      * @param globalTrustVector Global trust vector
      * @return The service provider to interact with
      */
-    private int selectServiceProvider(Sensor client, double[] globalTrustVector) {
+    private int selectServiceProvider(Sensor client, GatheredInformationEigenTrust gatheredInfo, double[] globalTrustVector) {
         Vector<Integer> candidates = new Vector<Integer>();
         //Trust-proportional selection
         if (Math.random() > ((EigenTrust_Parameters)trmParameters).get_zeroTrustNodeSelectionProbability()) {
@@ -215,7 +225,7 @@ public class EigenTrust extends TRModel_WSN {
                 if ((accumulator <= aleat) &&
                                 (aleat <= (accumulator + probailities.get(j)/addition)) &&
                                 (client.id() != candidates.get(j)+1) &&
-                                (client.findSensors(new IsSensorSearchCondition(candidates.get(j)+1)) != null))
+                                gatheredInfo.hasPathToServer(candidates.get(j)+1))
                         return candidates.get(j)+1;
                 accumulator += probailities.get(j)/addition;
             }
@@ -224,16 +234,16 @@ public class EigenTrust extends TRModel_WSN {
                 if (globalTrustVector[i] <= Math.pow(10, -6))
                     candidates.add(i);
             int selectedServiceProvider = (int)(Math.random()*candidates.size());
-            if ((selectedServiceProvider > 0) && (client.id() != candidates.get(selectedServiceProvider) + 1) && (client.findSensors(new IsSensorSearchCondition(candidates.get(selectedServiceProvider)+1)) != null))
+            if ((selectedServiceProvider > 0) && (client.id() != candidates.get(selectedServiceProvider) + 1) && gatheredInfo.hasPathToServer(candidates.get(selectedServiceProvider)+1))
                 return candidates.get(selectedServiceProvider) + 1;
-            else if ((candidates.size() > 0) && (client.id() != candidates.get(0) + 1) && (client.findSensors(new IsSensorSearchCondition(candidates.get(0)+1)) != null))
+            else if ((candidates.size() > 0) && (client.id() != candidates.get(0) + 1) && gatheredInfo.hasPathToServer(candidates.get(0)+1))
                 return candidates.get(0) + 1;
         }
         //Select the most trustworthy service provider
         double maxTrustValue = Double.NEGATIVE_INFINITY;
         int serviceProvider = 0;
         for (int i = 0; i < globalTrustVector.length; i++)
-            if ((globalTrustVector[i] > maxTrustValue) && (client.id() != i+1) && (client.findSensors(new IsSensorSearchCondition(i+1)) != null)) {
+            if ((globalTrustVector[i] > maxTrustValue) && (client.id() != i+1) && gatheredInfo.hasPathToServer(i+1)) {
                 maxTrustValue = globalTrustVector[i];
                 serviceProvider = i+1;
             }

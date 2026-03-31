@@ -44,6 +44,7 @@ package es.ants.felixgm.trmsim_wsn.trm.eigentrust;
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
 import es.ants.felixgm.trmsim_wsn.trm.GatheredInformation;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Vector;
 
 /**
@@ -59,6 +60,8 @@ public class GatheredInformationEigenTrust extends GatheredInformation {
     private double[][] normalizedLocalTrustValuesMatrix;
     /** Number of sensors composing the network */
     private int numSensors;
+    /** Fast path lookup by destination sensor id */
+    private HashMap<Integer, Vector<Sensor>> pathsByServerId;
 
     /**
      * Class GatheredInformationEigenTrust constructor
@@ -70,8 +73,14 @@ public class GatheredInformationEigenTrust extends GatheredInformation {
         this.numSensors = numSensors;
         pathsToClients = new Vector<Vector<EigenTrust_Sensor>>();
         normalizedLocalTrustValuesMatrix = new double[numSensors][numSensors];
+        pathsByServerId = new HashMap<Integer, Vector<Sensor>>();
         for (int i = 0; i < normalizedLocalTrustValuesMatrix.length; i ++)
             normalizedLocalTrustValuesMatrix[i][i] = 1.0;
+        for (Vector<Sensor> pathToServer : this.pathsToServers) {
+            if ((pathToServer != null) && (pathToServer.size() > 0)) {
+                pathsByServerId.put(Integer.valueOf(pathToServer.lastElement().id()), pathToServer);
+            }
+        }
     }
 
     /**
@@ -97,11 +106,15 @@ public class GatheredInformationEigenTrust extends GatheredInformation {
      * @return The path leading to a given server
      */
     public Vector<Sensor> getPathToServer(int serverId) {
-        for (Vector<Sensor> pathToServer : pathsToServers) 
-            if (pathToServer.lastElement().id() == serverId)
-                return pathToServer;
+        return pathsByServerId.get(Integer.valueOf(serverId));
+    }
 
-        return null;
+    public boolean hasPathToServer(int serverId) {
+        return pathsByServerId.containsKey(Integer.valueOf(serverId));
+    }
+
+    public int getPathCount() {
+        return pathsByServerId.size();
     }
 
     /**

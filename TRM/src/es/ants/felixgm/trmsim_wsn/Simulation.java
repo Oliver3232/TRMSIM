@@ -50,6 +50,7 @@ import es.ants.felixgm.trmsim_wsn.trm.TRModel_WSN;
 
 import java.util.Collection;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
 
 /**
  * <p>
@@ -77,6 +78,7 @@ public class Simulation implements Runnable {
     private final SimulationContext simulationContext;
     private final SimulationContext workspaceSimulationContext;
     private final Collection<SimulationListener> listeners;
+    private ExecutorService clientExecutor;
 
 	/** Wireless sensor network to test */
 	private Network network;
@@ -354,24 +356,10 @@ public class Simulation implements Runnable {
 	}
 
     private void executeClients(Network network) throws InterruptedException {
-        Thread[] clients = new Thread[network.get_numClients()];
-        int index = 0;
-        for (Sensor client : network.get_clients()) {
-            clients[index++] = new Thread(() -> {
-                Sensor.activateSimulationContext(simulationContext);
-                try {
-                    client.run();
-                } finally {
-                    Sensor.clearActiveSimulationContext();
-                }
-            });
+        if ((clientExecutor == null) || clientExecutor.isShutdown()) {
+            clientExecutor = ClientExecutionSupport.createClientExecutor(network.get_numClients());
         }
-        for (Thread clientThread : clients) {
-            clientThread.start();
-        }
-        for (Thread clientThread : clients) {
-            clientThread.join();
-        }
+        ClientExecutionSupport.executeClients(network.get_clients(), clientExecutor, simulationContext);
     }
 
     private Network resolveNetworkForExecution() throws Exception {
@@ -521,6 +509,9 @@ public class Simulation implements Runnable {
             setRunningSimulation(false);
 			notifyError(ex);
 		} finally {
+            if (clientExecutor != null) {
+                clientExecutor.shutdownNow();
+            }
             Sensor.clearActiveSimulationContext();
 		}
 	}

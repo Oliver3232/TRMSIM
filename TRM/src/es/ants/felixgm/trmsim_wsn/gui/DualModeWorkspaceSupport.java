@@ -108,16 +108,19 @@ final class DualModeWorkspaceSupport {
             if (slotNetworkPanel instanceof JavaFXNetworkPanel) {
                 ((JavaFXNetworkPanel) slotNetworkPanel).ensureActiveRendering();
             }
+            NetworkRenderSupport.RenderState requestedState = NetworkRenderSupport.createState(
+                    owner.radioRangeSlider.getValue() / (double) owner.radioRangeSlider.getMaximum(),
+                    owner.dualShowRanges(slot),
+                    owner.dualShowLinks(slot),
+                    owner.dualShowIds(slot),
+                    owner.dualShowGrid(slot));
+            NetworkRenderSupport.RenderState effectiveState = NetworkRenderSupport.effectiveState(network, requestedState);
             NetworkRenderSupport.renderNetwork(
                     slotNetworkPanel,
                     network,
                     controller.get_requiredService(),
-                    NetworkRenderSupport.createState(
-                            owner.radioRangeSlider.getValue() / (double) owner.radioRangeSlider.getMaximum(),
-                            owner.dualShowRanges(slot),
-                            owner.dualShowLinks(slot),
-                            owner.dualShowIds(slot),
-                            owner.dualShowGrid(slot)));
+                    requestedState);
+            announceDualLargeScaleModeIfNeeded(slot, slotNetworkPanel, network, requestedState, effectiveState);
             slotNetworkPanel.revalidate();
             slotNetworkPanel.repaint();
             owner.dualWorkspacePanel(slot).revalidate();
@@ -323,24 +326,54 @@ final class DualModeWorkspaceSupport {
     }
 
     private void updateSlotDisplayControls(SimulationSlot slot) {
+        Network currentNetwork = null;
+        Controller controller = owner.dualController(slot);
+        if (controller != null) {
+            currentNetwork = controller.get_currentNetwork(slot);
+        }
+        NetworkRenderSupport.RenderState effectiveState = NetworkRenderSupport.effectiveState(
+                currentNetwork,
+                NetworkRenderSupport.createState(
+                        owner.radioRangeSlider.getValue() / (double) owner.radioRangeSlider.getMaximum(),
+                        owner.dualShowRanges(slot),
+                        owner.dualShowLinks(slot),
+                        owner.dualShowIds(slot),
+                        owner.dualShowGrid(slot)));
         SimulationGraphWorkspace workspace = owner.dualGraphWorkspaces.get(slot);
         if (workspace != null) {
             workspace.updateDisplayControlsState(
-                    owner.dualShowIds(slot),
-                    owner.dualShowLinks(slot),
-                    owner.dualShowRanges(slot),
-                    owner.dualShowGrid(slot),
+                    effectiveState.isShowIds(),
+                    effectiveState.isShowLinks(),
+                    effectiveState.isShowRanges(),
+                    effectiveState.isShowGrid(),
                     owner.dualDelayValue(slot),
                     owner.delaySlider.getMinimum(),
                     owner.delaySlider.getMaximum());
         }
         owner.dualWorkspacePanel(slot).updateDisplayControlsState(
-                owner.dualShowIds(slot),
-                owner.dualShowLinks(slot),
-                owner.dualShowRanges(slot),
-                owner.dualShowGrid(slot),
+                effectiveState.isShowIds(),
+                effectiveState.isShowLinks(),
+                effectiveState.isShowRanges(),
+                effectiveState.isShowGrid(),
                 owner.dualDelayValue(slot),
                 owner.delaySlider.getMinimum(),
                 owner.delaySlider.getMaximum());
+    }
+
+    private void announceDualLargeScaleModeIfNeeded(
+            SimulationSlot slot,
+            NetworkPanel slotNetworkPanel,
+            Network network,
+            NetworkRenderSupport.RenderState requestedState,
+            NetworkRenderSupport.RenderState effectiveState) {
+        boolean reduced = NetworkRenderSupport.isReducedForLargeScale(network, requestedState, effectiveState);
+        Object previous = slotNetworkPanel.getClientProperty("largeScaleRenderReduced");
+        boolean wasReduced = Boolean.TRUE.equals(previous);
+        slotNetworkPanel.putClientProperty("largeScaleRenderReduced", Boolean.valueOf(reduced));
+        if (reduced && !wasReduced) {
+            owner.prependDualMessage(
+                    slot,
+                    "Large-scale render mode active: ids, links, ranges, and grid were hidden automatically for faster visualization.\n");
+        }
     }
 }

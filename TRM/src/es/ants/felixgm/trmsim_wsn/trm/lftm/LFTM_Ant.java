@@ -43,6 +43,7 @@ package es.ants.felixgm.trmsim_wsn.trm.lftm;
 
 import java.util.Vector;
 
+import es.ants.felixgm.trmsim_wsn.network.Link;
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
 import es.ants.felixgm.trmsim_wsn.network.Service;
 
@@ -123,9 +124,11 @@ public class LFTM_Ant {
             averagePheromone = averagePheromone/solution.size();
 
             //We check if currentNode has more not visited neighbors
-            for (Sensor neighbour : currentNode.getNeighbors())
+            for (Link link : currentNode.getLinksView()) {
+                    Sensor neighbour = link.get_destination();
                     if (!visitedSensors.contains((LFTM_Sensor)neighbour))
                             return currentNode;
+            }
             //Current node has no more non visited neighbors
             //If we've reached a final server, we need to stop
             //and return current solution
@@ -221,7 +224,8 @@ public class LFTM_Ant {
         Vector<Double> transitionProb = new Vector<Double>();
         Vector<LFTM_Sensor> candidates = new Vector<LFTM_Sensor>();
         double addition = 0.0;
-        for (Sensor neighbour : currentNode.getNeighbors())
+        for (Link link : currentNode.getLinksView()) {
+            Sensor neighbour = link.get_destination();
             if (!visitedSensors.contains((LFTM_Sensor)neighbour)) {
                 double probability = Math.pow(currentNode.getPheromone(neighbour), alpha)*
                                                         Math.pow(currentNode.getHeuristic(neighbour), beta);
@@ -231,6 +235,7 @@ public class LFTM_Ant {
                     candidates.add((LFTM_Sensor)neighbour);
                 }
             }
+        }
         double aleat = Math.random();
         double accumulator = 0.0;
         for (int j = 0; j < transitionProb.size(); j++) {
@@ -253,7 +258,8 @@ public class LFTM_Ant {
         LFTM_Sensor selectedSensor = null;
         double max = Double.NEGATIVE_INFINITY;
 
-        for (Sensor neighbour : currentNode.getNeighbors())
+        for (Link link : currentNode.getLinksView()) {
+            Sensor neighbour = link.get_destination();
             if (!visitedSensors.contains((LFTM_Sensor)neighbour) &&
                     (Math.pow(currentNode.getPheromone(neighbour), alpha)*
                      Math.pow(currentNode.getHeuristic(neighbour), beta) > max))
@@ -262,6 +268,7 @@ public class LFTM_Ant {
                 Math.pow(currentNode.getHeuristic(neighbour), beta);
                 selectedSensor = (LFTM_Sensor)neighbour;
             }
+        }
         return selectedSensor;
     }
 
