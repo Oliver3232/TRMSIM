@@ -1,0 +1,11 @@
+####################################
+# SVMTrust parameters file
+####################################
+learningRate=0.2
+regularization=0.02
+directEvidenceWeight=1.5
+witnessEvidenceWeight=0.7
+evidenceNormalizationFactor=20.0
+pathLengthPenalty=0.12
+selectionThreshold=0.0
+windowSize=20
