@@ -6,5 +6,6 @@ priorBeta=1.0
 directEvidenceWeight=1.5
 witnessEvidenceWeight=0.75
 pathLengthPenalty=0.12
+uncertaintyPenalty=1.0
 selectionThreshold=0.35
 windowSize=20

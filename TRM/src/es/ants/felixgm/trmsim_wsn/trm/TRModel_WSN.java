@@ -157,6 +157,12 @@ public abstract class TRModel_WSN {
     public abstract Network loadCurrentNetwork(String xmlFilePath) throws Exception;
 
     /**
+     * Resets any mutable model state before running a new network.
+     * Stateless models can keep the default no-op implementation.
+     */
+    public void resetModelState() { }
+
+    /**
      * Returns the associated trust and reputation model´s parameters
      * @return The associated trust and reputation model´s parameters
      */

@@ -19,6 +19,7 @@ import java.util.Vector;
 public class BayesTrust extends TRModel_WSN {
     private static final double MIN_SATISFACTION = 0.0;
     private static final double MAX_SATISFACTION = 1.0;
+    private static final double EPSILON = 1.0e-9;
 
     public BayesTrust(BayesTrust_Parameters parameters) {
         super(parameters);
@@ -57,11 +58,21 @@ public class BayesTrust extends TRModel_WSN {
                     (directEvidence.getFailures() * parameters.get_directEvidenceWeight()) +
                     (witnessEvidence.getFailures() * parameters.get_witnessEvidenceWeight());
 
+            double totalWeightedEvidence = weightedSuccesses + weightedFailures;
             double posterior = (parameters.get_priorAlpha() + weightedSuccesses)
-                    / (parameters.get_priorAlpha() + parameters.get_priorBeta() + weightedSuccesses + weightedFailures);
+                    / (parameters.get_priorAlpha() + parameters.get_priorBeta() + totalWeightedEvidence);
+            double posteriorVariance = posteriorVariance(
+                    parameters.get_priorAlpha() + weightedSuccesses,
+                    parameters.get_priorBeta() + weightedFailures);
+            double uncertaintyWeight = totalWeightedEvidence > 0.0
+                    ? totalWeightedEvidence / (1.0 + totalWeightedEvidence)
+                    : 0.0;
+            double conservativePosterior = Math.max(
+                    0.0,
+                    posterior - (parameters.get_uncertaintyPenalty() * uncertaintyWeight * Math.sqrt(posteriorVariance)));
             int hops = Math.max(1, pathToServer.size() - 1);
             double hopPenalty = 1.0 / (1.0 + (parameters.get_pathLengthPenalty() * Math.max(0, hops - 1)));
-            double score = posterior * hopPenalty;
+            double score = conservativePosterior * hopPenalty;
 
             if (score >= bestScore) {
                 bestScore = score;
@@ -73,7 +84,7 @@ public class BayesTrust extends TRModel_WSN {
             }
         }
 
-        if (bestPath == null) {
+        if ((bestPath == null) || (bestScore < parameters.get_selectionThreshold())) {
             return new Vector<Sensor>();
         }
         return bestPath;
@@ -123,5 +134,14 @@ public class BayesTrust extends TRModel_WSN {
     @Override
     public Network loadCurrentNetwork(String fileName) throws Exception {
         return new BayesTrust_Network(fileName);
+    }
+
+    private double posteriorVariance(double alpha, double beta) {
+        double denominator = alpha + beta;
+        if (denominator <= 0.0) {
+            return 0.0;
+        }
+        double denominatorSquared = denominator * denominator;
+        return (alpha * beta) / (denominatorSquared * (denominator + 1.0) + EPSILON);
     }
 }

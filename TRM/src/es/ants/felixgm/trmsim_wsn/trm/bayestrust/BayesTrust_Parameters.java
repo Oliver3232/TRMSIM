@@ -13,6 +13,7 @@ public class BayesTrust_Parameters extends TRMParameters {
     private double directEvidenceWeight;
     private double witnessEvidenceWeight;
     private double pathLengthPenalty;
+    private double uncertaintyPenalty;
     private double selectionThreshold;
     private int windowSize;
 
@@ -28,6 +29,7 @@ public class BayesTrust_Parameters extends TRMParameters {
         set_directEvidenceWeight(1.5);
         set_witnessEvidenceWeight(0.75);
         set_pathLengthPenalty(0.12);
+        set_uncertaintyPenalty(1.0);
         set_selectionThreshold(0.35);
         set_windowSize(20);
     }
@@ -44,6 +46,7 @@ public class BayesTrust_Parameters extends TRMParameters {
         directEvidenceWeight = getDoubleParameter("directEvidenceWeight");
         witnessEvidenceWeight = getDoubleParameter("witnessEvidenceWeight");
         pathLengthPenalty = getDoubleParameter("pathLengthPenalty");
+        uncertaintyPenalty = getOptionalDoubleParameter("uncertaintyPenalty", 1.0);
         selectionThreshold = getDoubleParameter("selectionThreshold");
         windowSize = getIntegerParameter("windowSize");
     }
@@ -93,6 +96,24 @@ public class BayesTrust_Parameters extends TRMParameters {
         setDoubleParameter("pathLengthPenalty", pathLengthPenalty);
     }
 
+    public double get_uncertaintyPenalty() {
+        return uncertaintyPenalty;
+    }
+
+    public void set_uncertaintyPenalty(double uncertaintyPenalty) {
+        this.uncertaintyPenalty = uncertaintyPenalty;
+        setDoubleParameter("uncertaintyPenalty", uncertaintyPenalty);
+    }
+
+    private double getOptionalDoubleParameter(String parameterName, double defaultValue) {
+        String value = parameters.getProperty(parameterName);
+        if (value == null) {
+            setDoubleParameter(parameterName, defaultValue);
+            return defaultValue;
+        }
+        return Double.parseDouble(value);
+    }
+
     public double get_selectionThreshold() {
         return selectionThreshold;
     }
@@ -119,6 +140,7 @@ public class BayesTrust_Parameters extends TRMParameters {
         s += "directEvidenceWeight=" + directEvidenceWeight + "\n";
         s += "witnessEvidenceWeight=" + witnessEvidenceWeight + "\n";
         s += "pathLengthPenalty=" + pathLengthPenalty + "\n";
+        s += "uncertaintyPenalty=" + uncertaintyPenalty + "\n";
         s += "selectionThreshold=" + selectionThreshold + "\n";
         s += "windowSize=" + windowSize + "\n";
         return s;

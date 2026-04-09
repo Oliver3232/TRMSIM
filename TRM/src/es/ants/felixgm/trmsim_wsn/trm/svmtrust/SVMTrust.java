@@ -19,12 +19,15 @@ import java.util.Vector;
 public class SVMTrust extends TRModel_WSN {
     private static final double MIN_SATISFACTION = 0.0;
     private static final double MAX_SATISFACTION = 1.0;
+    private static final int FEATURE_COUNT = 5;
+    private static final double[] INITIAL_WEIGHTS = new double[] {0.9, 0.6, 0.3, 0.8, 0.4};
 
-    private final double[] weights = new double[] {0.9, 0.6, 0.3, 0.8};
-    private double bias = -0.2;
+    private final double[] weights = new double[FEATURE_COUNT];
+    private long updateCount = 0L;
 
     public SVMTrust(SVMTrust_Parameters parameters) {
         super(parameters);
+        resetModelState();
     }
 
     public static String get_name() {
@@ -49,7 +52,7 @@ public class SVMTrust extends TRModel_WSN {
             }
 
             double[] features = extractFeatures((SVMTrust_Sensor) client, (SVMTrust_Sensor) pathToServer.lastElement(), pathToServer.size());
-            double score = margin(features);
+            double score = score(features);
 
             if (score >= bestScore) {
                 bestScore = score;
@@ -61,7 +64,7 @@ public class SVMTrust extends TRModel_WSN {
             }
         }
 
-        if (bestPath == null) {
+        if ((bestPath == null) || (bestScore < parameters.get_selectionThreshold())) {
             return new Vector<Sensor>();
         }
         return bestPath;
@@ -114,6 +117,12 @@ public class SVMTrust extends TRModel_WSN {
         return new SVMTrust_Network(fileName);
     }
 
+    @Override
+    public synchronized void resetModelState() {
+        System.arraycopy(INITIAL_WEIGHTS, 0, weights, 0, FEATURE_COUNT);
+        updateCount = 0L;
+    }
+
     private double[] extractFeatures(SVMTrust_Sensor client, SVMTrust_Sensor server, int pathSize) {
         SVMTrust_Parameters parameters = (SVMTrust_Parameters) trmParameters;
         SVMTrust_Sensor.Evidence directEvidence = client.getDirectEvidence(server);
@@ -126,13 +135,16 @@ public class SVMTrust extends TRModel_WSN {
         double confidence = Math.min(1.0,
                 ((directTotal * parameters.get_directEvidenceWeight()) + (witnessTotal * parameters.get_witnessEvidenceWeight()))
                         / Math.max(1.0, parameters.get_evidenceNormalizationFactor()));
+        double directBalance = toSignedRate(directRate);
+        double witnessBalance = toSignedRate(witnessRate);
+        double agreement = 1.0 - Math.abs(directRate - witnessRate);
         double hopScore = 1.0 / (1.0 + (Math.max(0, pathSize - 1) * parameters.get_pathLengthPenalty()));
 
-        return new double[] {directRate, witnessRate, confidence, hopScore};
+        return new double[] {directBalance, witnessBalance, confidence, hopScore, agreement};
     }
 
-    private double margin(double[] features) {
-        double score = bias;
+    private double score(double[] features) {
+        double score = 0.0;
         for (int i = 0; i < features.length; i++) {
             score += weights[i] * features[i];
         }
@@ -141,9 +153,10 @@ public class SVMTrust extends TRModel_WSN {
 
     private void updateModel(double[] features, double label) {
         SVMTrust_Parameters parameters = (SVMTrust_Parameters) trmParameters;
-        double lr = parameters.get_learningRate();
+        updateCount++;
+        double lr = parameters.get_learningRate() / Math.sqrt(updateCount);
         double lambda = parameters.get_regularization();
-        double currentMargin = label * margin(features);
+        double currentMargin = label * score(features);
 
         for (int i = 0; i < weights.length; i++) {
             weights[i] = weights[i] * (1.0 - (lr * lambda));
@@ -151,8 +164,9 @@ public class SVMTrust extends TRModel_WSN {
                 weights[i] += lr * label * features[i];
             }
         }
-        if (currentMargin < 1.0) {
-            bias += lr * label;
-        }
+    }
+
+    private double toSignedRate(double probability) {
+        return (2.0 * probability) - 1.0;
     }
 }

@@ -462,9 +462,10 @@ public class Simulation implements Runnable {
         setRunningSimulation(true);
 		try {
 			for (int net = 0; (net < numNetworks) && !stop; net++) {
-				waitIfPaused();
-				network = resolveNetworkForExecution();
-				prepareClients(network);
+					waitIfPaused();
+					network = resolveNetworkForExecution();
+                    simulationContext.getTrustModel().resetModelState();
+					prepareClients(network);
 
 				notifyNetworkUpdated(network);
 

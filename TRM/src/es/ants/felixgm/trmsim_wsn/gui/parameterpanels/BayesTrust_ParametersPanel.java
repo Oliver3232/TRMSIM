@@ -17,6 +17,8 @@ public class BayesTrust_ParametersPanel extends TRMParametersPanel {
     private javax.swing.JTextField witnessEvidenceWeightTextField;
     private javax.swing.JLabel pathLengthPenaltyLabel;
     private javax.swing.JTextField pathLengthPenaltyTextField;
+    private javax.swing.JLabel uncertaintyPenaltyLabel;
+    private javax.swing.JTextField uncertaintyPenaltyTextField;
     private javax.swing.JLabel selectionThresholdLabel;
     private javax.swing.JTextField selectionThresholdTextField;
     private javax.swing.JLabel windowSizeLabel;
@@ -37,6 +39,8 @@ public class BayesTrust_ParametersPanel extends TRMParametersPanel {
         witnessEvidenceWeightTextField = new javax.swing.JTextField("0.75");
         pathLengthPenaltyLabel = new javax.swing.JLabel("Path length penalty");
         pathLengthPenaltyTextField = new javax.swing.JTextField("0.12");
+        uncertaintyPenaltyLabel = new javax.swing.JLabel("Uncertainty penalty");
+        uncertaintyPenaltyTextField = new javax.swing.JTextField("1.0");
         selectionThresholdLabel = new javax.swing.JLabel("Selection threshold");
         selectionThresholdTextField = new javax.swing.JTextField("0.35");
         windowSizeLabel = new javax.swing.JLabel("Witness window size");
@@ -48,6 +52,7 @@ public class BayesTrust_ParametersPanel extends TRMParametersPanel {
         directEvidenceWeightTextField.setPreferredSize(fieldSize);
         witnessEvidenceWeightTextField.setPreferredSize(fieldSize);
         pathLengthPenaltyTextField.setPreferredSize(fieldSize);
+        uncertaintyPenaltyTextField.setPreferredSize(fieldSize);
         selectionThresholdTextField.setPreferredSize(fieldSize);
         windowSizeSpinner.setPreferredSize(new java.awt.Dimension(120, 25));
 
@@ -72,6 +77,9 @@ public class BayesTrust_ParametersPanel extends TRMParametersPanel {
                         .addComponent(pathLengthPenaltyLabel)
                         .addComponent(pathLengthPenaltyTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGroup(layout.createSequentialGroup()
+                        .addComponent(uncertaintyPenaltyLabel)
+                        .addComponent(uncertaintyPenaltyTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGroup(layout.createSequentialGroup()
                         .addComponent(selectionThresholdLabel)
                         .addComponent(selectionThresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGroup(layout.createSequentialGroup()
@@ -94,6 +102,9 @@ public class BayesTrust_ParametersPanel extends TRMParametersPanel {
                         .addComponent(pathLengthPenaltyLabel)
                         .addComponent(pathLengthPenaltyTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
+                        .addComponent(uncertaintyPenaltyLabel)
+                        .addComponent(uncertaintyPenaltyTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
                         .addComponent(selectionThresholdLabel)
                         .addComponent(selectionThresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
@@ -109,6 +120,7 @@ public class BayesTrust_ParametersPanel extends TRMParametersPanel {
         parameters.set_directEvidenceWeight(Double.parseDouble(directEvidenceWeightTextField.getText()));
         parameters.set_witnessEvidenceWeight(Double.parseDouble(witnessEvidenceWeightTextField.getText()));
         parameters.set_pathLengthPenalty(Double.parseDouble(pathLengthPenaltyTextField.getText()));
+        parameters.set_uncertaintyPenalty(Double.parseDouble(uncertaintyPenaltyTextField.getText()));
         parameters.set_selectionThreshold(Double.parseDouble(selectionThresholdTextField.getText()));
         parameters.set_windowSize(((Integer) windowSizeSpinner.getValue()).intValue());
         return parameters;
@@ -122,6 +134,7 @@ public class BayesTrust_ParametersPanel extends TRMParametersPanel {
         directEvidenceWeightTextField.setText(String.valueOf(parameters.get_directEvidenceWeight()));
         witnessEvidenceWeightTextField.setText(String.valueOf(parameters.get_witnessEvidenceWeight()));
         pathLengthPenaltyTextField.setText(String.valueOf(parameters.get_pathLengthPenalty()));
+        uncertaintyPenaltyTextField.setText(String.valueOf(parameters.get_uncertaintyPenalty()));
         selectionThresholdTextField.setText(String.valueOf(parameters.get_selectionThreshold()));
         windowSizeSpinner.setValue(Integer.valueOf(parameters.get_windowSize()));
     }
@@ -138,6 +151,8 @@ public class BayesTrust_ParametersPanel extends TRMParametersPanel {
         witnessEvidenceWeightTextField.setEnabled(enabled);
         pathLengthPenaltyLabel.setEnabled(enabled);
         pathLengthPenaltyTextField.setEnabled(enabled);
+        uncertaintyPenaltyLabel.setEnabled(enabled);
+        uncertaintyPenaltyTextField.setEnabled(enabled);
         selectionThresholdLabel.setEnabled(enabled);
         selectionThresholdTextField.setEnabled(enabled);
         windowSizeLabel.setEnabled(enabled);
