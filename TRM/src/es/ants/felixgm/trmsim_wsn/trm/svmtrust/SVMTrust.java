@@ -14,16 +14,15 @@ import java.util.Collection;
 import java.util.Vector;
 
 /**
- * Lightweight online linear SVM trust model using local and witness evidence features.
+ * SVM trust model backed by LIBSVM, using local and witness evidence features.
  */
 public class SVMTrust extends TRModel_WSN {
     private static final double MIN_SATISFACTION = 0.0;
     private static final double MAX_SATISFACTION = 1.0;
     private static final int FEATURE_COUNT = 5;
-    private static final double[] INITIAL_WEIGHTS = new double[] {0.9, 0.6, 0.3, 0.8, 0.4};
 
-    private final double[] weights = new double[FEATURE_COUNT];
-    private long updateCount = 0L;
+    private final LibSvmTrustClassifier classifier = new LibSvmTrustClassifier();
+    private int coldStartSelectionCursor;
 
     public SVMTrust(SVMTrust_Parameters parameters) {
         super(parameters);
@@ -43,24 +42,36 @@ public class SVMTrust extends TRModel_WSN {
     @Override
     public synchronized Vector<Sensor> scoreAndRanking(Sensor client, GatheredInformation gi) {
         SVMTrust_Parameters parameters = (SVMTrust_Parameters) trmParameters;
-        double bestScore = Double.NEGATIVE_INFINITY;
-        Vector<Sensor> bestPath = null;
+        Vector<Vector<Sensor>> candidatePaths = new Vector<Vector<Sensor>>();
 
         for (Vector<Sensor> pathToServer : gi.getPathsToServers()) {
             if ((pathToServer == null) || pathToServer.isEmpty() || !pathToServer.lastElement().isActive()) {
                 continue;
             }
+            candidatePaths.add(pathToServer);
 
+            for (int i = 0; i < pathToServer.size() - 1; i++) {
+                pathToServer.get(i).addTransmittedDistance((long) pathToServer.get(i).distance(pathToServer.get(i + 1)));
+            }
+        }
+
+        if (candidatePaths.isEmpty()) {
+            return new Vector<Sensor>();
+        }
+
+        if (!classifier.isTrained()) {
+            return selectColdStartPath(candidatePaths);
+        }
+
+        double bestScore = Double.NEGATIVE_INFINITY;
+        Vector<Sensor> bestPath = null;
+        for (Vector<Sensor> pathToServer : candidatePaths) {
             double[] features = extractFeatures((SVMTrust_Sensor) client, (SVMTrust_Sensor) pathToServer.lastElement(), pathToServer.size());
-            double score = score(features);
+            double score = classifier.score(features);
 
             if (score >= bestScore) {
                 bestScore = score;
                 bestPath = pathToServer;
-            }
-
-            for (int i = 0; i < pathToServer.size() - 1; i++) {
-                pathToServer.get(i).addTransmittedDistance((long) pathToServer.get(i).distance(pathToServer.get(i + 1)));
             }
         }
 
@@ -84,7 +95,7 @@ public class SVMTrust extends TRModel_WSN {
 
         client.recordDirectExperience(server, satisfied);
         server.recordWitnessExperience(client, satisfied);
-        updateModel(features, satisfied ? 1.0 : -1.0);
+        classifier.addExample(features, satisfied, (SVMTrust_Parameters) trmParameters);
 
         return new EnergyConsumptionOutcome(
                 new SatisfactionInterval(MIN_SATISFACTION, MAX_SATISFACTION, satisfied ? MAX_SATISFACTION : MIN_SATISFACTION),
@@ -119,8 +130,28 @@ public class SVMTrust extends TRModel_WSN {
 
     @Override
     public synchronized void resetModelState() {
-        System.arraycopy(INITIAL_WEIGHTS, 0, weights, 0, FEATURE_COUNT);
-        updateCount = 0L;
+        classifier.reset();
+        coldStartSelectionCursor = 0;
+    }
+
+    public synchronized boolean isLibSvmModelTrained() {
+        return classifier.isTrained();
+    }
+
+    public synchronized int getLibSvmTrainingExampleCount() {
+        return classifier.getTrainingExampleCount();
+    }
+
+    public synchronized int getLibSvmTrustedExampleCount() {
+        return classifier.getTrustedExampleCount();
+    }
+
+    public synchronized int getLibSvmUntrustedExampleCount() {
+        return classifier.getUntrustedExampleCount();
+    }
+
+    public synchronized int getLibSvmTrainingCount() {
+        return classifier.getTrainingCount();
     }
 
     private double[] extractFeatures(SVMTrust_Sensor client, SVMTrust_Sensor server, int pathSize) {
@@ -143,27 +174,10 @@ public class SVMTrust extends TRModel_WSN {
         return new double[] {directBalance, witnessBalance, confidence, hopScore, agreement};
     }
 
-    private double score(double[] features) {
-        double score = 0.0;
-        for (int i = 0; i < features.length; i++) {
-            score += weights[i] * features[i];
-        }
-        return score;
-    }
-
-    private void updateModel(double[] features, double label) {
-        SVMTrust_Parameters parameters = (SVMTrust_Parameters) trmParameters;
-        updateCount++;
-        double lr = parameters.get_learningRate() / Math.sqrt(updateCount);
-        double lambda = parameters.get_regularization();
-        double currentMargin = label * score(features);
-
-        for (int i = 0; i < weights.length; i++) {
-            weights[i] = weights[i] * (1.0 - (lr * lambda));
-            if (currentMargin < 1.0) {
-                weights[i] += lr * label * features[i];
-            }
-        }
+    private Vector<Sensor> selectColdStartPath(Vector<Vector<Sensor>> candidatePaths) {
+        Vector<Sensor> selectedPath = candidatePaths.get(coldStartSelectionCursor % candidatePaths.size());
+        coldStartSelectionCursor++;
+        return selectedPath;
     }
 
     private double toSignedRate(double probability) {

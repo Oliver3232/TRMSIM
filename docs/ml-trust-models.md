@@ -30,7 +30,7 @@ This is an appropriate Bayesian baseline for online trust estimation in a WSN-st
 
 ## SVMTrust
 
-`SVMTrust` is implemented as an online linear large-margin classifier inspired by linear SVM training.
+`SVMTrust` is implemented as a LIBSVM-backed linear Support Vector Machine classifier with online evidence collection.
 
 Core idea:
 
@@ -42,15 +42,18 @@ Core idea:
   - path-length score
   - direct/witness agreement
 - transactions produce labels `+1` for successful service and `-1` for failed service
-- weights are updated online with hinge-loss style learning and L2 regularization
-- the learning rate decays with the number of updates to stabilize training during long simulations
+- examples are collected incrementally during the simulation
+- once enough positive and negative examples are available, LIBSVM trains a linear C-SVC model
+- the model is retrained periodically as new transaction evidence arrives
+- before enough training data exists, the implementation cycles through candidate paths to collect labeled examples
 
 Important note:
 
-- this is an online linear SVM-style classifier
-- it is not a batch-trained kernel SVM with a separate offline training dataset
+- the classifier is a real SVM implementation through LIBSVM
+- training data is still generated online by the simulator rather than loaded from a separate offline dataset
+- the current integration uses a linear kernel to keep the model explainable and efficient inside simulation runs
 
-That distinction matters in the thesis text. The implementation is still valid as a machine-learning-based trust approach because it performs feature-based classification and updates the decision boundary from observed data during simulation.
+That distinction matters in the thesis text. The implementation is valid as a machine-learning-based trust approach because it performs feature-based classification and periodically retrains a LIBSVM decision boundary from observed transaction data.
 
 ## Why this design fits the simulator
 
@@ -59,21 +62,21 @@ The simulator generates evidence incrementally during execution. Because of that
 These models therefore support the statement that the simulator investigates the feasibility of selected ML-based trust approaches:
 
 - a Bayesian classifier-like trust estimator
-- an SVM-inspired linear large-margin trust classifier
+- a LIBSVM-backed linear SVM trust classifier
 
 ## Recommended wording for the thesis
 
 Preferred wording:
 
-> The simulator was extended with two online machine-learning-based trust models: a Bayesian trust estimator based on Beta-Bernoulli updating and a linear SVM-inspired large-margin classifier trained incrementally from transaction evidence.
+> The simulator was extended with two machine-learning-based trust models: a Bayesian trust estimator based on Beta-Bernoulli updating and a LIBSVM-backed linear Support Vector Machine classifier trained from transaction evidence collected during simulation.
 
 Safer wording if you want to avoid overclaiming:
 
-> The implementation investigates the feasibility of Bayesian and SVM-inspired trust modeling in the simulator through lightweight online variants suitable for incremental evidence collection.
+> The implementation investigates the feasibility of Bayesian and SVM-based trust modeling in the simulator using incremental evidence collection and periodic SVM retraining.
 
 ## Limitations
 
 - no offline dataset split or cross-validation is currently built into the simulator
-- `SVMTrust` is linear only and does not support kernels
+- `SVMTrust` currently uses a linear LIBSVM kernel only
 - witness evidence is aggregated in a bounded recent-history window
 - evaluation quality still depends on scenario design and comparative experiments against the classical models

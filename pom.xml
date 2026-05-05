@@ -28,6 +28,11 @@
       <version>21.0.5</version>
       <classifier>${javafx.platform}</classifier>
     </dependency>
+    <dependency>
+      <groupId>tw.edu.ntu.csie</groupId>
+      <artifactId>libsvm</artifactId>
+      <version>3.35</version>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>
