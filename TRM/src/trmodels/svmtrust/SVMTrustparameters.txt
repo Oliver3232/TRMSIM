@@ -1,0 +1,13 @@
+####################################
+# SVMTrust parameters file
+####################################
+directEvidenceWeight=1.5
+witnessEvidenceWeight=0.7
+evidenceNormalizationFactor=20.0
+pathLengthPenalty=0.12
+selectionThreshold=0.0
+svmCost=1.0
+minTrainingExamples=8
+retrainInterval=4
+maxTrainingExamples=500
+windowSize=20

@@ -1,15 +1,19 @@
 package es.ants.felixgm.trmsim_wsn.trm;
 
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.BTRM_WSN_ParametersPanel;
+import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.BayesTrust_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.EigenTrust_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.lftm.LFTM_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.PeerTrust_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.PowerTrust_ParametersPanel;
+import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.SVMTrust_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.TRMParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.TRIP_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.gui.parameterpanels.TemplateTRM_ParametersPanel;
 import es.ants.felixgm.trmsim_wsn.trm.btrm_wsn.BTRM_WSN;
 import es.ants.felixgm.trmsim_wsn.trm.btrm_wsn.BTRM_WSN_Parameters;
+import es.ants.felixgm.trmsim_wsn.trm.bayestrust.BayesTrust;
+import es.ants.felixgm.trmsim_wsn.trm.bayestrust.BayesTrust_Parameters;
 import es.ants.felixgm.trmsim_wsn.trm.eigentrust.EigenTrust;
 import es.ants.felixgm.trmsim_wsn.trm.eigentrust.EigenTrust_Parameters;
 import es.ants.felixgm.trmsim_wsn.trm.lftm.LFTM;
@@ -18,6 +22,8 @@ import es.ants.felixgm.trmsim_wsn.trm.peertrust.PeerTrust;
 import es.ants.felixgm.trmsim_wsn.trm.peertrust.PeerTrust_Parameters;
 import es.ants.felixgm.trmsim_wsn.trm.powertrust.PowerTrust;
 import es.ants.felixgm.trmsim_wsn.trm.powertrust.PowerTrust_Parameters;
+import es.ants.felixgm.trmsim_wsn.trm.svmtrust.SVMTrust;
+import es.ants.felixgm.trmsim_wsn.trm.svmtrust.SVMTrust_Parameters;
 import es.ants.felixgm.trmsim_wsn.trm.templatetrm.TemplateTRM;
 import es.ants.felixgm.trmsim_wsn.trm.templatetrm.TemplateTRM_Parameters;
 import es.ants.felixgm.trmsim_wsn.trm.trip.TRIP;
@@ -142,6 +148,22 @@ public final class TrustModelRegistry {
                 parameters -> new BTRM_WSN((BTRM_WSN_Parameters) parameters),
                 BTRM_WSN_ParametersPanel::new));
 
+        descriptors.put(BayesTrust.get_name(), new Descriptor(
+                BayesTrust.get_name(),
+                BayesTrust.class,
+                BayesTrust_Parameters.defaultParametersFileName,
+                new ParametersFactory() {
+                    public TRMParameters create(String parametersFile) throws Exception {
+                        return new BayesTrust_Parameters(parametersFile);
+                    }
+
+                    public TRMParameters createDefault() {
+                        return new BayesTrust_Parameters();
+                    }
+                },
+                parameters -> new BayesTrust((BayesTrust_Parameters) parameters),
+                BayesTrust_ParametersPanel::new));
+
         descriptors.put(EigenTrust.get_name(), new Descriptor(
                 EigenTrust.get_name(),
                 EigenTrust.class,
@@ -189,6 +211,22 @@ public final class TrustModelRegistry {
                 },
                 parameters -> new PowerTrust((PowerTrust_Parameters) parameters),
                 PowerTrust_ParametersPanel::new));
+
+        descriptors.put(SVMTrust.get_name(), new Descriptor(
+                SVMTrust.get_name(),
+                SVMTrust.class,
+                SVMTrust_Parameters.defaultParametersFileName,
+                new ParametersFactory() {
+                    public TRMParameters create(String parametersFile) throws Exception {
+                        return new SVMTrust_Parameters(parametersFile);
+                    }
+
+                    public TRMParameters createDefault() {
+                        return new SVMTrust_Parameters();
+                    }
+                },
+                parameters -> new SVMTrust((SVMTrust_Parameters) parameters),
+                SVMTrust_ParametersPanel::new));
 
         descriptors.put(LFTM.get_name(), new Descriptor(
                 LFTM.get_name(),

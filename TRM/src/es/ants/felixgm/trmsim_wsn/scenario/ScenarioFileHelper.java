@@ -4,14 +4,31 @@ import es.ants.felixgm.trmsim_wsn.app.BatchSimulationConfig;
 import es.ants.felixgm.trmsim_wsn.app.NetworkGenerationConfig;
 
 import javax.swing.JFileChooser;
+import javax.swing.JDialog;
 import javax.swing.JCheckBox;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileFilter;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dialog;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -116,48 +133,12 @@ public final class ScenarioFileHelper {
     }
 
     private static ScenarioMetadata promptScenarioMetadata(Component owner, String recommendedTrustModel) {
-        JTextField idField = new JTextField();
-        JTextField displayNameField = new JTextField();
-        JTextArea descriptionArea = new JTextArea(5, 32);
-        JCheckBox includeInSimulatorCheckBox = new JCheckBox("Include in simulator predefined scenarios");
-        includeInSimulatorCheckBox.setSelected(false);
-        JLabel bundledHintLabel = new JLabel("Saved predefined scenarios are stored in TRM/src/resources/scenarios.");
-        descriptionArea.setLineWrap(true);
-        descriptionArea.setWrapStyleWord(true);
         String modelName = (recommendedTrustModel == null || recommendedTrustModel.trim().isEmpty())
                 ? "current model"
                 : recommendedTrustModel.trim();
-        displayNameField.setText("Custom " + modelName + " Scenario");
-        idField.setText(("custom-" + modelName).toLowerCase().replaceAll("[^a-z0-9]+", "-"));
-
-        javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.GridLayout(0, 1, 0, 6));
-        panel.add(new javax.swing.JLabel("Scenario ID"));
-        panel.add(idField);
-        panel.add(new javax.swing.JLabel("Display name"));
-        panel.add(displayNameField);
-        panel.add(new javax.swing.JLabel("Description"));
-        javax.swing.JPanel descriptionPanel = new javax.swing.JPanel(new BorderLayout());
-        descriptionPanel.add(descriptionArea, BorderLayout.CENTER);
-        panel.add(descriptionPanel);
-        panel.add(includeInSimulatorCheckBox);
-        panel.add(bundledHintLabel);
-
-        int choice = JOptionPane.showConfirmDialog(owner, panel, "Save Scenario", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return null;
-        }
-
-        String id = sanitizeId(idField.getText());
-        String displayName = displayNameField.getText() == null ? "" : displayNameField.getText().trim();
-        String description = descriptionArea.getText() == null ? "" : descriptionArea.getText().trim();
-        if (id.isEmpty() || displayName.isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "Scenario ID and display name are required.", "Invalid Scenario", JOptionPane.WARNING_MESSAGE);
-            return null;
-        }
-        if (description.isEmpty()) {
-            description = "Imported custom scenario saved from the current simulator configuration.";
-        }
-        return new ScenarioMetadata(id, displayName, description, includeInSimulatorCheckBox.isSelected());
+        SaveScenarioDialog dialog = new SaveScenarioDialog(owner, modelName);
+        dialog.showDialog();
+        return dialog.getMetadata();
     }
 
     private static String sanitizeId(String rawId) {
@@ -251,6 +232,160 @@ public final class ScenarioFileHelper {
             this.displayName = displayName;
             this.description = description;
             this.addToBundledScenarios = addToBundledScenarios;
+        }
+    }
+
+    private static final class SaveScenarioDialog extends JDialog {
+        private static final Color BORDER_COLOR = new Color(216, 220, 228);
+        private static final Color BACKGROUND_COLOR = Color.WHITE;
+
+        private final JTextField idField = new JTextField();
+        private final JTextField displayNameField = new JTextField();
+        private final JTextArea descriptionArea = new JTextArea(5, 32);
+        private final JCheckBox includeInSimulatorCheckBox = new JCheckBox("Include in simulator predefined scenarios");
+        private final JLabel bundledHintLabel = new JLabel("Saved predefined scenarios are stored in TRM/src/resources/scenarios.");
+
+        private ScenarioMetadata metadata;
+
+        private SaveScenarioDialog(Component owner, String modelName) {
+            super(resolveWindow(owner), "Save Scenario", Dialog.ModalityType.APPLICATION_MODAL);
+            buildUi(modelName);
+        }
+
+        private void buildUi(String modelName) {
+            setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            setResizable(false);
+
+            displayNameField.setText("Custom " + modelName + " Scenario");
+            idField.setText(("custom-" + modelName).toLowerCase().replaceAll("[^a-z0-9]+", "-"));
+            descriptionArea.setLineWrap(true);
+            descriptionArea.setWrapStyleWord(true);
+            descriptionArea.setBorder(new EmptyBorder(8, 8, 8, 8));
+            includeInSimulatorCheckBox.setOpaque(false);
+            bundledHintLabel.setForeground(new Color(72, 72, 72));
+            bundledHintLabel.setVisible(false);
+            includeInSimulatorCheckBox.addActionListener(evt -> bundledHintLabel.setVisible(includeInSimulatorCheckBox.isSelected()));
+
+            JPanel content = new JPanel(new BorderLayout(0, 18));
+            content.setBackground(BACKGROUND_COLOR);
+            content.setBorder(new EmptyBorder(14, 14, 10, 14));
+            content.add(buildFormPanel(), BorderLayout.CENTER);
+            content.add(buildFooterPanel(), BorderLayout.SOUTH);
+
+            setContentPane(content);
+            pack();
+            setMinimumSize(new Dimension(430, 360));
+            setLocationRelativeTo(getOwner());
+        }
+
+        private JPanel buildFormPanel() {
+            JPanel formPanel = new JPanel(new GridBagLayout());
+            formPanel.setBackground(BACKGROUND_COLOR);
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.weightx = 1.0;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.anchor = GridBagConstraints.NORTHWEST;
+            gbc.insets = new Insets(0, 0, 12, 0);
+
+            gbc.gridy = 0;
+            formPanel.add(createSection("Scenario ID", wrapField(idField)), gbc);
+            gbc.gridy = 1;
+            formPanel.add(createSection("Display name", wrapField(displayNameField)), gbc);
+            gbc.gridy = 2;
+            gbc.fill = GridBagConstraints.BOTH;
+            gbc.weighty = 1.0;
+            formPanel.add(createSection("Description", wrapDescription()), gbc);
+            gbc.gridy = 3;
+            gbc.weighty = 0.0;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.insets = new Insets(0, 0, 0, 0);
+            formPanel.add(includeInSimulatorCheckBox, gbc);
+
+            return formPanel;
+        }
+
+        private JPanel buildFooterPanel() {
+            JPanel footerPanel = new JPanel(new BorderLayout(0, 16));
+            footerPanel.setBackground(BACKGROUND_COLOR);
+
+            footerPanel.add(bundledHintLabel, BorderLayout.NORTH);
+
+            JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            actionsPanel.setOpaque(false);
+
+            JButton okButton = new JButton("OK");
+            JButton cancelButton = new JButton("Cancel");
+            okButton.setPreferredSize(new Dimension(74, 24));
+            cancelButton.setPreferredSize(new Dimension(82, 24));
+            okButton.addActionListener(evt -> onConfirm());
+            cancelButton.addActionListener(evt -> dispose());
+            getRootPane().setDefaultButton(okButton);
+
+            actionsPanel.add(okButton);
+            actionsPanel.add(cancelButton);
+            footerPanel.add(actionsPanel, BorderLayout.SOUTH);
+            return footerPanel;
+        }
+
+        private JPanel createSection(String labelText, Component field) {
+            JPanel sectionPanel = new JPanel(new BorderLayout(0, 8));
+            sectionPanel.setOpaque(false);
+            sectionPanel.add(new JLabel(labelText), BorderLayout.NORTH);
+            sectionPanel.add(field, BorderLayout.CENTER);
+            return sectionPanel;
+        }
+
+        private Component wrapField(JTextField field) {
+            field.setBorder(new EmptyBorder(6, 8, 6, 8));
+            JPanel wrapper = new JPanel(new BorderLayout());
+            wrapper.setBackground(BACKGROUND_COLOR);
+            wrapper.setBorder(new LineBorder(BORDER_COLOR));
+            Dimension fieldSize = field.getPreferredSize();
+            wrapper.setPreferredSize(new Dimension(380, fieldSize.height + 12));
+            wrapper.add(field, BorderLayout.CENTER);
+            return wrapper;
+        }
+
+        private Component wrapDescription() {
+            JScrollPane scrollPane = new JScrollPane(descriptionArea);
+            scrollPane.setBorder(new LineBorder(BORDER_COLOR));
+            scrollPane.setPreferredSize(new Dimension(380, 88));
+            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+            return scrollPane;
+        }
+
+        private void onConfirm() {
+            String id = sanitizeId(idField.getText());
+            String displayName = displayNameField.getText() == null ? "" : displayNameField.getText().trim();
+            String description = descriptionArea.getText() == null ? "" : descriptionArea.getText().trim();
+
+            if (id.isEmpty() || displayName.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Scenario ID and display name are required.", "Invalid Scenario", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (description.isEmpty()) {
+                description = "Imported custom scenario saved from the current simulator configuration.";
+            }
+
+            metadata = new ScenarioMetadata(id, displayName, description, includeInSimulatorCheckBox.isSelected());
+            dispose();
+        }
+
+        private void showDialog() {
+            setVisible(true);
+        }
+
+        private ScenarioMetadata getMetadata() {
+            return metadata;
+        }
+
+        private static Window resolveWindow(Component owner) {
+            if (owner == null) {
+                return new Frame();
+            }
+            Window window = owner instanceof Window ? (Window) owner : SwingUtilities.getWindowAncestor(owner);
+            return window != null ? window : new Frame();
         }
     }
 }
