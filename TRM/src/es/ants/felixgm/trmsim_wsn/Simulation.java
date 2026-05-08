@@ -79,6 +79,7 @@ public class Simulation implements Runnable {
     private final SimulationContext workspaceSimulationContext;
     private final Collection<SimulationListener> listeners;
     private ExecutorService clientExecutor;
+    private int clientExecutorWorkers = -1;
 
 	/** Wireless sensor network to test */
 	private Network network;
@@ -356,8 +357,14 @@ public class Simulation implements Runnable {
 	}
 
     private void executeClients(Network network) throws InterruptedException {
-        if ((clientExecutor == null) || clientExecutor.isShutdown()) {
+        int currentClientCount = network.get_numClients();
+        int currentWorkerCount = ClientExecutionSupport.workerCountForClientCount(currentClientCount);
+        if ((clientExecutor == null) || clientExecutor.isShutdown() || (clientExecutorWorkers != currentWorkerCount)) {
+            if (clientExecutor != null) {
+                clientExecutor.shutdownNow();
+            }
             clientExecutor = ClientExecutionSupport.createClientExecutor(network.get_numClients());
+            clientExecutorWorkers = currentWorkerCount;
         }
         ClientExecutionSupport.executeClients(network.get_clients(), clientExecutor, simulationContext);
     }

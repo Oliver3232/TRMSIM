@@ -1,0 +1,6 @@
+recorded_at,app_version,scenario_id,scenario_name,trust_model,num_sensors,num_networks,num_executions,duration_ms,outcome
+"Thu May 07 16:55:39 CEST 2026","0.5","large-scale-fast-peertrust","Large Scale - Fast PeerTrust","PeerTrust",80,1,1,68,"EnergyConsumptionOutcome"
+"Thu May 07 16:55:39 CEST 2026","0.5","large-scale-fast-peertrust","Large Scale - Fast PeerTrust","PeerTrust",120,1,1,31,"EnergyConsumptionOutcome"
+"Thu May 07 16:55:54 CEST 2026","0.5","large-scale-fast-peertrust","Large Scale - Fast PeerTrust","PeerTrust",100,3,1,106,"EnergyConsumptionOutcome"
+"Thu May 07 16:59:28 CEST 2026","0.5","large-scale-fast-peertrust","Large Scale - Fast PeerTrust","PeerTrust",80,1,1,63,"EnergyConsumptionOutcome"
+"Thu May 07 16:59:28 CEST 2026","0.5","large-scale-fast-peertrust","Large Scale - Fast PeerTrust","PeerTrust",120,1,1,35,"EnergyConsumptionOutcome"

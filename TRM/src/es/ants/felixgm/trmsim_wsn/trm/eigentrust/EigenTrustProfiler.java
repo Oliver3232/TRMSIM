@@ -8,26 +8,19 @@ import java.util.Date;
  * Lightweight opt-in profiler for EigenTrust benchmark runs.
  */
 public final class EigenTrustProfiler {
-    private static boolean enabled = false;
     private static ProfileSnapshot current = null;
 
     private EigenTrustProfiler() {
     }
 
     public static synchronized void beginRun(String scenarioId, int numSensors, int numNetworks, int numExecutions) {
-        enabled = true;
         current = new ProfileSnapshot(scenarioId, numSensors, numNetworks, numExecutions);
     }
 
     public static synchronized ProfileSnapshot endRun() {
         ProfileSnapshot snapshot = current;
-        enabled = false;
         current = null;
         return snapshot;
-    }
-
-    public static boolean isEnabled() {
-        return enabled;
     }
 
     public static synchronized void recordGather(long durationNanos) {

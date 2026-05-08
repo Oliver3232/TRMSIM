@@ -162,23 +162,26 @@ public class EigenTrust extends TRModel_WSN {
     @Override
     public synchronized Outcome performTransaction(Vector<Sensor> path, Service service) {
         long startedAt = System.nanoTime();
-        Outcome outcome = null;
-        if ((path == null) || (path.size() <= 0) || (!path.lastElement().isActive()))
+        try {
+            Outcome outcome = null;
+            if ((path == null) || (path.size() <= 0) || (!path.lastElement().isActive()))
+                return outcome;
+
+            EigenTrust_Sensor server = (EigenTrust_Sensor)path.lastElement();
+            EigenTrust_Sensor client = (EigenTrust_Sensor)path.firstElement();
+            Service receivedService = server.serve(service,path);
+
+            if (receivedService == null)
+                outcome = new EigenTrustEnergyConsumptionOutcome(new SatisfactionInterval(MIN_SATISFACTION,MAX_SATISFACTION,MIN_SATISFACTION),path.size());
+            else
+                outcome = new EigenTrustEnergyConsumptionOutcome(new SatisfactionInterval(MIN_SATISFACTION,MAX_SATISFACTION,MAX_SATISFACTION),path.size());
+
+            client.addNewTransaction(client, server, outcome);
+
             return outcome;
-        
-        EigenTrust_Sensor server = (EigenTrust_Sensor)path.lastElement();
-        EigenTrust_Sensor client = (EigenTrust_Sensor)path.firstElement();
-        Service receivedService = server.serve(service,path);
-
-        if (receivedService == null)
-            outcome = new EigenTrustEnergyConsumptionOutcome(new SatisfactionInterval(MIN_SATISFACTION,MAX_SATISFACTION,MIN_SATISFACTION),path.size());
-        else
-            outcome = new EigenTrustEnergyConsumptionOutcome(new SatisfactionInterval(MIN_SATISFACTION,MAX_SATISFACTION,MAX_SATISFACTION),path.size());
-
-        client.addNewTransaction(client, server, outcome);
-        EigenTrustProfiler.recordTransaction(System.nanoTime() - startedAt);
-
-        return outcome;
+        } finally {
+            EigenTrustProfiler.recordTransaction(System.nanoTime() - startedAt);
+        }
     }
 
     /**

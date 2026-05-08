@@ -101,6 +101,7 @@ public final class VerboseSimulationRunner {
         Collection<Outcome> globalOutcomes = new ArrayList<Outcome>();
         Sensor.set_TRModel_WSN(trustModel);
         ExecutorService clientExecutor = null;
+        int clientExecutorWorkers = -1;
 
         try {
             for (int net = 0; net < numNetworks; net++) {
@@ -121,8 +122,14 @@ public final class VerboseSimulationRunner {
                     network = trustModel.generateRandomNetwork(numSensors, probClients, radioRange, probServices, probGoodness, services);
                     network.set_collusion(collusion);
                     network.set_dynamic(dynamic);
-                    if (clientExecutor == null) {
-                        clientExecutor = ClientExecutionSupport.createClientExecutor(network.get_numClients());
+                    int currentClientCount = network.get_numClients();
+                    int currentWorkerCount = ClientExecutionSupport.workerCountForClientCount(currentClientCount);
+                    if ((clientExecutor == null) || (clientExecutorWorkers != currentWorkerCount)) {
+                        if (clientExecutor != null) {
+                            clientExecutor.shutdownNow();
+                        }
+                        clientExecutor = ClientExecutionSupport.createClientExecutor(currentClientCount);
+                        clientExecutorWorkers = currentWorkerCount;
                     }
                 }
 

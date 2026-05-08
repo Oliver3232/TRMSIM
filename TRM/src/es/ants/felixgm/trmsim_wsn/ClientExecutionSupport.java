@@ -22,9 +22,7 @@ final class ClientExecutionSupport {
     }
 
     static ExecutorService createClientExecutor(int clientCount) {
-        final int availableProcessors = Math.max(1, Runtime.getRuntime().availableProcessors());
-        final int desiredWorkers = Math.max(availableProcessors, availableProcessors * 2);
-        final int workers = Math.max(1, Math.min(Math.max(1, clientCount), desiredWorkers));
+        final int workers = workerCountForClientCount(clientCount);
         return Executors.newFixedThreadPool(workers, new ThreadFactory() {
             @Override
             public Thread newThread(Runnable runnable) {
@@ -33,6 +31,12 @@ final class ClientExecutionSupport {
                 return thread;
             }
         });
+    }
+
+    static int workerCountForClientCount(int clientCount) {
+        final int availableProcessors = Math.max(1, Runtime.getRuntime().availableProcessors());
+        final int desiredWorkers = Math.max(availableProcessors, availableProcessors * 2);
+        return Math.max(1, Math.min(Math.max(1, clientCount), desiredWorkers));
     }
 
     static void executeClients(

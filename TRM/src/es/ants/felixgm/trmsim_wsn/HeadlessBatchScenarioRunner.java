@@ -106,45 +106,49 @@ public final class HeadlessBatchScenarioRunner {
             String currentVersion,
             File eigenProfileCsv) throws Exception {
         NetworkGenerationConfig baseConfig = scenario.getNetworkGenerationConfig();
-        if (EigenTrust.get_name().equals(trustModelName)) {
+        boolean profileEigenTrust = EigenTrust.get_name().equals(trustModelName);
+        if (profileEigenTrust) {
             EigenTrustProfiler.beginRun(scenario.getId(), numSensors, numNetworks, numExecutions);
         }
         long startedAtNanos = System.nanoTime();
-        Outcome outcome = VerboseSimulationRunner.runTrustModel(
-                trustModelName,
-                new Service("My service"),
-                numNetworks,
-                numExecutions,
-                numSensors,
-                numSensors,
-                baseConfig.getProbClients(),
-                baseConfig.getProbRelay(),
-                baseConfig.getProbMalicious(),
-                baseConfig.getRadioRange(),
-                baseConfig.isDynamic(),
-                baseConfig.isOscillating(),
-                baseConfig.isCollusion());
-        long elapsedMillis = (System.nanoTime() - startedAtNanos) / 1_000_000L;
-        String outcomeName = (outcome == null ? "null" : outcome.getClass().getSimpleName());
-        if (EigenTrust.get_name().equals(trustModelName)) {
-            EigenTrustProfiler.appendCsv(EigenTrustProfiler.endRun(), eigenProfileCsv);
-        }
+        try {
+            Outcome outcome = VerboseSimulationRunner.runTrustModel(
+                    trustModelName,
+                    new Service("My service"),
+                    numNetworks,
+                    numExecutions,
+                    numSensors,
+                    numSensors,
+                    baseConfig.getProbClients(),
+                    baseConfig.getProbRelay(),
+                    baseConfig.getProbMalicious(),
+                    baseConfig.getRadioRange(),
+                    baseConfig.isDynamic(),
+                    baseConfig.isOscillating(),
+                    baseConfig.isCollusion());
+            long elapsedMillis = (System.nanoTime() - startedAtNanos) / 1_000_000L;
+            String outcomeName = (outcome == null ? "null" : outcome.getClass().getSimpleName());
 
-        System.out.println("model=" + trustModelName
-                + " size=" + numSensors
-                + " durationMs=" + elapsedMillis
-                + " outcome=" + outcomeName);
-        return new BatchRecord(
-                new Date().toString(),
-                currentVersion,
-                scenario.getId(),
-                scenario.getDisplayName(),
-                trustModelName,
-                numSensors,
-                numNetworks,
-                numExecutions,
-                elapsedMillis,
-                outcomeName);
+            System.out.println("model=" + trustModelName
+                    + " size=" + numSensors
+                    + " durationMs=" + elapsedMillis
+                    + " outcome=" + outcomeName);
+            return new BatchRecord(
+                    new Date().toString(),
+                    currentVersion,
+                    scenario.getId(),
+                    scenario.getDisplayName(),
+                    trustModelName,
+                    numSensors,
+                    numNetworks,
+                    numExecutions,
+                    elapsedMillis,
+                    outcomeName);
+        } finally {
+            if (profileEigenTrust) {
+                EigenTrustProfiler.appendCsv(EigenTrustProfiler.endRun(), eigenProfileCsv);
+            }
+        }
     }
 
     private static void writeSummary(

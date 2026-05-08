@@ -108,8 +108,9 @@ public class PowerTrust extends TRModel_WSN {
         double maxReputation = Double.NEGATIVE_INFINITY;
         for (Vector<Sensor> pathToServer : gi.getPathsToServers()) {
             PowerTrust_Sensor server = (PowerTrust_Sensor)pathToServer.lastElement();
-            if (server.computeGlobalReputation() > maxReputation) {
-                maxReputation = server.get_globalReputationScore();
+            double serverReputation = server.computeGlobalReputation();
+            if (serverReputation > maxReputation) {
+                maxReputation = serverReputation;
                 mostReputablePath = pathToServer;
             }
             client.addTransmittedDistance((long)client.distance(server));
