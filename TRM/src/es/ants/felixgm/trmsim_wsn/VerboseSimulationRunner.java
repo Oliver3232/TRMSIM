@@ -10,6 +10,7 @@ import es.ants.felixgm.trmsim_wsn.trm.TrustModelFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Command-line oriented execution utility kept outside the GUI class.
@@ -18,18 +19,8 @@ public final class VerboseSimulationRunner {
     private VerboseSimulationRunner() {
     }
 
-    private static void executeClients(Network network) throws InterruptedException {
-        Thread[] clients = new Thread[network.get_numClients()];
-        int index = 0;
-        for (Sensor client : network.get_clients()) {
-            clients[index++] = new Thread(client);
-        }
-        for (Thread clientThread : clients) {
-            clientThread.start();
-        }
-        for (Thread clientThread : clients) {
-            clientThread.join();
-        }
+    private static void executeClients(Network network, ExecutorService clientExecutor) throws InterruptedException {
+        ClientExecutionSupport.executeClients(network.get_clients(), clientExecutor, Sensor.getDefaultSimulationContext());
     }
 
     public static void runVerbose(
@@ -109,26 +100,38 @@ public final class VerboseSimulationRunner {
         Network network = null;
         Collection<Outcome> globalOutcomes = new ArrayList<Outcome>();
         Sensor.set_TRModel_WSN(trustModel);
+        ExecutorService clientExecutor = null;
+        int clientExecutorWorkers = -1;
 
-        for (int net = 0; net < numNetworks; net++) {
-            if ((network == null) || (numNetworks != 1)) {
-                int numSensors = (int) (minNumSensors + Math.random() * Math.abs(maxNumSensors - minNumSensors));
-                ArrayList<Double> probServices = new ArrayList<Double>();
-                ArrayList<Double> probGoodness = new ArrayList<Double>();
-                ArrayList<Service> services = new ArrayList<Service>();
+        try {
+            for (int net = 0; net < numNetworks; net++) {
+                if ((network == null) || (numNetworks != 1)) {
+                    int numSensors = (int) (minNumSensors + Math.random() * Math.abs(maxNumSensors - minNumSensors));
+                    ArrayList<Double> probServices = new ArrayList<Double>();
+                    ArrayList<Double> probGoodness = new ArrayList<Double>();
+                    ArrayList<Service> services = new ArrayList<Service>();
 
-                services.add(new Service("Relay"));
-                services.add(requiredService);
+                    services.add(new Service("Relay"));
+                    services.add(requiredService);
 
-                probServices.add(1.0);
-                probGoodness.add(1.0);
-                probServices.add(1.0 - probRelay);
-                probGoodness.add(1.0 - probMalicious);
+                    probServices.add(1.0);
+                    probGoodness.add(1.0);
+                    probServices.add(1.0 - probRelay);
+                    probGoodness.add(1.0 - probMalicious);
 
-                network = trustModel.generateRandomNetwork(numSensors, probClients, radioRange, probServices, probGoodness, services);
-                network.set_collusion(collusion);
-                network.set_dynamic(dynamic);
-	            }
+                    network = trustModel.generateRandomNetwork(numSensors, probClients, radioRange, probServices, probGoodness, services);
+                    network.set_collusion(collusion);
+                    network.set_dynamic(dynamic);
+                    int currentClientCount = network.get_numClients();
+                    int currentWorkerCount = ClientExecutionSupport.workerCountForClientCount(currentClientCount);
+                    if ((clientExecutor == null) || (clientExecutorWorkers != currentWorkerCount)) {
+                        if (clientExecutor != null) {
+                            clientExecutor.shutdownNow();
+                        }
+                        clientExecutor = ClientExecutionSupport.createClientExecutor(currentClientCount);
+                        clientExecutorWorkers = currentWorkerCount;
+                    }
+                }
 
                 trustModel.resetModelState();
 
@@ -136,33 +139,38 @@ public final class VerboseSimulationRunner {
 	                client.set_requiredService(requiredService);
 	            }
 
-            Collection<Outcome> outcomes = new ArrayList<Outcome>();
-            int executions = 0;
-            if ((net % 5) == 0) {
-                System.out.println("\tnet = " + net);
-                System.out.flush();
-            }
-            for (; executions < numExecutions; executions++) {
-                executeClients(network);
+                Collection<Outcome> outcomes = new ArrayList<Outcome>();
+                int executions = 0;
+                if ((net % 5) == 0) {
+                    System.out.println("\tnet = " + net);
+                    System.out.flush();
+                }
+                for (; executions < numExecutions; executions++) {
+                    executeClients(network, clientExecutor);
 
-                for (Sensor client : network.get_clients()) {
-                    if (client.get_outcome() != null) {
-                        outcomes.add(client.get_outcome());
+                    for (Sensor client : network.get_clients()) {
+                        if (client.get_outcome() != null) {
+                            outcomes.add(client.get_outcome());
+                        }
+                    }
+
+                    if (oscillating && (executions % 20 == 0)) {
+                        network.oscillate(requiredService);
                     }
                 }
 
-                if (oscillating && (executions % 20 == 0)) {
-                    network.oscillate(requiredService);
+                Outcome outcome = Outcome.computeOutcomes(outcomes, network, requiredService, executions);
+                if (outcome == null) {
+                    if (net > 0) {
+                        net--;
+                    }
+                } else {
+                    globalOutcomes.add(outcome);
                 }
             }
-
-            Outcome outcome = Outcome.computeOutcomes(outcomes, network, requiredService, executions);
-            if (outcome == null) {
-                if (net > 0) {
-                    net--;
-                }
-            } else {
-                globalOutcomes.add(outcome);
+        } finally {
+            if (clientExecutor != null) {
+                clientExecutor.shutdownNow();
             }
         }
 

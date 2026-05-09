@@ -44,6 +44,7 @@ package es.ants.felixgm.trmsim_wsn.trm.trip;
 import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.network.Sensor;
 import es.ants.felixgm.trmsim_wsn.network.Service;
+import es.ants.felixgm.trmsim_wsn.network.Link;
 import es.ants.felixgm.trmsim_wsn.outcomes.EnergyConsumptionOutcome;
 import es.ants.felixgm.trmsim_wsn.outcomes.Outcome;
 import es.ants.felixgm.trmsim_wsn.satisfaction.SatisfactionInterval;
@@ -127,7 +128,8 @@ public class TRIP extends TRModel_WSN {
 
         //If there is no benevolent node reachable, any trust and reputation model makes sense
         boolean atLeastOneBenevolentNeighbor = false;
-        for (Sensor neighbor : client.getNeighbors())
+        for (Link link : client.getLinksView()) {
+            Sensor neighbor = link.get_destination();
             try {
                 if ((!((TRIP_Sensor)neighbor).isRSU()) && 
                         (neighbor.get_goodness(client.get_requiredService()) > 0.5)) {
@@ -135,6 +137,7 @@ public class TRIP extends TRModel_WSN {
                     break;
                 }
             } catch (Exception ex) {}
+        }
 
         if ((((TRIP_Sensor)client).isRSU()) || !atLeastOneBenevolentNeighbor)
             return selectedNeighbors;
@@ -145,11 +148,13 @@ public class TRIP extends TRModel_WSN {
         double muNT = ((TRIP_Parameters)trmParameters).get_notTrustFuzzySetMean();
         // "Not Trust" fuzzy set standard deviation
         double sigmaNT = ((TRIP_Parameters)trmParameters).get_notTrustFuzzySetStDev();
-        for (Sensor neighbor : client.getNeighbors())
+        for (Link link : client.getLinksView()) {
+            Sensor neighbor = link.get_destination();
             if (!((TRIP_Sensor)neighbor).isRSU() && neighbor.offersService(client.get_requiredService())){
                 double alpha = ((TRIP_Sensor)client).get_alpha();
                 double beta = ((TRIP_Sensor)client).get_beta();
                 double gamma = ((TRIP_Sensor)client).get_gamma();
+
                 double vehiclesRecommendations = 0.0;
                 double rsuRecommendations = 0.0;
 
@@ -205,6 +210,7 @@ public class TRIP extends TRModel_WSN {
 
                 ((TRIP_Sensor)client).set_trustValue((TRIP_Sensor)neighbor, neighborTrustValue);
             }
+        }
 
         return selectedNeighbors;
     }

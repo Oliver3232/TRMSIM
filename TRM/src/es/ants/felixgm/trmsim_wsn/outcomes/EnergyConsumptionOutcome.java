@@ -159,9 +159,7 @@ public class EnergyConsumptionOutcome extends BasicOutcome {
 
             // Získanie počtu susedov
             int neighbors = 0;
-            if (s.getNeighbors() != null) {
-                neighbors = s.getNeighbors().size();
-            }
+            neighbors = s.get_numNeighborsFast();
 
             this.addNodeMetric(new NodeMetric(
                     s.id(),

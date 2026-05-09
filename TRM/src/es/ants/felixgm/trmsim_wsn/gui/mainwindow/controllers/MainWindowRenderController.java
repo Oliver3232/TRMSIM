@@ -77,9 +77,11 @@ public final class MainWindowRenderController {
     }
 
     public static void paintNetwork(MainWindowContext context, Network network, Service requiredService) throws Exception {
-        NetworkRenderSupport.RenderState renderState = context.getCurrentRenderState();
-        renderNetwork(context.getMainNetworkPanel(), network, requiredService, renderState);
-        context.renderOnFullscreen(network, requiredService, renderState);
+        NetworkRenderSupport.RenderState requestedState = context.getCurrentRenderState();
+        NetworkRenderSupport.RenderState effectiveState = NetworkRenderSupport.effectiveState(network, requestedState);
+        renderNetwork(context.getMainNetworkPanel(), network, requiredService, requestedState);
+        context.renderOnFullscreen(network, requiredService, effectiveState);
+        announceLargeScaleModeIfNeeded(context, network, requestedState, effectiveState);
         context.sleepAfterUiUpdate();
     }
 
@@ -123,5 +125,23 @@ public final class MainWindowRenderController {
 
     private static void renderNetwork(NetworkPanel targetPanel, Network network, Service requiredService, NetworkRenderSupport.RenderState renderState) throws Exception {
         NetworkRenderSupport.renderNetwork(targetPanel, network, requiredService, renderState);
+    }
+
+    private static void announceLargeScaleModeIfNeeded(
+            MainWindowContext context,
+            Network network,
+            NetworkRenderSupport.RenderState requestedState,
+            NetworkRenderSupport.RenderState effectiveState) {
+        if (context.getMainNetworkPanel() == null) {
+            return;
+        }
+        boolean reduced = NetworkRenderSupport.isReducedForLargeScale(network, requestedState, effectiveState);
+        Object previous = context.getMainNetworkPanel().getClientProperty("largeScaleRenderReduced");
+        boolean wasReduced = Boolean.TRUE.equals(previous);
+        context.getMainNetworkPanel().putClientProperty("largeScaleRenderReduced", Boolean.valueOf(reduced));
+        if (reduced && !wasReduced) {
+            context.prependMessage(
+                    "Large-scale render mode active: ids, links, ranges, and grid were hidden automatically for faster visualization.\n");
+        }
     }
 }

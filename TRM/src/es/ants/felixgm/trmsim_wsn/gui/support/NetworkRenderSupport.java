@@ -6,6 +6,8 @@ import es.ants.felixgm.trmsim_wsn.network.Network;
 import es.ants.felixgm.trmsim_wsn.network.Service;
 
 public final class NetworkRenderSupport {
+    public static final int LARGE_SCALE_NETWORK_THRESHOLD = 750;
+
     public static final class RenderState {
         private final double radioRange;
         private final boolean showRanges;
@@ -49,14 +51,41 @@ public final class NetworkRenderSupport {
         return new RenderState(radioRange, showRanges, showLinks, showIds, showGrid);
     }
 
+    public static boolean isLargeScaleNetwork(Network network) {
+        return network != null
+                && network.get_sensors() != null
+                && network.get_sensors().size() >= LARGE_SCALE_NETWORK_THRESHOLD;
+    }
+
+    public static RenderState effectiveState(Network network, RenderState requestedState) {
+        if (!isLargeScaleNetwork(network)) {
+            return requestedState;
+        }
+        return new RenderState(
+                requestedState.getRadioRange(),
+                false,
+                false,
+                false,
+                false);
+    }
+
+    public static boolean isReducedForLargeScale(Network network, RenderState requestedState, RenderState effectiveState) {
+        return isLargeScaleNetwork(network)
+                && ((requestedState.isShowRanges() != effectiveState.isShowRanges())
+                || (requestedState.isShowLinks() != effectiveState.isShowLinks())
+                || (requestedState.isShowIds() != effectiveState.isShowIds())
+                || (requestedState.isShowGrid() != effectiveState.isShowGrid()));
+    }
+
     public static void renderNetwork(NetworkPanel targetPanel, Network network, Service requiredService, RenderState renderState) throws Exception {
+        RenderState effectiveState = effectiveState(network, renderState);
         targetPanel.paintNetwork(
                 network,
                 requiredService,
-                renderState.getRadioRange(),
-                renderState.isShowRanges(),
-                renderState.isShowLinks(),
-                renderState.isShowIds(),
-                renderState.isShowGrid());
+                effectiveState.getRadioRange(),
+                effectiveState.isShowRanges(),
+                effectiveState.isShowLinks(),
+                effectiveState.isShowIds(),
+                effectiveState.isShowGrid());
     }
 }

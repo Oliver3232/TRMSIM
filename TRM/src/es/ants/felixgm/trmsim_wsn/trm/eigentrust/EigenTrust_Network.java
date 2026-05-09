@@ -191,11 +191,13 @@ public class EigenTrust_Network extends Network {
                     out.write("\t\t<service id=\""+service.id()+"\" "
                         +"goodness=\""+server.get_goodness(service)+"\""
                         +"/>\n");
-                for (Sensor neighbor : server.getNeighbors())
+                for (Link link : server.getLinksView()) {
+                    Sensor neighbor = link.get_destination();
                     if (neighbor.get_numServices() == 0)
                         out.write("\t\t<client id=\""+neighbor.id()+"\"/>\n");
                     else
                         out.write("\t\t<server id=\""+neighbor.id()+"\"/>\n");
+                }
                 out.write("\t</server>\n");
 
             }
