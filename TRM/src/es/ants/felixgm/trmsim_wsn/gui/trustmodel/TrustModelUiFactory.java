@@ -23,10 +23,12 @@ import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.PathLengthPanel;
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.PowerTrustEnergyConsumptionPanel;
 import es.ants.felixgm.trmsim_wsn.trm.TrustModelRegistry;
 import es.ants.felixgm.trmsim_wsn.trm.btrm_wsn.BTRM_WSN;
+import es.ants.felixgm.trmsim_wsn.trm.bayestrust.BayesTrust;
 import es.ants.felixgm.trmsim_wsn.trm.eigentrust.EigenTrust;
 import es.ants.felixgm.trmsim_wsn.trm.lftm.LFTM;
 import es.ants.felixgm.trmsim_wsn.trm.peertrust.PeerTrust;
 import es.ants.felixgm.trmsim_wsn.trm.powertrust.PowerTrust;
+import es.ants.felixgm.trmsim_wsn.trm.svmtrust.SVMTrust;
 import es.ants.felixgm.trmsim_wsn.trm.templatetrm.TemplateTRM;
 import es.ants.felixgm.trmsim_wsn.trm.trip.TRIP;
 
@@ -107,6 +109,12 @@ public final class TrustModelUiFactory {
                 BTRMFXNetworkPanel::new,
                 () -> createPanels(new AccuracyPanel(), new PathLengthPanel(), new EnergyConsumptionPanel())));
 
+        descriptors.put(BayesTrust.get_name(), new Descriptor(
+                true,
+                LegendPanel::new,
+                JavaFXNetworkPanel::new,
+                () -> createPanels(new AccuracyPanel(), new PathLengthPanel(), new EnergyConsumptionPanel())));
+
         descriptors.put(EigenTrust.get_name(), new Descriptor(
                 false,
                 EigenTrustLegendPanel::new,
@@ -124,6 +132,12 @@ public final class TrustModelUiFactory {
                 PowerTrustLegendPanel::new,
                 PowerTrustFXNetworkPanel::new,
                 () -> createPanels(new AccuracyPanel(), new PathLengthPanel(), new PowerTrustEnergyConsumptionPanel())));
+
+        descriptors.put(SVMTrust.get_name(), new Descriptor(
+                true,
+                LegendPanel::new,
+                JavaFXNetworkPanel::new,
+                () -> createPanels(new AccuracyPanel(), new PathLengthPanel(), new EnergyConsumptionPanel())));
 
         descriptors.put(LFTM.get_name(), new Descriptor(
                 true,

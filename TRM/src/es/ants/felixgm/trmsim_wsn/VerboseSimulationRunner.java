@@ -133,9 +133,11 @@ public final class VerboseSimulationRunner {
                     }
                 }
 
-                for (Sensor client : network.get_clients()) {
-                    client.set_requiredService(requiredService);
-                }
+                trustModel.resetModelState();
+
+	            for (Sensor client : network.get_clients()) {
+	                client.set_requiredService(requiredService);
+	            }
 
                 Collection<Outcome> outcomes = new ArrayList<Outcome>();
                 int executions = 0;
