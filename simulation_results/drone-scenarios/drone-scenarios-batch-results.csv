@@ -1,0 +1,13 @@
+scenario,model,nodes,num_networks,num_executions,duration_ms
+drone-swarm,EigenTrust,30,15,40,4578
+drone-swarm,PeerTrust,30,15,40,189
+drone-swarm,BTRM_WSN,30,15,40,724
+drone-swarm,LFTM,30,15,40,3712
+drone-logistics,EigenTrust,200,5,20,55318
+drone-logistics,PeerTrust,200,5,20,557
+drone-logistics,BTRM_WSN,200,5,20,2329
+drone-logistics,LFTM,200,5,20,8146
+drone-contested,EigenTrust,80,10,45,45961
+drone-contested,PeerTrust,80,10,45,637
+drone-contested,BTRM_WSN,80,10,45,5393
+drone-contested,LFTM,80,10,45,6113

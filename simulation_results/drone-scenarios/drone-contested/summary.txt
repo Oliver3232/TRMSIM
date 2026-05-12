@@ -1,0 +1,20 @@
+TRMSim-WSN Scenario Summary: drone-contested
+================================================================
+Nodes        : 80  (6 clients, 30 malicious, 4 benevolent, 40 relay)
+Networks     : 10   Executions per network: 45
+Radio range  : 0.33   Dynamic: False   Oscillating: True   Collusion: True
+
+Model           Runs   Avg Sat   Min Sat   Max Sat   Avg Path
+------------------------------------------------------------
+EigenTrust        40    0.8865    0.8485    0.9328     4.1342
+PeerTrust         40    0.7720    0.7195    0.8380     4.4610
+BTRM_WSN          40    0.8208    0.7853    0.8728     3.8823
+LFTM              40    0.8636    0.8103    0.8980     3.8633
+PowerTrust        40    0.8010    0.7567    0.8542     4.0966
+TRIP              40    0.8564    0.8133    0.9032     4.1146
+
+Files:
+  outcomes.tsv      full run data, all models (Tab-Separated)
+  outcomes.csv      full run data, all models (CSV)
+  nodes-all.csv     per-node energy, position, connectivity (5 simulations)
+  nodes-energy.csv  per-node energy only (5 simulations)

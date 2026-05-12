@@ -1,0 +1,4 @@
+scenario_id,num_sensors,num_networks,num_executions,gather_calls,gather_ms,matrix_fill_calls,matrix_fill_ms,score_calls,score_ms,power_iterations,provider_selection_calls,provider_selection_ms,provider_path_checks,transaction_calls,transaction_ms
+drone-swarm,30,15,40,3600,1834,3600,1791,3600,183,600,3600,98,46800,3600,14
+drone-logistics,200,5,20,1600,22174,1600,21043,1600,6897,100,1600,2561,108000,1600,89
+drone-contested,80,10,45,7200,18412,7200,17538,7200,5803,450,7200,2015,288000,7200,76

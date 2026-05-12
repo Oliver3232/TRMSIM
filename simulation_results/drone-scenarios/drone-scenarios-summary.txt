@@ -1,0 +1,62 @@
+TRMSim-WSN Drone Scenario Batch Results
+========================================
+Mode: --headless-batch-scenario
+Models evaluated: EigenTrust, PeerTrust, BTRM_WSN, LFTM
+
+------------------------------------------------------------------------
+Scenario: drone-swarm  (Drone Swarm -- Reconnaissance)
+  Nodes: 30  |  Networks: 15  |  Executions per network: 40
+  Topology: dynamic + oscillating  |  Malicious: 5%  |  Relay: 40%
+
+  EigenTrust :  4 578 ms
+  LFTM       :  3 712 ms
+  BTRM_WSN   :    724 ms
+  PeerTrust  :    189 ms
+
+  Recommended model: LFTM
+  Notes: EigenTrust cost dominated by matrix computation per execution.
+         LFTM close behind due to repeated fuzzy re-evaluation on membership
+         changes. BTRM_WSN and PeerTrust well under 1 second.
+
+------------------------------------------------------------------------
+Scenario: drone-logistics  (Drone Logistics -- Delivery Fleet)
+  Nodes: 200  |  Networks: 5  |  Executions per network: 20
+  Topology: static  |  Malicious: 7%  |  Relay: 65%
+
+  EigenTrust : 55 318 ms
+  LFTM       :  8 146 ms
+  BTRM_WSN   :  2 329 ms
+  PeerTrust  :    557 ms
+
+  Recommended model: PeerTrust
+  Notes: Largest network of the three scenarios. EigenTrust overhead
+         dominated by algorithmic complexity (matrix over 200 nodes), not
+         topology dynamics -- static topology does not reduce its cost.
+         PeerTrust benefits from stable repeated interactions.
+
+------------------------------------------------------------------------
+Scenario: drone-contested  (Drone Contested -- Hostile Airspace)
+  Nodes: 80  |  Networks: 10  |  Executions per network: 45
+  Topology: oscillating + collusion  |  Malicious: 38%  |  Relay: 50%
+
+  EigenTrust : 45 961 ms
+  LFTM       :  6 113 ms
+  BTRM_WSN   :  5 393 ms
+  PeerTrust  :    637 ms
+
+  Recommended model: EigenTrust
+  Notes: Highest malicious proportion and collusion force EigenTrust to
+         re-propagate global trust vector aggressively. BTRM_WSN and LFTM
+         comparable. PeerTrust remains fast but offers weaker guarantees
+         under coordinated false recommendations.
+
+------------------------------------------------------------------------
+Cross-scenario observations:
+
+  PeerTrust  -- consistently fastest across all scenarios (189--637 ms)
+  EigenTrust -- consistently most expensive (4 578--55 318 ms)
+  BTRM_WSN   -- middle ground, more sensitive to oscillation than node count
+  LFTM       -- middle ground, higher cost than BTRM_WSN in oscillating cases
+
+  EigenTrust profiling data: eigentrust-profiling-drone-scenarios.csv
+  Raw and graph data:        drone-scenarios-batch-results.csv / .tsv

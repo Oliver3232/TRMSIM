@@ -1,0 +1,20 @@
+TRMSim-WSN Scenario Summary: drone-logistics
+================================================================
+Nodes        : 200  (16 clients, 14 malicious, 40 benevolent, 130 relay)
+Networks     : 5   Executions per network: 20
+Radio range  : 0.22   Dynamic: False   Oscillating: False   Collusion: False
+
+Model           Runs   Avg Sat   Min Sat   Max Sat   Avg Path
+------------------------------------------------------------
+EigenTrust        30    0.9901    0.9806    0.9970     4.1369
+PeerTrust         30    0.9947    0.9902    0.9998     3.9065
+BTRM_WSN          30    0.9815    0.9722    0.9946     4.5229
+LFTM              30    0.9854    0.9775    0.9957     3.8749
+PowerTrust        30    0.9958    0.9920    0.9999     3.7923
+TRIP              30    0.9806    0.9690    0.9930     4.6539
+
+Files:
+  outcomes.tsv      full run data, all models (Tab-Separated)
+  outcomes.csv      full run data, all models (CSV)
+  nodes-all.csv     per-node energy, position, connectivity (5 simulations)
+  nodes-energy.csv  per-node energy only (5 simulations)
