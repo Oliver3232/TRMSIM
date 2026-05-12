@@ -67,31 +67,32 @@ cd TRMSIM
 Maven automatically downloads all dependencies from Maven Central on the first build.
 
 ```bash
+cd TRM
 mvn clean package -q
 ```
 
-This produces two JARs in `target/`:
+This produces two JARs in `TRM/target/`:
 - `TRM-0.0.1-SNAPSHOT.jar` — thin JAR (requires classpath)
 - `TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar` — fat JAR with all dependencies bundled
 
 ### 3. Run the simulator (GUI)
 
 ```bash
-java -jar target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+java -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 ```
 
 On **macOS** add `-XstartOnFirstThread`:
 
 ```bash
-java -XstartOnFirstThread -jar target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+java -XstartOnFirstThread -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 ```
 
 ### 4. Run from your IDE
 
 Import the project as a **Maven project** in IntelliJ IDEA or Eclipse. The IDE will automatically import all dependencies defined in `pom.xml`.
 
-- IntelliJ IDEA: `File → Open` → select the root `pom.xml` → `Open as Project`
-- Eclipse: `File → Import → Existing Maven Projects` → select the repo root
+- IntelliJ IDEA: `File → Open` → select `TRM/pom.xml` → `Open as Project`
+- Eclipse: `File → Import → Existing Maven Projects` → select the `TRM/` directory
 
 Main class: `es.ants.felixgm.trmsim_wsn.gui.TRMSim_WSN`
 
@@ -100,7 +101,7 @@ Main class: `es.ants.felixgm.trmsim_wsn.gui.TRMSim_WSN`
 ### 5. Headless batch run (no GUI)
 
 ```bash
-java -cp target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
+java -cp TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
      es.ants.felixgm.trmsim_wsn.ClientExecutionSupport \
      --scenario TRM/src/resources/scenarios/large-scale-fast-peertrust.properties \
      --runs 100
@@ -112,13 +113,13 @@ java -cp target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
 
 ```
 TRMSIM/
-├── pom.xml                        Maven build descriptor
 ├── README.md                      This file
 ├── LICENSE.md                     Project license (LGPL v3 + additional terms)
 ├── NOTICE.md                      Original author attribution
 ├── MODIFICATIONS.md               Full list of changes vs. original TRMSim-WSN
 ├── THIRD_PARTY_NOTICES.md         Third-party library licenses
 └── TRM/
+    ├── pom.xml                        Maven build descriptor
     └── src/
         ├── es/ants/felixgm/trmsim_wsn/
         │   └── gui/
