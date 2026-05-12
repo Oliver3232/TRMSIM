@@ -70,10 +70,10 @@
     </profile>
   </profiles>
   <build>
-    <sourceDirectory>TRM/src</sourceDirectory>
+    <sourceDirectory>src</sourceDirectory>
     <resources>
       <resource>
-        <directory>TRM/src</directory>
+        <directory>src</directory>
         <excludes>
           <exclude>**/*.java</exclude>
         </excludes>
