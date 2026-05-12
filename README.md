@@ -10,8 +10,8 @@ Modified version repository: https://github.com/Oliver3232/TRMSIM
 
 TRMSim-WSN was created by:
 
-- **Félix Gómez Mármol** — [ants.dif.um.es/~felixgm](http://ants.dif.um.es/~felixgm/en)
-- **Gregorio Martínez Pérez** — [webs.um.es/gregorio](http://webs.um.es/gregorio)
+- **Félix Gómez Mármol**
+- **Gregorio Martínez Pérez**
 - **Antonio Bernárdez**
 
 Original source: https://github.com/LefKok/TRMSIM

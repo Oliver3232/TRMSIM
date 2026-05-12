@@ -6,8 +6,8 @@ This project is based on **TRMSim-WSN** (Trust and Reputation Models Simulator f
 Wireless Sensor Networks).
 
 **Original authors:**
-- Félix Gómez Mármol — http://ants.dif.um.es/~felixgm/en
-- Gregorio Martínez Pérez — http://webs.um.es/gregorio
+- Félix Gómez Mármol
+- Gregorio Martínez Pérez
 - Antonio Bernárdez
 
 **Original repository:** https://github.com/LefKok/TRMSIM
