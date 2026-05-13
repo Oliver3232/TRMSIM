@@ -1,6 +1,7 @@
 # TRMSIM
 
 Trust and Reputation Models Simulator for Wireless Sensor Networks.
+Whole code base of upgraded version is on a development branch.
 
 ## Requirements
 
