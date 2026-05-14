@@ -24,6 +24,7 @@ public final class SimulationExportHelper {
     public interface ExportHost {
         boolean ensureSimulationDataAvailable(SimulationResultRepository repository);
         String exportEnergyGraph(Component owner, ExportRequest request) throws Exception;
+        SimulationSnapshot getSimulationSnapshot();
     }
 
     private interface ExportAction {
@@ -227,6 +228,8 @@ public final class SimulationExportHelper {
                 continue;
             }
 
+            host.getSimulationSnapshot().saveToDirectory(targetDirectory);
+
             ExportRequest request = new ExportRequest(targetDirectory, reportName);
             List<String> exportedFiles = new ArrayList<String>();
             for (ExportOption exportOption : selectedOptions) {
@@ -265,6 +268,7 @@ public final class SimulationExportHelper {
         exportOptions.add(new ExportOption("node_csv_energy", "Node Energy CSV", true, request -> repository.exportNodeLevelEnergyCSV(owner, request)));
         exportOptions.add(new ExportOption("node_text_energy", "Node Energy Text", true, request -> repository.exportNodeLevelEnergyText(owner, request)));
         exportOptions.add(new ExportOption("node_text_all", "Node Data Text (All)", true, request -> repository.exportNodeLevelText(owner, request)));
+        exportOptions.add(new ExportOption("charts_png", "Charts (Satisfaction, Path Length, Energy) PNG", true, request -> repository.exportCharts(owner, request)));
         return exportOptions.toArray(new ExportOption[0]);
     }
 

@@ -101,11 +101,25 @@ Main class: `es.ants.felixgm.trmsim_wsn.gui.TRMSim_WSN`
 ### 5. Headless batch run (no GUI)
 
 ```bash
-java -cp TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
-     es.ants.felixgm.trmsim_wsn.ClientExecutionSupport \
-     --scenario TRM/src/resources/scenarios/large-scale-fast-peertrust.properties \
-     --runs 100
+java -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
+     --headless-batch-scenario large-scale-fast-peertrust PeerTrust
 ```
+
+To control network sizes and execution count:
+
+```bash
+java -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
+     --headless-batch-scenario large-scale-fast-peertrust PeerTrust "" 1 100
+```
+
+Full syntax: `--headless-batch-scenario <scenarioId> <models> [sizesCsv] [numNetworks] [numExecutions] [outputDir]`
+
+- `scenarioId` — name of the `.properties` file without extension (e.g. `large-scale-fast-peertrust`)
+- `models` — comma-separated trust model names: `PeerTrust`, `BTRM_WSN`, `EigenTrust`, `LFTM`, `PowerTrust`, `TRIP`
+- `sizesCsv` — comma-separated network sizes (empty = scenario default)
+- `numNetworks` — number of networks per execution (default from scenario)
+- `numExecutions` — number of executions (e.g. `100`)
+- `outputDir` — output directory for CSV/TSV/MD results (default: `docs/headless-batch`)
 
 ---
 

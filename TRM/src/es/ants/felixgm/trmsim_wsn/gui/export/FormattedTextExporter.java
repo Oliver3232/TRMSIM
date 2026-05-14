@@ -73,17 +73,18 @@ public class FormattedTextExporter {
         int satisfiedCount = 0;
 
         Map<String, Integer> modelCounts = new HashMap<>();
-        Map<String, Double> modelSatisfaction = new HashMap<>();
 
         for (Outcome outcome : outcomes) {
-            String modelType = outcome.getClass().getSimpleName();
+            String modelType = outcome.getModelName().isEmpty()
+                    ? outcome.getClass().getSimpleName().replace("Outcome", "").replace("EnergyConsumption", "")
+                    : outcome.getModelName();
             modelCounts.put(modelType, modelCounts.getOrDefault(modelType, 0) + 1);
 
             if (outcome instanceof BasicOutcome) {
                 BasicOutcome basic = (BasicOutcome) outcome;
                 totalSatisfaction += basic.get_avgSatisfaction();
                 totalPathLength += basic.get_avgPathLength();
-                totalAccuracy += basic.get_avgSatisfaction(); // Using satisfaction as accuracy proxy
+                totalAccuracy += basic.get_avgSatisfaction();
             }
 
             if (outcome.get_satisfaction().isSatisfied()) {
@@ -130,8 +131,10 @@ public class FormattedTextExporter {
     private static void writeOutcomeDetails(PrintWriter writer, Outcome outcome, int simNumber) {
         // Basic information
         writer.printf("%-20s: %s\n", "Timestamp", dateFormat.format(new Date()));
-        writer.printf("%-20s: %s\n", "Model Type",
-                outcome.getClass().getSimpleName().replace("Outcome", "").replace("EnergyConsumption", ""));
+        String modelLabel = outcome.getModelName().isEmpty()
+                ? outcome.getClass().getSimpleName().replace("Outcome", "").replace("EnergyConsumption", "")
+                : outcome.getModelName();
+        writer.printf("%-20s: %s\n", "Model Type", modelLabel);
         writer.printf("%-20s: %s\n", "Satisfaction",
                 outcome.get_satisfaction().isSatisfied() ? "SATISFIED" : "NOT SATISFIED");
 

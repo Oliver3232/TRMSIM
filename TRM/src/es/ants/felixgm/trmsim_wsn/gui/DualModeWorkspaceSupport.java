@@ -6,6 +6,7 @@ import es.ants.felixgm.trmsim_wsn.gui.dual.DualSimulationWorkspacePanel;
 import es.ants.felixgm.trmsim_wsn.gui.export.DualSimulationExportHelper;
 import es.ants.felixgm.trmsim_wsn.gui.export.GraphImageExporter;
 import es.ants.felixgm.trmsim_wsn.gui.export.SimulationResultRepository;
+import es.ants.felixgm.trmsim_wsn.gui.export.SimulationSnapshot;
 import es.ants.felixgm.trmsim_wsn.gui.graph.SimulationGraphWorkspace;
 import es.ants.felixgm.trmsim_wsn.gui.legendpanels.LegendPanel;
 import es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers.MainWindowNodeInspectorController;
@@ -250,6 +251,13 @@ final class DualModeWorkspaceSupport {
                                 return null;
                             }
                             return GraphImageExporter.exportCurrentGraph(dialogOwner, energyOutcomesPanel, energyOutcomesPanel.getLabel() + " " + owner.slotLabel(slot), request);
+                        }
+
+                        public SimulationSnapshot getSimulationSnapshot() {
+                            Controller ctrl = owner.dualController(SimulationSlot.PRIMARY);
+                            String primary   = ctrl != null ? ctrl.getTrustModelName(SimulationSlot.PRIMARY)   : "";
+                            String secondary = ctrl != null ? ctrl.getTrustModelName(SimulationSlot.SECONDARY) : "";
+                            return SimulationSnapshot.fromDualContext(owner, primary, secondary);
                         }
                     });
         } catch (Exception ex) {

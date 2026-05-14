@@ -25,6 +25,7 @@ public final class DualSimulationExportHelper {
     public interface ExportHost {
         boolean ensureSimulationDataAvailable(SimulationSlot slot, SimulationResultRepository repository);
         String exportEnergyGraph(Component owner, SimulationSlot slot, ExportRequest request) throws Exception;
+        SimulationSnapshot getSimulationSnapshot();
     }
 
     private interface ExportAction {
@@ -104,6 +105,8 @@ public final class DualSimulationExportHelper {
             return;
         }
 
+        host.getSimulationSnapshot().saveToDirectory(targetDirectory);
+
         List<String> exportedFiles = new ArrayList<String>();
         for (Selection selectedSelection : selectedSelections) {
             SimulationResultRepository repository = (selectedSelection.slot == SimulationSlot.PRIMARY)
@@ -176,6 +179,8 @@ public final class DualSimulationExportHelper {
                 (slot, repository, request) -> repository.exportNodeLevelEnergyText(owner, request)));
         exportOptions.add(new ExportOption("Node Data Text (All)", true,
                 (slot, repository, request) -> repository.exportNodeLevelText(owner, request)));
+        exportOptions.add(new ExportOption("Charts (Satisfaction, Path Length, Energy) PNG", true,
+                (slot, repository, request) -> repository.exportCharts(owner, request)));
         return exportOptions.toArray(new ExportOption[0]);
     }
 

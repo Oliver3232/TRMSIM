@@ -64,7 +64,11 @@ public final class SimulationEventHelper {
     }
 
     public static void onOutcomesUpdated(EventHost host, SimulationSlot slot, Collection<Outcome> outcomes) {
+        String modelName = host.getSelectedTrustModelName();
         Collection<Outcome> snapshot = new ArrayList<Outcome>(outcomes);
+        for (Outcome outcome : snapshot) {
+            outcome.setModelName(modelName);
+        }
         runSimulationUpdate(host, () -> {
             SimulationResultRepository repository = host.getSimulationResultsRepository();
             repository.addAllOutcomes(snapshot);

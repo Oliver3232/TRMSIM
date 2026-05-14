@@ -126,10 +126,13 @@ public class SimulationResultRepository {
 
             int simulationID = 1;
             for (Outcome outcome : simulationResults) {
+                String modelLabel = outcome.getModelName().isEmpty()
+                        ? outcome.getClass().getSimpleName()
+                        : outcome.getModelName();
                 writer.write(String.format("%d,%s,%s,%s,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d,%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f\n",
                         simulationID++,
                         dateFormat.format(new Date()),
-                        outcome.getClass().getSimpleName(),
+                        modelLabel,
                         outcome.get_satisfaction().isSatisfied(),
                         getAvgSatisfaction(outcome),
                         getAvgPathLength(outcome),
@@ -359,5 +362,9 @@ public class SimulationResultRepository {
 
     public String exportNodeLevelText(Component parentFrame, ExportRequest request) {
         return NodeLevelExporter.exportNodeData(parentFrame, simulationResults, 4, request);
+    }
+
+    public String exportCharts(Component parentFrame, ExportRequest request) {
+        return SimulationChartExporter.exportCharts(parentFrame, simulationResults, request);
     }
 }

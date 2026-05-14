@@ -61,6 +61,8 @@ public abstract class Outcome {
     /** Satisfaction of the client with the received service */
     protected Satisfaction satisfaction;
     protected List<NodeMetric> nodeMetrics = new ArrayList<>();
+    private String modelName = "";
+
     public List<NodeMetric> getNodeMetrics() {
         return nodeMetrics;
     }
@@ -68,6 +70,9 @@ public abstract class Outcome {
     public void addNodeMetric(NodeMetric metric) {
         this.nodeMetrics.add(metric);
     }
+
+    public String getModelName() { return modelName; }
+    public void setModelName(String modelName) { this.modelName = (modelName == null) ? "" : modelName; }
     /**
      * Class Outcome constructor
      * @param satisfaction Satisfaction of the client with the received service

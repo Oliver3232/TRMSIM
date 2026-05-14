@@ -4,6 +4,7 @@ package es.ants.felixgm.trmsim_wsn.gui.mainwindow.controllers;
 import es.ants.felixgm.trmsim_wsn.gui.MainWindowContext;
 import es.ants.felixgm.trmsim_wsn.gui.export.SimulationExportHelper;
 import es.ants.felixgm.trmsim_wsn.gui.export.SimulationResultRepository;
+import es.ants.felixgm.trmsim_wsn.gui.export.SimulationSnapshot;
 import es.ants.felixgm.trmsim_wsn.gui.networkpanels.NetworkPanel;
 import es.ants.felixgm.trmsim_wsn.gui.outcomespanels.OutcomesPanel;
 import es.ants.felixgm.trmsim_wsn.gui.support.NetworkRenderSupport;
@@ -37,6 +38,10 @@ public final class MainWindowRenderController {
 
                         public String exportEnergyGraph(java.awt.Component owner, es.ants.felixgm.trmsim_wsn.gui.export.ExportRequest request) throws Exception {
                             return MainWindowRenderController.exportEnergyGraph(context, owner, request);
+                        }
+
+                        public SimulationSnapshot getSimulationSnapshot() {
+                            return SimulationSnapshot.fromContext(context);
                         }
                     });
         } catch (Exception ex) {

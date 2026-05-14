@@ -36,7 +36,10 @@ public class EnergyConsumptionExporter {
 
             for (Outcome outcome : outcomes) {
                 StringBuilder line = new StringBuilder();
-                line.append(outcome.getClass().getSimpleName()).append(",");
+                String modelLabel = outcome.getModelName().isEmpty()
+                        ? outcome.getClass().getSimpleName()
+                        : outcome.getModelName();
+                line.append(modelLabel).append(",");
 
                 // Extract ONLY energy consumption data
                 double clientEnergy = 0.0;
