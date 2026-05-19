@@ -132,6 +132,8 @@ TRMSIM/
 ├── NOTICE.md                      Original author attribution
 ├── MODIFICATIONS.md               Full list of changes vs. original TRMSim-WSN
 ├── THIRD_PARTY_NOTICES.md         Third-party library licenses
+├── EXPORT_GUIDE.md                Description of all export file formats and charts
+├── simulation_results/            Export output directory (auto-created on first export)
 └── TRM/
     ├── pom.xml                        Maven build descriptor
     └── src/
@@ -143,6 +145,16 @@ TRMSIM/
             ├── trmsim-wsn_license.txt    Original TRMSim-WSN license header
             └── scenarios/               Predefined scenario files
 ```
+
+---
+
+## Export guide
+
+All export formats produced by the simulator are documented in [EXPORT_GUIDE.md](EXPORT_GUIDE.md).
+
+It covers every output file (CSV, TSV, TXT, PNG), the meaning of each column, and a detailed description of each chart — including how to read the rolling-mean satisfaction curve, the path-length trend, the scatter plot, the energy bar chart, and the LFTM fuzzy distribution stacked bar.
+
+Export runs are saved under `simulation_results/report_<timestamp>/`. Each subdirectory also contains a `simulation_params.txt` file that records the exact trust model, scenario, and parameter values used for that run.
 
 ---
 
