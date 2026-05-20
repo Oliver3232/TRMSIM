@@ -60,7 +60,10 @@ The project uses the following libraries (see [THIRD_PARTY_NOTICES.md](THIRD_PAR
 ```bash
 git clone https://github.com/Oliver3232/TRMSIM.git
 cd TRMSIM
+git checkout development
 ```
+
+> **Note:** The `master` branch contains the original unmodified codebase (kept for reference). All new features and fixes are on the `development` branch — always switch to it after cloning.
 
 ### 2. Build with Maven
 
@@ -77,7 +80,16 @@ This produces two JARs in `TRM/target/`:
 
 ### 3. Run the simulator (GUI)
 
+Run from the `TRMSIM/` root directory:
+
 ```bash
+java -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+```
+
+Or if you are already inside the `TRM/` directory:
+
+```bash
+cd ..
 java -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 ```
 
@@ -89,12 +101,19 @@ java -XstartOnFirstThread -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependenci
 
 ### 4. Run from your IDE
 
-Import the project as a **Maven project** in IntelliJ IDEA or Eclipse. The IDE will automatically import all dependencies defined in `pom.xml`.
+**IntelliJ IDEA:**
 
-- IntelliJ IDEA: `File → Open` → select `TRM/pom.xml` → `Open as Project`
-- Eclipse: `File → Import → Existing Maven Projects` → select the `TRM/` directory
+1. `File → Open` → select the **`TRMSIM/`** root directory (not `TRM/pom.xml`) → open it as a plain directory project
+2. In the Project panel, right-click `TRM/pom.xml` → **Add as Maven Project**
+3. IntelliJ imports all dependencies automatically
 
-Main class: `es.ants.felixgm.trmsim_wsn.gui.TRMSim_WSN`
+Opening the root directory ensures IntelliJ places `.idea/` in `TRMSIM/` where it is covered by `.gitignore`. Opening `TRM/pom.xml` directly would create `.idea/` inside `TRM/` instead.
+
+**Eclipse:**
+
+`File → Import → Existing Maven Projects` → select the `TRM/` directory
+
+**Main class:** `es.ants.felixgm.trmsim_wsn.gui.TRMSim_WSN`
 
 > **Note for OpenJFX users**: if you run directly from the IDE without the fat JAR, you may need to add VM options for the JavaFX module path. IntelliJ IDEA with Maven resolves this automatically when you use the Maven-generated classpath.
 
@@ -112,14 +131,32 @@ java -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
      --headless-batch-scenario large-scale-fast-peertrust PeerTrust "" 1 100
 ```
 
+You can replace `PeerTrust` with any of the supported trust models, or combine multiple models separated by commas:
+
+```bash
+# Single model
+java -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
+     --headless-batch-scenario large-scale-fast-peertrust EigenTrust
+
+# Multiple models compared side by side
+java -jar TRM/target/TRM-0.0.1-SNAPSHOT-jar-with-dependencies.jar \
+     --headless-batch-scenario large-scale-fast-peertrust PeerTrust,EigenTrust,BTRM_WSN
+```
+
+Available trust models: `PeerTrust`, `BTRM_WSN`, `EigenTrust`, `LFTM`, `PowerTrust`, `TRIP`, `BayesTrust`, `SVMTrust`
+
 Full syntax: `--headless-batch-scenario <scenarioId> <models> [sizesCsv] [numNetworks] [numExecutions] [outputDir]`
 
 - `scenarioId` — name of the `.properties` file without extension (e.g. `large-scale-fast-peertrust`)
-- `models` — comma-separated trust model names: `PeerTrust`, `BTRM_WSN`, `EigenTrust`, `LFTM`, `PowerTrust`, `TRIP`
+- `models` — comma-separated trust model names: `PeerTrust`, `BTRM_WSN`, `EigenTrust`, `LFTM`, `PowerTrust`, `TRIP`, `BayesTrust`, `SVMTrust`
 - `sizesCsv` — comma-separated network sizes (empty = scenario default)
 - `numNetworks` — number of networks per execution (default from scenario)
 - `numExecutions` — number of executions (e.g. `100`)
-- `outputDir` — output directory for CSV/TSV/MD results (default: `docs/headless-batch`)
+- `outputDir` — output directory for results (default: `docs/headless-batch`). The path is relative to the directory from which you run the command. The directory is created automatically if it does not exist. For each model, the runner writes:
+  - `<scenarioId>-<profile>-<model>-raw.csv` — per-execution raw data
+  - `<scenarioId>-<profile>-<model>-graph.tsv` — aggregated data for plotting
+  - `<scenarioId>-<profile>-<model>-summary.md` — human-readable summary
+  - `<scenarioId>-<profile>-<model>-eigentrust-profile.csv` — EigenTrust only
 
 ---
 
