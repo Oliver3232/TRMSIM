@@ -1,6 +1,6 @@
 # TRMSim-WSN — Modified Simulator
 
-This is a **modified version** of [TRMSim-WSN](https://github.com/LefKok/TRMSIM) (Trust and Reputation Models Simulator for Wireless Sensor Networks), extended as part of a bachelor's thesis at [your university].
+This is a **modified version** of [TRMSim-WSN](https://github.com/LefKok/TRMSIM) (Trust and Reputation Models Simulator for Wireless Sensor Networks), extended as part of a bachelor's thesis at Masaryk University.
 
 Modified version repository: https://github.com/Oliver3232/TRMSIM
 
